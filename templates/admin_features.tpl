@@ -1,5 +1,6 @@
 {* $Header$ *}
 {strip}
+{if !empty($page)}{assign var=page value=0}{/if}
 {form}
 	{jstabs}
 		{jstab title="bitweaver Settings"}
@@ -10,7 +11,7 @@
 						{formlabel label=$output.label for=$feature}
 						{forminput}
 							{html_checkboxes name="$feature" values="y" checked=$gBitSystem->getConfig($feature) labels=false id=$feature}
-							{formhelp note=$output.note page=$output.page}
+							{formhelp note=$output.note page=$output.page|default:''}
 						{/forminput}
 					</div>
 				{/foreach}
@@ -22,7 +23,7 @@
 						{formlabel label=$output.label for=$feature}
 						{forminput}
 							{html_checkboxes name="$feature" values="y" checked=$gBitSystem->getConfig($feature) labels=false id=$feature}
-							{formhelp note=$output.note page=$output.page}
+							{formhelp note=$output.note page=$output.page|default:''}
 						{/forminput}
 					</div>
 				{/foreach}
@@ -31,7 +32,7 @@
 
 		{jstab title="Homepage Settings"}
 			{legend legend="Homepage Settings"}
-				<div class="form-group">
+				<div class="form-group col-sm-12">
 					{formlabel label="Home page" for="bit_index"}
 					{forminput}
 						<select name="bit_index" id="bit_index">
@@ -59,7 +60,7 @@
 					{/forminput}
 				</div>
 
-				<div class="form-group">
+				<div class="form-group col-sm-12">
 					{formlabel label="URI for custom home" for="site_url_index"}
 					{forminput}
 						<input type="text" id="site_url_index" name="site_url_index" value="{$gBitSystem->getConfig('site_url_index')|escape}" size="50" />
@@ -145,7 +146,7 @@
 							{elseif $output.type == 'text'}
 								<input size="50" type="text" name="{$feature}" id="{$feature}" value="{$gBitSystem->getConfig($feature)|escape}" />
 							{/if}
-							{formhelp note=$output.note page=$output.page}
+							{formhelp note=$output.note page=$output.page|default:''}
 						{/forminput}
 					</div>
 				{/foreach}
@@ -165,7 +166,7 @@
 						{formlabel label=$output.label for=$feature}
 						{forminput}
 							{html_checkboxes name="$feature" values="y" checked=$gBitSystem->getConfig($feature) labels=false id=$feature}
-							{formhelp note=$output.note page=$output.page}
+							{formhelp note=$output.note page=$output.page|default:''}
 						{/forminput}
 					</div>
 				{/foreach}

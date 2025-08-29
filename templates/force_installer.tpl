@@ -1,6 +1,4 @@
-{if ($gBrowserInfo.browser neq 'ie') or ($gBrowserInfo.browser eq 'ie' and $gBrowserInfo.maj_ver gt 7) }
 <?xml version="1.0" encoding="utf-8"?>
-{/if}
 {strip}
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
@@ -13,12 +11,6 @@
 	<title>Upgrade Bitweaver</title>
 	<link rel="shortcut icon" href="{$smarty.const.INSTALL_PKG_URL}favicon.ico" type="image/x-icon" />
 	<link rel="icon" href="{$smarty.const.INSTALL_PKG_URL}favicon.ico" type="image/x-icon" />
-
-	{* if $gBrowserInfo.browser eq 'ie'}
-		<!--[if lt IE 7]>
-			<script type="text/javascript" src="{$smarty.const.BIT_ROOT_URL}util/javascript/fixes/ie7/IE8.js"></script>
-		<![endif]-->
-	{/if *}
 </head>
 <body id="step{$smarty.request.step}">
 	<div id="container">

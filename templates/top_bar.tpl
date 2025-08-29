@@ -1,11 +1,11 @@
 {strip}
-<nav class="navbar navbar-default {if $gBitSystem->getConfig('layout-header')}navbar-static-top{/if}" id="bw-top-bar">
+<nav class="navbar navbar-default {if $gBitSystem->getConfig('layout-header')}navbar-static-top{/if}" id="bittopbar">
 	<div class="navbar-header">
-		<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bw-top-menu">{booticon iname="fa-bars"}</button>
+		<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bit-top-menu">{booticon iname="icon-reorder"}</button>
 		<a class="navbar-brand" href="{$smarty.const.BIT_ROOT_URL}" {if $gBitSystem->getConfig('site_slogan')} title="{$gBitSystem->getConfig('site_slogan')|escape}" {/if}>{$gBitSystem->getConfig('site_title')}</a>
 	</div>
 	{if $gBitSystem->mAppMenu}
-	<div class="collapse navbar-collapse" id="bw-top-menu">
+	<div class="collapse navbar-collapse" id="bit-top-menu">
 		{if $gBitSystem->mAppMenu.bar}
 		<ul class="nav navbar-nav">
 			{foreach key=key item=menu from=$gBitSystem->mAppMenu.bar}
@@ -23,7 +23,7 @@
 			{/foreach}
 		</ul>
 		{/if}
-		{if $gBitSystem->mAppMenu.form}
+		{if !empty($gBitSystem->mAppMenu.form)}
 		{foreach key=key item=menu from=$gBitSystem->mAppMenu.form}
 			{if $menu.menu_title && $menu.index_url && $menu.menu_template && !$menu.is_disabled}
 				{include file="`$menu.menu_template`" packageMenuClass="dropdown-menu" packageMenuTitle=$menu.menu_title}
@@ -34,7 +34,7 @@
 		<ul class="nav navbar-nav navbar-right">
 			{if $gBitUser->isRegistered()}
 				<li class="dropdown">
-					<a class="dropdown-toggle" id="dLabel" role="button" data-toggle="dropdown" data-target="#">{booticon iname="fa-user"} {displayname hash=$gBitUser->mInfo nolink=1} <b class="caret"></b></a>
+					<a class="dropdown-toggle" id="dLabel" role="button" data-toggle="dropdown" data-target="#"><i class="icon-user"></i> {displayname hash=$gBitUser->mInfo nolink=1} <b class="caret"></b></a>
 					<ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">
 						<li><a href="{$gBitUser->getDisplayUrl()}">{tr}My Profile{/tr}</a></li>
 						<li><a href="{$smarty.const.USERS_PKG_URL}my">{tr}Dashboard{/tr}</a></li>
@@ -48,7 +48,7 @@
 					</ul>
 				</li>
 			{else}
-				<li><a href="{$smarty.const.USERS_PKG_URL}signin">{tr}Sign In{/tr}</a></li>
+				<li><a href="{$smarty.const.USERS_PKG_URL}signin.php">{tr}Sign In{/tr}</a></li>
 			{/if}
 		</ul>
 	</div>

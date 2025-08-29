@@ -2,15 +2,15 @@
 
 <div class="floaticon">
 	{bithelp}
-	{if $package}
+	{if !empty($package)}
 		{assign var=iconsize value=$gBitSystem->getConfig("site_icon_size")}
 		{biticon ipackage="$package" iname="pkg_`$package`" iexplain="$package" iclass="$iconsize icon"}
 	{/if}
 </div>
 
-<div class="admin {$package}">
+<div class="admin{if !empty($package)} {$package}{/if}">
 	<div class="header">
-		{if $package}
+		{if !empty($package)}
 			<h1>{tr}Configure{/tr}: {tr}{$pageName|default:$page|replace:"_":" "|capitalize}{/tr}</h1>
 		{else}
 			<h1>{tr}Administration{/tr}</h1>
@@ -20,10 +20,10 @@
 	{* The rest determines which page to include using "page" GET parameter. Default: list-sections
 	Add a value in first check when you create a new admin page. *}
 	<div class="body">
-		{if $adminFile }
+		{if !empty($adminFile) }
 			{include file="bitpackage:$package/admin_`$adminFile`.tpl"}
 		{else}
-			{if $smarty.request.version_check}
+			{if !empty($smarty.request.version_check) }
 				{if $version_info.error.number ne 0}
 					{formfeedback error=$version_info.error.string}
 				{elseif $version_info}

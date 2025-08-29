@@ -1,22 +1,26 @@
 {strip}
-{if $listInfo.query_string}
+{if !empty($listInfo.query_string)}
 		{assign var=pageUrl value="`$smarty.server.SCRIPT_NAME`?`$listInfo.query_string`&amp;"}
 {else}
 	{capture name=string}
-		{foreach from=$listInfo.parameters key=param item=value}
-			{if $value|is_array}
-				{foreach from=$value item=v}{if $value ne ''}{$param}[]={$v}&amp;{/if}{/foreach}
-			{else}
-				{if $value ne ''}{$param}={$value}&amp;{/if}
-			{/if}
-		{/foreach}
-		{foreach from=$listInfo.ihash key=param item=value}
-			{if $value|is_array}
-				{foreach from=$value item=v}{if $value ne ''}{$param}[]={$v}&amp;{/if}{/foreach}
-			{else}
-				{if $value ne ''}{$param}={$value}&amp;{/if}
-			{/if}
-		{/foreach}
+		{if isset($listInfo.parameters) }
+			{foreach from=$listInfo.parameters key=param item=value}
+				{if $value|is_array}
+					{foreach from=$value item=v}{if $value ne ''}{$param}[]={$v}&amp;{/if}{/foreach}
+				{else}
+					{if $value ne ''}{$param}={$value}&amp;{/if}
+				{/if}
+			{/foreach}
+		{/if}
+		{if isset($listInfo.ihash) }
+			{foreach from=$listInfo.ihash key=param item=value}
+				{if $value|is_array}
+					{foreach from=$value item=v}{if $value ne ''}{$param}[]={$v}&amp;{/if}{/foreach}
+				{else}
+					{if $value ne ''}{$param}={$value}&amp;{/if}
+				{/if}
+			{/foreach}
+		{/if}
 		{foreach from=$pgnHidden key=param item=value}
 			{if $value|is_array}
 				{foreach from=$value item=v}{if $value ne ''}{$param}[]={$v}&amp;{/if}{/foreach}
@@ -24,7 +28,7 @@
 				{if $value ne ''}{$param}={$value}&amp;{/if}
 			{/if}
 		{/foreach}
-		{*if $listInfo.sort_mode}
+		{if isset($listInfo.sort_mode) and $listInfo.sort_mode ne ''}
 			{if is_array($listInfo.sort_mode)}
 				{foreach from=$listInfo.sort_mode item=sort}
 					sort_mode[]={$sort}&amp;
@@ -32,16 +36,15 @@
 			{else}
 				sort_mode={$listInfo.sort_mode}&amp;
 			{/if}
-		{/if*}
+		{/if}
 		{if isset($listInfo.find) && $listInfo.find ne ''}
 			find={$listInfo.find}&amp;
 		{/if}
 	{/capture}
 	{assign var=pageUrlVar value=$smarty.capture.string|regex_replace:'/"/':'%22'}
-	{assign var=pageUrl value="`$smarty.server.SCRIPT_URL`?`$pageUrlVar`"}
+	{assign var=pageUrl value="`$pgnUrl`?`$pageUrlVar`"}
 {/if}
-
-{if $listInfo.total_pages > 1 && $listInfo.page_records}
+{if !empty($listInfo) and $listInfo.total_pages > 1 && $listInfo.page_records}
 <div class="paginator overflow-hidden clear">
 	<ul class="pagination pull-left">
 		{if $listInfo.current_page > 1}

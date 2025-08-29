@@ -16,9 +16,9 @@
 							{/section}
 						</ul>
 					{/if}
-					{formfeedback warning=$msgFields.warning}
-					{formfeedback success=$msgFields.success}
-					{formfeedback error=$msgFields.error}
+					{formfeedback warning=$msgFields.warning|default:''}
+					{formfeedback success=$msgFields.success|default:''}
+					{formfeedback error=$msgFields.error|default:''}
 				</div>
 
 				<div class="form-group submit">
