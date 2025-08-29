@@ -12,13 +12,14 @@
 /**
  * required setup
  */
-require_once( '../kernel/includes/setup_inc.php' );
-require_once( WIKI_PKG_CLASS_PATH.'BitPage.php' );
+require_once '../kernel/includes/setup_inc.php';
+use Bitweaver\KernelTools;
+use Bitweaver\Wiki\BitPage;
 
 /*
 if($gBitSystem->getConfig('wiki_list_pages') != 'y') {
-  $gBitSmarty->assign('msg',tra("This feature is disabled"));
-  $gBitSystem->display( 'error.tpl' , NULL, array( 'display_mode' => 'display' ));
+  $gBitSmarty->assign('msg', KernelTools::tra("This feature is disabled"));
+  $gBitSystem->display( 'error.tpl' , null, array( 'display_mode' => 'display' ));
   die;  
 }
 */
@@ -26,9 +27,9 @@ if (isset($_REQUEST['url'])) {
 	$id = $wikilib->isUrlCached($_REQUEST['url']);
 
 	if (!$id) {
-		$gBitSmarty->assign('msg', tra("No cache information available"));
+		$gBitSmarty->assign('msg', KernelTools::tra("No cache information available"));
 
-		$gBitSystem->display( 'error.tpl' , NULL, array( 'display_mode' => 'display' ));
+		$gBitSystem->display( 'error.tpl' , null, array( 'display_mode' => 'display' ));
 		die;
 	}
 
@@ -36,9 +37,9 @@ if (isset($_REQUEST['url'])) {
 }
 
 if (!isset($_REQUEST["cache_id"])) {
-	$gBitSmarty->assign('msg', tra("No page indicated"));
+	$gBitSmarty->assign('msg', KernelTools::tra("No page indicated"));
 
-	$gBitSystem->display( 'error.tpl' , NULL, array( 'display_mode' => 'display' ));
+	$gBitSystem->display( 'error.tpl' , null, array( 'display_mode' => 'display' ));
 	die;
 }
 
@@ -52,9 +53,5 @@ if (substr($info["url"], -4, 4) == ".txt") {
 }
 
 $gBitSmarty->assign('ggcacheurl', $ggcacheurl);
-$gBitSmarty->assignByRef('info', $info);
-$gBitSystem->display( 'bitpackage:kernel/view_cache.tpl', NULL, array( 'display_mode' => 'display' ));
-
-
-
-?>
+$gBitSmarty->assign('info', $info);
+$gBitSystem->display( 'bitpackage:kernel/view_cache.tpl', null, array( 'display_mode' => 'display' ));
