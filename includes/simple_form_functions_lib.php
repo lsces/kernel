@@ -9,9 +9,9 @@
  * Store or update an array of values
  * @param $pArray an array of values to set
  * @param $pPackageName name of the package the feature belongs to
- * @return none
+ * @return void
  */
-function simple_set_configs( $pArray, $pPackageName = NULL ){
+function simple_set_configs( $pArray, $pPackageName = null ){
     foreach( $pArray as $item => $data ) {
         if( $data['type'] == 'numeric' ) {
             simple_set_int( $item, $pPackageName );
@@ -27,14 +27,14 @@ function simple_set_configs( $pArray, $pPackageName = NULL ){
  * Store or update a boolean value in the database - automatically collects data from $_REQUEST[$pFeature]
  * @param $pFeature name of the parameter to be set in the database
  * @param $pPackageName name of the package the feature belongs to
- * @return none
+ * @return void
  */
-function simple_set_toggle( $pFeature, $pPackageName = NULL ) {
+function simple_set_toggle( $pFeature, $pPackageName = null ) {
 	// make function compatible with {html_checkboxes}
 	if( isset( $_REQUEST[$pFeature][0] ) ) {
 		$_REQUEST[$pFeature] = $_REQUEST[$pFeature][0];
 	}
-	toggle_preference( $pFeature, ( isset( $_REQUEST[$pFeature] ) ? $_REQUEST[$pFeature] : NULL ), $pPackageName );
+	toggle_preference( $pFeature, ( isset( $_REQUEST[$pFeature] ) ? $_REQUEST[$pFeature] : null ), $pPackageName );
 }
 
 /**
@@ -42,12 +42,12 @@ function simple_set_toggle( $pFeature, $pPackageName = NULL ) {
  * @param $pArray name of the array to check for features in
  * @param $pFeatures feature to check
  * @param $pPackageName name of the package the feature belongs to
- * @return none
+ * @return void
  */
-function simple_set_toggle_array( $pArray, $pFeature, $pPackageName = NULL ) {
+function simple_set_toggle_array( $pArray, $pFeature, $pPackageName = null ) {
 	if (!empty($_REQUEST[$pArray]) && is_array($_REQUEST[$pArray])) {
 		$flipped = array_flip($_REQUEST[$pArray]);
-		toggle_preference( $pFeature, ( isset( $flipped[$pFeature] ) ? 'y' : NULL ), $pPackageName );
+		toggle_preference( $pFeature, ( isset( $flipped[$pFeature] ) ? 'y' : null ), $pPackageName );
 	}
 }
 
@@ -56,9 +56,9 @@ function simple_set_toggle_array( $pArray, $pFeature, $pPackageName = NULL ) {
  * @param $pName name of the parameter to be set in the database
  * @param $pValue set $pName to $pValue in kernel_prefs
  * @param $pPackageName name of the package the feature belongs to
- * @return none
+ * @return void
  */
-function toggle_preference( $pName, $pValue = NULL, $pPackageName = NULL ) {
+function toggle_preference( $pName, $pValue = null, $pPackageName = null ) {
 	global $_REQUEST, $gBitSystem, $gBitSmarty;
 
 	if( isset( $pValue ) && $pValue == "on" ) {
@@ -75,9 +75,9 @@ function toggle_preference( $pName, $pValue = NULL, $pPackageName = NULL ) {
  * Store or update a value in the database - automatically collects data from $_REQUEST[$pFeature]
  * @param $pFeature name of the parameter to be set in the database
  * @param $pPackageName name of the package the feature belongs to
- * @return none
+ * @return void
  */
-function simple_set_value( $pFeature, $pPackageName = NULL ) {
+function simple_set_value( $pFeature, $pPackageName = null ) {
 	global $_REQUEST, $gBitSystem, $gBitSmarty;
 	if( isset( $_REQUEST[$pFeature] ) ) {
 		$gBitSystem->storeConfig( $pFeature, $_REQUEST[$pFeature], $pPackageName );
@@ -89,9 +89,9 @@ function simple_set_value( $pFeature, $pPackageName = NULL ) {
  * Store or update an integer in the database - automatically collects data from $_REQUEST[$pFeature]
  * @param $pFeature name of the parameter to be set in the database
  * @param $pPackageName name of the package the feature belongs to
- * @return none
+ * @return void
  */
-function simple_set_int( $pFeature, $pPackageName = NULL ) {
+function simple_set_int( $pFeature, $pPackageName = null ) {
 	global $_REQUEST, $gBitSystem, $gBitSmarty;
 	if ( isset( $_REQUEST[$pFeature] ) && is_numeric( $_REQUEST[$pFeature] ) ) {
 		$gBitSystem->storeConfig( $pFeature, $_REQUEST[$pFeature], $pPackageName );
@@ -103,20 +103,20 @@ function simple_set_int( $pFeature, $pPackageName = NULL ) {
  * Store or update a value in the database but assign it by reference to smarty - automatically collects data from $_REQUEST[$pFeature]
  * @param $pFeature name of the parameter to be set in the database
  * @param $pPackageName name of the package the feature belongs to
- * @return none
+ * @return void
  */
-function byref_set_value( $pFeature, $pPref = "", $pPackageName = NULL ) {
+function byref_set_value( $pFeature, $pPref = "", $pPackageName = null ) {
 	global $_REQUEST, $gBitSystem, $gBitSmarty;
 	if( isset( $_REQUEST[$pFeature] ) ) {
 		if( strlen( $pPref ) > 0 ) {
 			$gBitSystem->storeConfig( $pPref, $_REQUEST[$pFeature], $pPackageName );
 			// also assign the ref appareantly --gongo
-			$gBitSmarty->assignByRef( $pPref, $_REQUEST[$pFeature] );
+			$gBitSmarty->assign( $pPref, $_REQUEST[$pFeature] );
 		} else {
 			$gBitSystem->storeConfig( $pFeature, $_REQUEST[$pFeature], $pPackageName );
 		}
 
-		$gBitSmarty->assignByRef( $pFeature, $_REQUEST[$pFeature] );
+		$gBitSmarty->assign( $pFeature, $_REQUEST[$pFeature] );
 	}
 }
 
@@ -128,7 +128,7 @@ function byref_set_value( $pFeature, $pPref = "", $pPackageName = NULL ) {
  */
 function set_tab() {
 	global $_REQUEST,$gBitSmarty;
-	$ret = FALSE;
+	$ret = false;
 	if( !empty( $_REQUEST ) ) {
 		foreach( array_keys( $_REQUEST ) as $item ) {
 			if( preg_match( "/TabSubmit/",$item ) ) {

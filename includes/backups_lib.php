@@ -1,4 +1,6 @@
 <?php
+use Bitweaver\BitBase;
+
 /**
  * Database Backup Library
  *
@@ -17,7 +19,7 @@ class BackupLib extends BitBase {
 		global $gBitDbType;
 		// Get the password before it's too late
 		$query = "select `hash` from `".BIT_DB_PREFIX."users_users` where `user_id`=?";
-		$pwd = $this->mDb->getOne($query,array(ROOT_USER_ID));
+		$pwd = $this->mDb->getOne($query, [ ROOT_USER_ID ]);
 
 		switch ($gBitDbType) {
 			case "postgres":
@@ -32,7 +34,7 @@ class BackupLib extends BitBase {
 		$part = '';
 
 		while ($res = $result->fetchRow()) {
-			list($key, $val) = each($res);
+			[ $key, $val ] = $res;
 
 			if (!strstr($val, 'babl')) {
 				// Now delete the table contents
@@ -42,7 +44,7 @@ class BackupLib extends BitBase {
 		}
 
 //		$query = "update `".BIT_DB_PREFIX."users_users` set `hash`=? where `login`=?";
-//		$result = $this->mDb->query($query,array($pwd,'admin'));
+//		$result = $this->mDb->query($query, [ pwd,'admin'] );
 		@$fp = fopen($filename, "rb");
 
 		if (!$fp) return false;
@@ -59,7 +61,7 @@ class BackupLib extends BitBase {
 //			$line = $this->RC4($pwd, $line);
 
 			// EXECUTE SQL SENTENCE HERE
-			$result = $this->mDb->query($line,array());
+			$result = $this->mDb->query($line,[]);
 		}
 
 		fclose ($fp);
@@ -117,7 +119,7 @@ class BackupLib extends BitBase {
 		ini_set("max_execution_time", "3000");
 
 		$query = "select `hash` from `".BIT_DB_PREFIX."users_users` where `user_id`=?";
-		$pwd = $this->mDb->getOne($query,array(ROOT_USER_ID));
+		$pwd = $this->mDb->getOne($query, [ ROOT_USER_ID ]);
 		@$fp = fopen($filename, "w");
 
 		if (!$fp)
@@ -136,7 +138,7 @@ class BackupLib extends BitBase {
 		$part = '';
 
 		while ($res = $result->fetchRow()) {
-			list($key, $val) = each($res);
+			[ $key, $val ] = $res;
 
 			if (!strstr($val, 'babl')) {
 				// Now dump the table
@@ -183,5 +185,3 @@ class BackupLib extends BitBase {
 }
 
 $backuplib = new BackupLib();
-
-?>

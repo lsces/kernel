@@ -35,16 +35,16 @@
  *
  * NOTE: when you process the imported files, make sure you use realpath() to check of files are really in your 'jail'.
  */
-require_once( 'setup_inc.php' );
+require_once 'setup_inc.php';
 // we need to set these global that we can include this file from functions
 global $gBitThemes, $gBitSystem, $gBitSmarty;
 
 if( !empty( $_REQUEST['ajax_path_conf'] ) && $gBitSystem->isFeatureActive( $_REQUEST['ajax_path_conf'] ) ) {
-	$fileList = ajax_dir_list( $gBitSystem->getConfig( $_REQUEST['ajax_path_conf'] ), ( !empty( $_REQUEST['relpath'] ) ? $_REQUEST['relpath']."/" : NULL ));
+	$fileList = ajax_dir_list( $gBitSystem->getConfig( $_REQUEST['ajax_path_conf'] ), !empty( $_REQUEST['relpath'] ) ? $_REQUEST['relpath'] . "/" : null);
 	$gBitSmarty->assign( 'fileList', $fileList );
 }
 $gBitThemes->loadAjax( 'mochikit', array( 'Iter.js', 'DOM.js', 'Async.js' ));
-$gBitThemes->loadJavascript( KERNEL_PKG_PATH."scripts/BitFileBrowser.js", TRUE );
+$gBitThemes->loadJavascript( KERNEL_PKG_PATH."scripts/BitFileBrowser.js", true );
 
 if( $gBitThemes->isAjaxRequest() ) {
 	$gBitSmarty->display( 'bitpackage:kernel/ajax_file_browser_inc.tpl' );
@@ -53,18 +53,18 @@ if( $gBitThemes->isAjaxRequest() ) {
 /**
  * ajax_dir_list
  *
- * @param array $pDir Base directory
- * @param array $pRelPath relative path on top of base directory
+ * @param string $pDir Base directory
+ * @param string $pRelPath relative path on top of base directory
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
- */
-function ajax_dir_list( $pDir, $pRelPath = NULL ) {
+ * @return array
+ */ 
+function ajax_dir_list( $pDir, $pRelPath = null ) {
 	global $gBitSystem;
-	$ret = $files = array();
+	$ret = $files = [];
 
 	if( !empty( $pDir ) && is_dir( $pDir.$pRelPath )) {
 		if( $handle = opendir( $pDir.$pRelPath )) {
-			while( FALSE !== ( $file = readdir( $handle ))) {
+			while( false !== ( $file = readdir( $handle ))) {
 				if( !preg_match( "#^\.#",$file ) && is_readable( $pDir.$pRelPath.$file )) {
 					array_push( $files, $file );
 				}
@@ -100,4 +100,3 @@ function ajax_dir_list( $pDir, $pRelPath = NULL ) {
 
 	return $ret;
 }
-?>

@@ -16,10 +16,15 @@
  */
 
 /**
+ * required setup
+ */
+namespace Bitweaver;
+
+/**
  * set error handling
  */
 if( !defined( 'BIT_INSTALL' ) &&  !defined( 'ADODB_ERROR_HANDLER' )  ) {
-	define( 'ADODB_ERROR_HANDLER', 'bitdb_error_handler' );
+	define( 'ADODB_ERROR_HANDLER', '\Bitweaver\bitdb_error_handler' );
 }
 
 /**
@@ -54,7 +59,7 @@ function bit_print_log( $pLogParams, $pLogMessages ) {
 
 	for( $i = 1; $i < func_num_args(); $i++ ) { 
     	if( $pLogMessage = func_get_arg( $i ) ) {
-			$errlines = explode( "\n", (is_array( $pLogMessage ) || is_object( $pLogMessage ) ? vc( $pLogMessage, FALSE ) : $pLogMessage) );
+			$errlines = explode( "\n", is_array( $pLogMessage ) || is_object( $pLogMessage ) ? vc( $pLogMessage, false ) : $pLogMessage);
 			foreach ($errlines as $txt) { 
 				print "$virtualHost $remoteAddr $ident $userName $logTimestamp \"$scriptFilename\" $statusCode $executionTime \"$userAgent\" $pLogMessage\n";
 			}
@@ -67,7 +72,7 @@ function bit_print_log( $pLogParams, $pLogMessages ) {
 function bit_error_log() {
 	for( $i = 0; $i < func_num_args(); $i++ ) { 
     	if( $pLogMessage = func_get_arg( $i ) ) {
-			$errlines = explode( "\n", (is_array( $pLogMessage ) || is_object( $pLogMessage ) ? vc( $pLogMessage, FALSE ) : $pLogMessage) );
+			$errlines = explode( "\n", is_array( $pLogMessage ) || is_object( $pLogMessage ) ? vc( $pLogMessage, false ) : $pLogMessage);
 			foreach ($errlines as $txt) { 
 				error_log($txt); 
 			}
@@ -95,37 +100,38 @@ if( !function_exists( 'eb' ) ) {
 	}
 }
 
-function bit_error_email ( $pSubject, $pMessage, $pGlobalVars=array() ) {
+function bit_error_email ( $pSubject, $pMessage, $pGlobalVars=[] ) {
 	// You can prevent sending of error emails by adding define('ERROR_EMAIL', ''); in your config/kernel/config_inc.php
-	$errorEmail = defined( 'ERROR_EMAIL' ) ? ERROR_EMAIL : (!empty( $_SERVER['SERVER_ADMIN'] ) ? $_SERVER['SERVER_ADMIN'] : NULL);
+	$errorEmail = defined( 'ERROR_EMAIL' ) ? ERROR_EMAIL : (!empty( $_SERVER['SERVER_ADMIN'] ) ? $_SERVER['SERVER_ADMIN'] : null);
 
 	$separator = "\n";
 	$indent = "  ";
 	$parameters = '';
 	if( empty( $pGlobalVars ) ) {
-		$pGlobalVars = array(
+		$pGlobalVars = [
 			'$_POST'   => $_POST,
 			'$_GET'    => $_GET,
 			'$_FILES'  => $_FILES,
 			'$_COOKIE' => $_COOKIE,
-		);
+		];
 	}
 	foreach( $pGlobalVars as $global => $hash ) {
 		if( !empty( $hash )) {
-			$parameters .= $separator.$global.': '.$separator.var_export( $hash, TRUE ).$separator;
+			$parameters .= $separator.$global.': '.$separator.var_export( $hash, true ).$separator;
 		}
 	}
 	$parameters = preg_replace( "/\n/", $separator.$indent, $parameters );
 
-	mail( $errorEmail, $pSubject, $pMessage.$parameters.$separator.$separator.'$_SERVER: '.var_export( $_SERVER, TRUE ) );
+	mail( $errorEmail, $pSubject, $pMessage.$parameters.$separator.$separator.'$_SERVER: '.var_export( $_SERVER, true ) );
 }
 
-function bit_error_handler ( $errno, $errstr, $errfile, $errline, $errcontext=NULL ) {
+function bit_error_handler ( $errno, $errstr, $errfile, $errline, $errcontext=null ) {
     // error_reporting() === 0 if code was prepended with @
-	$reportingLevel = error_reporting();
+
+    $reportingLevel = error_reporting();
     if( $reportingLevel !== 0 && !strpos( $errfile, 'templates_c' ) ) {
 		$errType = 'Error';
-		$isReported = TRUE;
+		$isReported = true;
         switch ($errno) {
 			case E_ERROR: $errType = 'FATAL ERROR'; break;
 			case E_WARNING: $isReported = $reportingLevel & E_WARNING; $errType = 'WARNING'; break;
@@ -138,7 +144,6 @@ function bit_error_handler ( $errno, $errstr, $errfile, $errline, $errcontext=NU
 			case E_USER_ERROR: $isReported = $reportingLevel & E_USER_ERROR; $errType = 'USER_ERROR'; break;
 			case E_USER_WARNING: $isReported = $reportingLevel & E_USER_WARNING; $errType = 'USER_WARNING'; break;
 			case E_USER_NOTICE: $isReported = $reportingLevel & E_USER_NOTICE; $errType = 'USER_NOTICE'; break;
-			case E_STRICT: $isReported = $reportingLevel & E_STRICT; $errType = 'STRICT'; break;
 			case E_RECOVERABLE_ERROR: $isReported = $reportingLevel & E_RECOVERABLE_ERROR; $errType = 'RECOVERABLE_ERROR'; break;
 			case E_DEPRECATED: $isReported = $reportingLevel & E_DEPRECATED; $errType = 'DEPRECATED'; break;
 			case E_USER_DEPRECATED: $isReported = $reportingLevel & E_USER_DEPRECATED; $errType = 'USER_DEPRECATED'; break;
@@ -146,7 +151,7 @@ function bit_error_handler ( $errno, $errstr, $errfile, $errline, $errcontext=NU
 
         }
 
-		$isReported = TRUE;
+		$isReported = true;
 		if( $isReported ) {
 //eb( $isReported, $errType, $errno, $reportingLevel, $errfile );
 			$errorSubject = 'PHP '.$errType.' on '.php_uname( 'n' ).': '.$errstr;
@@ -166,10 +171,10 @@ function bit_error_handler ( $errno, $errstr, $errfile, $errline, $errcontext=NU
 				}
 			}
 		}
-    }
+     }
 
     // Execute PHP's internal error handler
-    return FALSE;
+    return false;
 }
 
 function bit_shutdown_handler() {
@@ -183,10 +188,10 @@ function bit_shutdown_handler() {
 	}
 }
 
-register_shutdown_function('bit_shutdown_handler');
+register_shutdown_function('Bitweaver\bit_shutdown_handler');
 
 
-function bit_display_error( $pLogMessage, $pSubject, $pFatal = TRUE ) {
+function bit_display_error( $pLogMessage, $pSubject, $pFatal = true ) {
 	global $gBitSystem;
 
 	if( $pFatal ) {
@@ -208,7 +213,7 @@ function bit_display_error( $pLogMessage, $pSubject, $pFatal = TRUE ) {
 			<ul>
 				<li><a href='http://sourceforge.net/tracker/?func=add&amp;group_id=141358&amp;atid=749176'>Click here to log a bug</a>, if this appears to be an error with the application.</li>
 				<li><a href='".BIT_ROOT_URL."install/install.php'>Go here to begin the installation process</a>, if you haven't done so already.</li>
-				<li>To hide this message, please <strong>set the IS_LIVE constant to TRUE</strong> in your config/kernel/config_inc.php file.</li>
+				<li>To hide this message, please <strong>set the IS_LIVE constant to true</strong> in your config/kernel/config_inc.php file.</li>
 			</ul>
 			<hr />
 		";
@@ -218,7 +223,7 @@ function bit_display_error( $pLogMessage, $pSubject, $pFatal = TRUE ) {
 	} else {
 		bit_error_email ( $pSubject, $pLogMessage );
 		if( defined( 'AUTO_BUG_SUBMIT' ) && AUTO_BUG_SUBMIT && !empty( $gBitSystem ) && $gBitSystem->isDatabaseValid() ) {
-			mail( 'bugs@bitweaver.org',"$pSubject",$pLogMessage );
+			mail( 'support@rainbowdigitalmedia.uk',"$pSubject",$pLogMessage );
 		}
 	}
 
@@ -227,7 +232,7 @@ function bit_display_error( $pLogMessage, $pSubject, $pFatal = TRUE ) {
 	}
 }
 
-function bit_error_string( $iDBParms = array() ) {
+function bit_error_string( $iDBParms = [] ) {
 	global $gBitDb;
 	global $gBitUser;
 	global $argv;
@@ -237,11 +242,7 @@ function bit_error_string( $iDBParms = array() ) {
 
 	$date = date("D M d H:i:s Y"); // [Tue Sep 24 12:19:20 2002] [error]
 
-	if( is_a( $gBitUser, 'BitUser' ) ) {
-		$acctStr = "ID: ".$gBitUser->mInfo['user_id']." - Login: ".$gBitUser->mInfo['login']." - e-mail: ".$gBitUser->mInfo['email'];
-	} else {
-		$acctStr = "User unknown";
-	}
+	$acctStr = is_a( $gBitUser, 'BitUser' ) ? "ID: ".$gBitUser->mInfo['user_id']." - Login: ".$gBitUser->mInfo['login']." - e-mail: ".$gBitUser->mInfo['email'] : "User unknown";
 
 	$info  = $indent."[ - ".BIT_MAJOR_VERSION.".".BIT_MINOR_VERSION.".".BIT_SUB_VERSION." ".BIT_LEVEL." - ] [ $date ]".$separator;
 	$info .= $indent."-----------------------------------------------------------------------------------------------".$separator;
@@ -253,7 +254,7 @@ function bit_error_string( $iDBParms = array() ) {
 	} elseif( !empty( $_SERVER['REQUEST_URI'] ) ) {
 		$uri =  $_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
 	} elseif( !empty( $argv ) ) {
-		$uri = implode( ' ', $argv );
+		$uri = \implode( ' ', $argv );
 	}
 
 	$info .= $indent."#### URL: ".$uri.$separator;
@@ -278,7 +279,7 @@ function bit_error_string( $iDBParms = array() ) {
 		}
 	}
 
-	$errno = (!empty( $iDBParms['errno'] ) ? 'Errno: '.$iDBParms['errno'] : '');
+	$errno = !empty( $iDBParms['errno'] ) ? 'Errno: '.$iDBParms['errno'] : '';
 	if( !empty( $iDBParms['db_msg'] ) ) {
 		$info .= $indent."#### ERROR CODE: ".$errno."  Message: ".$iDBParms['db_msg'];
 	}
@@ -322,7 +323,7 @@ function bit_stack( $pDepth = 999 ) {
 				break;
 			}
 
-			$args = array();
+			$args = [];
 			for ($i=0; $i <= $tabs; $i++) {
 				$indent .= '}';
 			}
@@ -350,7 +351,7 @@ function bit_stack( $pDepth = 999 ) {
 				$s .= $sClass.$arr['function'].'('.implode(', ',$args).')';
 			}
 			$s .= "\n    ".$indent;
-			$s .= @sprintf(" LINE: %4d, %s", $arr['line'],$arr['file']);
+			$s .= @sprintf(" LINE: %4d, %s", !empty($arr['line']) ? $arr['line'] : 'none', !empty($arr['file']) ? $arr['file'] : 'none');
 			$indent = '';
 		}
 		$s .= "\n";
@@ -366,9 +367,8 @@ function vvd() {
 }
 
 // var dump variable in something nicely readable in web browser
-function vd( $pVar, $pGlobals=FALSE, $pDelay=FALSE ) {
+function vd( $pVar, $pGlobals=false, $pDelay=false ) {
 	global $gBitSystem;
-
 	ob_start();
 	if( $pGlobals ) {
 		print '<h2>$pVar</h2>';
@@ -405,13 +405,13 @@ function vd( $pVar, $pGlobals=FALSE, $pDelay=FALSE ) {
 function vvc() {
 	$ret = '';
 	for( $i = 0; $i < func_num_args(); $i++ ) { 
-    	$ret .= vc( func_get_arg( $i ), FALSE );
+    	$ret .= vc( func_get_arg( $i ), false );
 	} 
 	return $ret;
 }
 
 // var capture variable in something nicely readable in web browser
-function vc( $iVar, $pHtml=TRUE ) {
+function vc( $iVar, $pHtml=true ) {
 	ob_start();
 	if( is_object( $iVar ) ) {
 		if( isset( $iVar->mDb ) ) {
@@ -427,8 +427,8 @@ function vc( $iVar, $pHtml=TRUE ) {
 			var_dump( $iVar );
 		}
 	} elseif( $pHtml && !empty( $_SERVER['HTTP_USER_AGENT'] ) && $_SERVER['HTTP_USER_AGENT'] != 'cron' && ((is_object( $iVar ) && !empty( $iVar )) || is_array( $iVar )) ) {
-		include_once( UTIL_PKG_INCLUDE_PATH.'dBug/dBug.php' );
-		new dBug( $iVar, "", FALSE );
+	    include_once UTIL_PKG_INCLUDE_PATH.'dBug/dBug.php';
+		new \dBug( $iVar, "", false );
 	} else {
 		print '<pre>';
 		if( is_object( $iVar ) ) {
@@ -454,13 +454,13 @@ function va( $iVar ) {
 }
 
 /**
- * bitdebug display an debug output when $gDebug is set to TRUE
+ * bitdebug display an debug output when $gDebug is set to true
  *
- * @param array $pMessage Message to display
+ * @param string $pMessage Message to display
  * @access public
- * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+ * @return void
  */
-function bitdebug( $pMessage ) {
+function bitdebug( string $pMessage ): void {
 	global $gDebug;
 	if( !empty( $gDebug )) {
 		echo "<pre>$pMessage</pre>";

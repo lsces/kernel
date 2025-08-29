@@ -7,11 +7,14 @@
 /**
  * required setup
  */
+namespace Bitweaver;
+
+require_once BIT_ROOT_PATH.'kernel/includes/autoload.php';
 
 // include the bitweaver configuration file - this needs to happen first
 $config_file = empty( $_SERVER['CONFIG_INC'] ) ? BIT_ROOT_PATH.'config/kernel/config_inc.php' : $_SERVER['CONFIG_INC'];
 if( file_exists( $config_file ) ) {
-	include_once( $config_file );
+	include_once $config_file;
 }
 
 // when running scripts
@@ -19,7 +22,7 @@ global $gShellScript;
 if( !empty( $gShellScript ) ) {
 	$siteName = 'localhost';
 	// keep notices quiet
-	$serverDefaults = array(
+	$serverDefaults = [
 		'DOCUMENT_ROOT' => dirname( dirname( dirname( __FILE__ ) ) ),
 		'HTTP_HOST' => $siteName,
 		'HTTP_SERVER_VARS' => '',
@@ -27,14 +30,14 @@ if( !empty( $gShellScript ) ) {
 		'REMOTE_ADDR' => $siteName,
 		'REQUEST_METHOD' => 'GET',
 		'REQUEST_URI' => __FILE__,
-		'REQUEST_URI' => __FILE__,
+		'REQUEST_URL' => __FILE__,
 		'SCRIPT_URI' => $_SERVER['SCRIPT_FILENAME'],
 		'SCRIPT_URL' => $_SERVER['SCRIPT_NAME'],
 		'SERVER_ADDR' => $siteName,
-		'SERVER_ADMIN' => 'root@'.$siteName,
+		'SERVER_ADMIN' => 'support@'.$siteName,
 		'SERVER_NAME' => '',
 		'SERVER_PROTOCOL' => 'http',
-	);
+	];
 
 	foreach( $serverDefaults as $key=>$value ) {
 		if( empty( $_SERVER[$key] ) ) {
@@ -44,17 +47,17 @@ if( !empty( $gShellScript ) ) {
 
 	// Process some global arguments
 	global $gArgs, $argv;
-	$gArgs = array();
+	$gArgs = [];
 	if( $argv ) {
 		foreach( $argv AS $arg ) {
 			$argKey = $arg;
 			if( strpos( $arg, '--' ) === 0 ) {
 				$argKey = substr( $arg, 2 );
 			}
-			$argValue = TRUE;
+			$argValue = true;
 			if( strpos( $arg, '=' ) ) {
 				$argKey = substr( $arg, 2, strpos( $arg, '=' )-2 );
-				$argValue = substr( $arg, (strpos( $arg, '=' ) +1) );
+				$argValue = substr( $arg, strpos( $arg, '=' ) +1);
 			}
 			switch( $argKey ) {
 				case 'debug':
@@ -74,7 +77,7 @@ if( !defined( 'BIT_DB_PREFIX' ) ) {
 	define( 'BIT_DB_PREFIX', '' );
 }
 if( !defined( 'BIT_CACHE_OBJECTS' ) ) {
-	define( 'BIT_CACHE_OBJECTS', TRUE );
+	define( 'BIT_CACHE_OBJECTS', false );
 }
 if( !defined( 'BIT_QUERY_CACHE_TIME' ) ) {
 	define( 'BIT_QUERY_CACHE_TIME', 86400 );
@@ -88,11 +91,11 @@ if( !defined( 'DISPLAY_ERRORS' ) ) {
 }
 // name of session variable in browser cookie
 if( !defined( 'BIT_SESSION_NAME' ) ) {
-	define( 'BIT_SESSION_NAME', 'BWSESSION' );
+	define( 'BIT_SESSION_NAME', 'BWSESSION'); // '__Secure-BWSESSION' );
 }
 // define where errors are sent
 if( !defined( 'BIT_PHP_ERROR_REPORTING' ) ) {
-	define( 'BIT_PHP_ERROR_REPORTING', E_ALL & ~E_DEPRECATED & ~E_STRICT );
+	define( 'BIT_PHP_ERROR_REPORTING', E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING );
 }
 // don't change / set _IDs unless you know exactly what you are doing
 if( !defined( 'ROOT_USER_ID' ) ) {
@@ -108,10 +111,10 @@ if( !defined( 'EVIL_EXTENSION_PATTERN' )) {
 	define( 'EVIL_EXTENSION_PATTERN', "#\.(htaccess|pl|php|php3|php4|phtml|py|cgi|asp|jsp|sh|shtml)$#i" );
 }
 
-/* Uncomment to switch to role team model ...
+// Uncomment to switch to role team model ...
 if( !defined( 'ROLE_MODEL' )) {
 	define( 'ROLE_MODEL', true );
-} */
+}
 
 if( !defined( 'ANONYMOUS_TEAM_ID' ) ) {
 	define( 'ANONYMOUS_TEAM_ID', -1 );
@@ -119,7 +122,7 @@ if( !defined( 'ANONYMOUS_TEAM_ID' ) ) {
 
 // Uncomment the following line if you require attachment and file id's to match the content id
 // This is used to simplify content mamagment where fisheye and treasury content is used internally
-//define( 'LINKED_ATTACHMENTS', true );
+define( 'LINKED_ATTACHMENTS', true );
 // Empty SCRIPT_NAME and incorrect SCRIPT_NAME due to php-cgiwrap - wolff_borg
 if( empty( $_SERVER['SCRIPT_NAME'] ) ) {
 	$_SERVER['SCRIPT_NAME'] = $_SERVER['SCRIPT_URL'];
@@ -133,7 +136,7 @@ if( empty( $_SERVER['SCRIPT_NAME'] ) ) {
 if( !defined( 'BIT_ROOT_URL' ) ) {
 	// version one which seems to only cause problems seldomly
 	preg_match( '/.*'.basename( dirname( dirname( __FILE__ ) ) ).'\//', $_SERVER['SCRIPT_NAME'], $match );
-	$subpath = ( isset($match[0] ) ) ? $match[0] : '/';
+	$subpath = !empty($match[0] ) ? $match[0] : '/';
 	// version two which doesn't work well on it's own
 	if( $subpath == "/" ) {
 		$subpath = dirname( dirname( $_SERVER['SCRIPT_NAME'] ) );
@@ -173,10 +176,10 @@ if( substr_count( $_SERVER['HTTP_HOST'], '.' ) >= 2 ) {
 // set the currect version of bitweaver
 // if this version of bitweaver needs a visit to the installer, update the number in /bit_setup_inc.php
 if( !defined( 'BIT_MAJOR_VERSION' ) ) {
-	define( 'BIT_MAJOR_VERSION',	'4' );
+	define( 'BIT_MAJOR_VERSION',	'5' );
 	define( 'BIT_MINOR_VERSION',	'0' );
-	define( 'BIT_SUB_VERSION',		'0' );
-	define( 'BIT_LEVEL',			'' ); // dev < alpha < beta < RC# < '' < pl
+	define( 'BIT_SUB_VERSION',	'0' );
+	define( 'BIT_LEVEL',			'dev' ); // dev < alpha < beta < RC# < '' < pl
 }
 
 // When updating to certain versions of bitweaver, we need to force a visit to the installer to fix certain stuff in the database.
@@ -188,8 +191,6 @@ if( !defined( 'MIN_BIT_VERSION' ) ) {
 // These defines have to happen FIRST because core classes depend on them.
 // This means these packages *CANNOT* be renamed
 define( 'INSTALL_PKG_PATH',   BIT_ROOT_PATH.'install/' );
-define( 'INSTALL_PKG_INCLUDE_PATH',   INSTALL_PKG_PATH.'includes/' );
-define( 'INSTALL_PKG_CLASS_PATH',   INSTALL_PKG_INCLUDE_PATH.'classes/' );
 define( 'INSTALL_PKG_URL',    BIT_ROOT_URL.'install/' );
 define( 'KERNEL_PKG_DIR',     'kernel' );
 define( 'KERNEL_PKG_NAME',    'kernel' );
@@ -223,6 +224,9 @@ if( !defined( 'STORAGE_PKG_NAME' ) ) {
 if( !defined( 'STORAGE_PKG_PATH' ) ) {
 	define( 'STORAGE_PKG_PATH',   BIT_ROOT_PATH.'storage/' );
 }
+if( !defined( 'STORAGE_PKG_URL' ) ) {
+    define( 'STORAGE_PKG_URL',   BIT_ROOT_URL.'storage/' );
+}
 if( !defined( 'STORAGE_PKG_INCLUDE_PATH' ) ) {
 	define( 'STORAGE_PKG_INCLUDE_PATH',   STORAGE_PKG_PATH.'includes/' );
 }
@@ -250,13 +254,13 @@ define( 'UTIL_PKG_CLASS_PATH', UTIL_PKG_INCLUDE_PATH.'classes/' );
 define( 'UTIL_PKG_ADMIN_PATH', UTIL_PKG_PATH.'admin/' );
 
 if( !defined( 'EXTERNAL_LIBS_PATH' ) ) {
-	define( 'EXTERNAL_LIBS_PATH',      BIT_ROOT_PATH.'config/externals/' );
+	define( 'EXTERNAL_LIBS_PATH',      BIT_ROOT_PATH.'externals/' );
 }
 
 if( !defined( 'TEMP_PKG_PATH' ) ) {
-	define( 'TEMP_PKG_PATH', sys_get_temp_dir().'/php/'.$_SERVER['HTTP_HOST'] ).'/';
+	define( 'TEMP_PKG_PATH', sys_get_temp_dir().'/php/'.$_SERVER['HTTP_HOST'] .'/');
 	if( !file_exists( TEMP_PKG_PATH ) ) {
-		mkdir( TEMP_PKG_PATH, 2775, TRUE );
+		mkdir( TEMP_PKG_PATH, 2775, true );
 	}
 }
 
@@ -266,13 +270,18 @@ if( empty( $gBitDbHost ) ) {
 	$gBitDbHost   = 'localhost';
 }
 
+// If you want to go a step further with template debugging then this enables
+// smarty's debugging console.  A popup with a dump of all of the vars the
+// template(s) have been passed.
+$smarty_debugging = false;
+
 // $gPreScan can be used to specify the order in which packages are scanned by
 // the kernel.  In the example provided below, the kernel package is processed
 // first, followed by the users and liberty packages.  Any packages not
 // specified in $gPreScan are processed in the traditional order
 global $gPreScan;
 if( empty( $gPreScan ) ) {
-	$gPreScan = array( 'config', 'kernel', 'storage', 'liberty', 'themes', 'users' );
+	$gPreScan = [ 'config', 'kernel', 'storage', 'liberty', 'themes', 'users' ];
 }
 
 // here we set the default thumbsizes we use in bitweaver.
@@ -280,12 +289,29 @@ if( empty( $gPreScan ) ) {
 // you can override these by populating this hash in your config/kernel/config_inc.php
 global $gThumbSizes;
 if( empty( $gThumbSizes )) {
-	$gThumbSizes = array(
-		'large'  => array( 'width' => 1200, 'height' => 900 ),
-		'medium' => array( 'width' => 800, 'height' => 600 ),
-		'small'  => array( 'width' => 400, 'height' => 300 ),
-		'avatar' => array( 'width' => 200, 'height' => 150 ),
-		'icon'   => array( 'width' => 100,  'height' => 100 ),
-	);
+	$gThumbSizes = [
+		'large'  => [ 'width' => 1200, 'height' => 900 ],
+		'medium' => [ 'width' => 800, 'height' => 600 ],
+		'small'  => [ 'width' => 400, 'height' => 300 ],
+		'avatar' => [ 'width' => 200, 'height' => 150 ],
+		'icon'   => [ 'width' => 100,  'height' => 100 ],
+	];
 }
-?>
+
+function kernel_autoload( $className ) {
+	$prefix = 'Bitweaver\\';
+	$base_dir = __DIR__ . '/classes/';
+
+	$len = strlen($prefix);
+	if (strncmp($prefix, $className, $len) !== 0) {
+		return;
+	}
+
+	$relative_class = substr($className, $len);
+	$file = "$base_dir$relative_class.php";
+
+	if (file_exists($file)) {
+		require $file;
+	}
+}
+

@@ -16,21 +16,21 @@
 /**
  * Initialization
  */
-include_once( '../kernel/includes/setup_inc.php' );
+include_once '../kernel/includes/setup_inc.php';
 
 if (!$gBitUser->hasPermission( 'p_tidbits_configure_modules' )) {
 	$gBitSmarty->assign('msg', tra("You dont have permission to use this feature"));
-	$gBitSystem->display( 'error.tpl' , NULL, array( 'display_mode' => 'display' ));
+	$gBitSystem->display( 'error.tpl' , null, array( 'display_mode' => 'display' ));
 	die;
 }
 /*if (!$gBitSystem->isFeatureActive( 'site_user_assigned_modules' ) && $check_req) {
 	$gBitSmarty->assign('msg', tra("This feature is disabled").": site_user_assigned_modules");
-	$gBitSystem->display( 'error.tpl' , NULL, array( 'display_mode' => 'display' ));
+	$gBitSystem->display( 'error.tpl' , null, array( 'display_mode' => 'display' ));
 	die;
 }*/
 if (!$gBitUser->isRegistered()) {
 	$gBitSmarty->assign('msg', tra("You must log in to use this feature"));
-	$gBitSystem->display( 'error.tpl' , NULL, array( 'display_mode' => 'display' ));
+	$gBitSystem->display( 'error.tpl' , null, array( 'display_mode' => 'display' ));
 	die;
 }
 
@@ -69,8 +69,7 @@ if( isset( $_REQUEST['fMove'] ) && isset(  $_REQUEST['fPackage'] ) && isset(  $_
 // Remove module movemet paramaters from an URL
 // \todo What if 'mc_xxx' arg was not at the end? (if smbd fix URL by hands...)
 //       should I handle this very special (hack?) case?
-//    $url = preg_replace('/(.*)(\?|&){1}(mc_up|mc_down|mc_move|mc_unassign)=[^&]*/','\1', $url);
+//    $url = preg_replace('/(.*)(\?|&)[1](mc_up|mc_down|mc_move|mc_unassign)=[^&]*/','\1', $url);
 
 // Fix locaton if parameter was removed...
 header('Location: '.$url);
-?>

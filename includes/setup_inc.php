@@ -11,22 +11,24 @@
 /**
  * required setup
  */
+namespace Bitweaver;
+use Bitweaver\Plugins\ResourceBitpackage;
+use Bitweaver\Languages\BitLanguage;
 
 $rootDir = dirname( dirname( dirname( __FILE__ ) ) );
-define( 'BIT_ROOT_PATH', empty( $_SERVER['VHOST_DIR'] ) ? $rootDir.'/' : $_SERVER['VHOST_DIR'].'/' );
+define( 'BIT_ROOT_PATH', empty( $_SERVER['DOCUMENT_ROOT'] ) ? $rootDir.'/' : $_SERVER['DOCUMENT_ROOT'].'/' );
 
 // immediately die on request to hack our database
-if(( !empty( $_REQUEST['sort_mode'] ) && !is_array( $_REQUEST['sort_mode'] ) && strpos( $_REQUEST['sort_mode'], 'http' ) !== FALSE ) || ( !empty( $_REQUEST['PGV_BASE_DIRECTORY'] ) && strpos( $_REQUEST['PGV_BASE_DIRECTORY'], 'http' ) !== FALSE )) {
+if(( !empty( $_REQUEST['sort_mode'] ) && !is_array( $_REQUEST['sort_mode'] ) && strpos( $_REQUEST['sort_mode'], 'http' ) !== false ) || ( !empty( $_REQUEST['PGV_BASE_DIRECTORY'] ) && strpos( $_REQUEST['PGV_BASE_DIRECTORY'], 'http' ) !== false )) {
 	die;
 }
 
-require_once( BIT_ROOT_PATH.'kernel/includes/config_defaults_inc.php' );
-require_once( KERNEL_PKG_INCLUDE_PATH.'bit_error_inc.php' );
-require_once( KERNEL_PKG_INCLUDE_PATH.'kernel_lib.php' );
-require_once( KERNEL_PKG_CLASS_PATH.'BitTimer.php' );
+require_once BIT_ROOT_PATH.'kernel/includes/config_defaults_inc.php';
+require_once KERNEL_PKG_INCLUDE_PATH.'bit_error_inc.php';
+use Bitweaver\KernelTools;
 
 // set error reporting
-error_reporting( BIT_PHP_ERROR_REPORTING );
+error_reporting( E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING ); // BIT_PHP_ERROR_REPORTING ); //
 
 if( ini_get( 'safe_mode' ) && ini_get( 'safe_mode_gid' )) {
 	umask( 0007 );
@@ -34,47 +36,33 @@ if( ini_get( 'safe_mode' ) && ini_get( 'safe_mode_gid' )) {
 
 // clean up $_GET and make sure others are clean as well
 if( !empty( $_GET ) && is_array( $_GET ) && empty( $gNoToxify ) ) {
-	detoxify( $_GET, TRUE, FALSE );
+	KernelTools::detoxify( $_GET, true, false );
 	$_REQUEST = array_merge( $_REQUEST, $_GET );
 }
 
-// Force a global ADODB db object so all classes share the same connection
-$dbClass = 'BitDbAdodb';
-if( !empty( $gBitSystem ) ) {
-	switch( $gBitDbSystem ) {
-		case 'pear':
-			$dbClass = 'BitDbPear';
-			break;
-		default:
-			$dbClass = 'BitDbAdodb';
-			break;
-	}
-}
-// the installer and select admin pages required DataDict to verify package installation
-global $gForceAdodb;
-if( !empty( $gForceAdodb )) {
-	$dbClass = 'BitDbAdodb';
-}
-require_once( KERNEL_PKG_CLASS_PATH.$dbClass.'.php' );
-
 // =================== Global Classes ===================
 global $gBitDb;
-$gBitDb = new $dbClass();
+$gBitDb = new BitDbAdodb();
 if( defined( 'QUERY_CACHE_ACTIVE' ) ) {
 	$gBitDb->setCaching();
 }
 
-require_once( KERNEL_PKG_CLASS_PATH.'BitSystem.php' );
 global $gBitSmarty, $gBitSystem;
 // Per http://stackoverflow.com/a/14101767/268416 try to force gBitSystem to be among the last object to be destroyed, see BitSystem::__destruct() for details
-set_error_handler(function() use($gBitSystem) {});
+set_error_handler('\Bitweaver\bit_error_handler');
 
 // make sure we only create one BitSmarty
 if( !is_object( $gBitSmarty ) ) {
-	$gBitSmarty = new BitSmarty();
+	$gBitSmarty = new Themes\BitSmarty();
+	// Load Bitweaver Plugins
+	$gBitSmarty->addExtension(new Themes\BitweaverExtension() );
 	// set the default handler
-	$gBitSmarty->loadFilter( 'pre', 'tr' );
-	// $gBitSmarty->loadFilter('output','trimwhitespace');
+	$gBitSmarty->addDefaultModifiers( [ 'add_link_ticket', 'tr' ] );
+	$gBitSmarty->registerResource( 'bitpackage', new ResourceBitpackage() );
+
+	if( isset( $_REQUEST['highlight'] ) ) {
+//		$gBitSmarty->addDefaultModifiers( 'highlight' );
+	}
 }
 
 BitSystem::loadSingleton();
@@ -83,29 +71,27 @@ BitSystem::loadSingleton();
 // we need to know about this before any other package is loaded to ensure that we can exclude stuff that isn't backwards compatible.
 // BIT_INSTALL is set by the installer and LOGIN_VALIDATE is set in users/validate.php
 if( !empty( $gBitSystem->mConfig ) && version_compare( MIN_BIT_VERSION, $gBitSystem->getVersion(), '>' ) && !( defined( 'BIT_INSTALL' ) || defined( 'LOGIN_VALIDATE' ))) {
-	define( 'INSTALLER_FORCE', TRUE );
+	define( 'INSTALLER_FORCE', true );
 }
 
 BitSystem::prependIncludePath( UTIL_PKG_INCLUDE_PATH );
-BitSystem::prependIncludePath( EXTERNAL_LIBS_PATH.'pear/' );
+BitSystem::prependIncludePath( UTIL_PKG_INCLUDE_PATH.'pear/' );
 
-require_once( LANGUAGES_PKG_CLASS_PATH.'BitLanguage.php' );
 BitLanguage::loadSingleton();
 
 // collects information about the browser - needed for various browser specific theme settings
-require_once( UTIL_PKG_INCLUDE_PATH.'phpsniff/phpSniff.class.php' );
+require_once UTIL_PKG_INCLUDE_PATH.'phpsniff/phpSniff.class.php';
 global $gSniffer;
-$gSniffer = new phpSniff;
+$gSniffer = new \phpSniff;
 if( file_exists( ini_get( 'browscap' ) ) ) {
 	$browserInfo = array_merge( $gSniffer->_browser_info, get_browser( null, true ) );
-	$gBitSmarty->assignByRef( 'gBrowserInfo', $browserInfo );
+	$gBitSmarty->assign( 'gBrowserInfo', $browserInfo );
 } else {
-	$gBitSmarty->assignByRef( 'gBrowserInfo', $gSniffer->_browser_info );
+	$gBitSmarty->assign( 'gBrowserInfo', $gSniffer->_browser_info );
 }
 
 // set various classes global
 global $gBitUser, $gTicket, $userlib, $gBitDbType, $gLibertySystem;
-
 if( $gBitSystem->isDatabaseValid() ) {
 
 	// output compression
@@ -126,7 +112,7 @@ if( $gBitSystem->isDatabaseValid() ) {
 		$root_url_count = strlen( BIT_ROOT_URL );
 		$root_path_count = strlen( BIT_ROOT_PATH );
 		$path_end = $root_path_count - $root_url_count;
-		define( 'BIT_BASE_PATH', ( BIT_ROOT_URL == "/" ? BIT_ROOT_PATH : substr( BIT_ROOT_PATH, 0, $path_end ) . "/" ) );
+		define( 'BIT_BASE_PATH', BIT_ROOT_URL == "/" ? BIT_ROOT_PATH : substr( BIT_ROOT_PATH, 0, $path_end ) . "/" );
 	}
 
 	// Force full URI's for offline or exported content (newsletters, etc.)
@@ -136,25 +122,25 @@ if( $gBitSystem->isDatabaseValid() ) {
 	}
 	define( 'UTIL_PKG_URL', $root.'util/' );
 	define( 'LIBERTY_PKG_URL', $root.'liberty/' );
-
+	
 	// load only installed and active packages
-	$gBitSystem->scanPackages( 'includes/bit_setup_inc.php', TRUE, 'active', TRUE, TRUE );
+	$gBitSystem->scanPackages( 'bit_setup_inc.php', true, 'active', true, true );
 	$gBitSmarty->scanPackagePluginDirs();
-
+	
 	if( file_exists( CONFIG_PKG_INCLUDE_PATH.'kernel/override_inc.php' ) ) {
 		// possible install specific customizations for multi-sites, staging sites, etc.
-		require_once( CONFIG_PKG_PATH.'kernel/override_inc.php' );
+		require_once CONFIG_PKG_PATH.'kernel/override_inc.php';
 	}
 
 	// some plugins check for active packages, so we do this *after* package scanning
-	$gBitSmarty->assignByRef( 'gBitSystem', $gBitSystem );
-
+	$gBitSmarty->assign( 'gBitSystem', $gBitSystem );
+	
 	// some liberty plugins might need to run some functions.
 	// it's necessary that we call them early on after scanPackages() has been completed.
 	foreach( $gLibertySystem->getPluginFunctions( 'preload_function' ) as $func ) {
 		$func();
 	}
-
+	
 	// TODO: XSS security check
 	if( !empty( $_REQUEST['tk'] ) && empty( $_SERVER['bot'] ) ) {
 		//$gBitUser->verifyTicket();
@@ -162,7 +148,7 @@ if( $gBitSystem->isDatabaseValid() ) {
 	}
 
 	// this will register and set up the dropdown menus and the application menus in modules
-	require_once( THEMES_PKG_INCLUDE_PATH.'menu_register_inc.php' );
+	require_once THEMES_PKG_INCLUDE_PATH.'menu_register_inc.php';
 
 	// added for virtual hosting suport
 	if( !isset( $bitdomain )) {
@@ -184,12 +170,12 @@ if( $gBitSystem->isDatabaseValid() ) {
 		$_REQUEST['page'] = strip_tags( $_REQUEST['page'] );
 	}
 	global $gHideModules;
-	$gBitSmarty->assignByRef( 'gHideModules', $gHideModules );
+	$gBitSmarty->assign( 'gHideModules', $gHideModules );
 	$keywords = $gBitSystem->getConfig( 'site_keywords' );
-	$gBitSmarty->assignByRef( 'metaKeywords', $keywords );
+	$gBitSmarty->assign( 'metaKeywords', $keywords );
 
 	// =================== Kernel ===================
-	//$gBitSmarty->assignByRef( "gBitSystemPackages", $gBitSystem->mPackages ); doesn't seem to be used - xing
+	//$gBitSmarty->assign( "gBitSystemPackages", $gBitSystem->mPackages ); doesn't seem to be used - xing
 
 	// check to see if admin has closed the site
 	if(( isset( $_SERVER['SCRIPT_URL'] ) && $_SERVER['SCRIPT_URL'] == USERS_PKG_URL.'validate.php' )) {
@@ -197,7 +183,7 @@ if( $gBitSystem->isDatabaseValid() ) {
 	}
 	if( empty($gShellScript) && $gBitSystem->isFeatureActive( 'site_closed' ) && !$gBitUser->hasPermission( 'p_access_closed_site' ) && !isset( $bypass_siteclose_check )) {
 		$_REQUEST['error'] = $gBitSystem->getConfig('site_closed_msg','&nbsp;');
-		include( KERNEL_PKG_PATH . 'error_simple.php' );
+		include KERNEL_PKG_PATH . 'error_simple.php';
 		exit;
 	}
 
@@ -211,7 +197,7 @@ if( $gBitSystem->isDatabaseValid() ) {
 			$site_load_threshold = $gBitSystem->getConfig('site_load_threshold', 3);
 			if ($server_load > $site_load_threshold) {
 				$_REQUEST['error'] = $gBitSystem->getConfig('site_busy_msg', 'Server is currently too busy; please come back later.');
-				include( KERNEL_PKG_PATH . 'error_simple.php' );
+				include KERNEL_PKG_PATH . 'error_simple.php';
 				exit;
 			}
 		}
@@ -219,7 +205,7 @@ if( $gBitSystem->isDatabaseValid() ) {
 
 	// if we are interactively translating the website, we force template caching on every page load.
 	if( $gBitSystem->isFeatureActive( 'i18n_interactive_translation' ) && $gBitUser->hasPermission( 'p_languages_edit' ) ) {
-		$gBitSmarty->assignByRef( "gBitTranslationHash", $gBitTranslationHash );
+		$gBitSmarty->assign( "gBitTranslationHash", $gBitTranslationHash );
 	} else {
 		// this has to be done since the permission can't be checked in BitLanguage::translate() as it's called too soon by prefilter.tr
 		$gBitSystem->setConfig( 'i18n_interactive_translation', 'n' );
@@ -241,7 +227,7 @@ if( $gBitSystem->isDatabaseValid() ) {
 	if( defined( 'SECURE_BIT_BASE_URI' ) ) {
 		define( 'SECURE_BIT_BASE_URI', 'https://'.$host.($site_https_port!=443?$site_https_port:'') );
 	}
-
+	
 	// we need this for backwards compatibility - use $gBitSystem->getPrerference( 'max_records' ) if you need it, or else the spanish inquisition will come and poke you with a soft cushion
 	$max_records = $gBitSystem->getConfig( "max_records", 10 );
 
@@ -256,13 +242,13 @@ if( $gBitSystem->isDatabaseValid() ) {
 		if( $site_http_port != 80 ) {
 			$http_login_url .= ':'.$site_http_port;
 		}
-		$http_login_url .= $gBitSystem->getConfig( 'site_http_prefix', BIT_ROOT_URL ).USERS_PKG_URL.'login.php';
+		$http_login_url .= $gBitSystem->getConfig( 'site_http_prefix', BIT_ROOT_URL ).USERS_PKG_URL.'signin.php';
 
 		$https_login_url = 'https://'.$gBitSystem->getConfig( 'site_https_domain', $_SERVER['HTTP_HOST'] );
 		if( $site_https_port != 443 ) {
 			$https_login_url .= ':'.$site_https_port;
 		}
-		$https_login_url .= $gBitSystem->getConfig( 'site_https_prefix', BIT_ROOT_URL ).USERS_PKG_URL.'login.php';
+		$https_login_url .= $gBitSystem->getConfig( 'site_https_prefix', BIT_ROOT_URL ).USERS_PKG_URL.'signin.php';
 
 		$gBitSystem->setConfig( 'http_login_url', $http_login_url );
 		if( $gBitSystem->isFeatureActive('site_https_login_required') ) {
@@ -279,7 +265,7 @@ if( $gBitSystem->isDatabaseValid() ) {
 	// if we have a valid user but their status is unsavory then completely cut them off from accessing the site
 	if( $gBitUser->getField('content_status_id') < 0 ){
 		$gBitSystem->scanPackages();
-		$gBitSystem->fatalError( tra( 'Access Denied' )."!" );
+		$gBitSystem->fatalError( KernelTools::tra( 'Access Denied' )."!" );
 	}
 }
 
@@ -288,4 +274,3 @@ if( defined( 'INSTALLER_FORCE' )) {
 	$gBitSmarty->display( "bitpackage:kernel/force_installer.tpl" );
 	die;
 }
-?>
