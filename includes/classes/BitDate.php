@@ -44,7 +44,7 @@ class BitDate {
 	 * Default constructor
 	 * @param int desired offset for date display, in minutes
 	 */
-	function __construct($_display_offset = 0) {
+	public function __construct($_display_offset = 0) {
 		if ( version_compare( phpversion(), "5.1.0", ">=" ) ) {
 			date_default_timezone_set( @date_default_timezone_get() );
 		}
@@ -58,7 +58,7 @@ class BitDate {
 	 * @param int the logged-in user.
 	 * @return int the preferred offset to UTC or 0 for straight UTC display
 	 */
-	function get_display_offset($_user = false) {
+	public function get_display_offset($_user = false) {
 		global $gBitUser;
 
 		// Cache preference from DB
@@ -175,10 +175,7 @@ class BitDate {
 	 * @return string Current timezone
 	 */
 	public function getTzName() {
-		if ($this->display_offset == 0)
-			return "UTC";
-		else
-			return "";
+		return $this->display_offset == 0 ? "UTC" : '';
 	}
 
 	/**
@@ -221,7 +218,7 @@ class BitDate {
 	 * @param int
 	 * @return int
 	 */
-	function dayOfWeek($year, $month, $day) {
+	public function dayOfWeek($year, $month, $day) {
 	/*
 	Pope Gregory removed 10 days - October 5 to October 14 - from the year 1582 and
 	proclaimed that from that time onwards 3 days would be dropped from the calendar
@@ -257,7 +254,7 @@ class BitDate {
 	 * @param int
 	 * @return int
 	 */
-	function weekOfYear($year, $month, $day)
+	public function weekOfYear($year, $month, $day)
 	{
         $iso    = $this->gregorianToISO($year, $month, $day);
         $parts  = explode('-',$iso);
@@ -272,7 +269,7 @@ class BitDate {
 	 * @param int
 	 * @return bool
 	 */
-	function _is_leap_year($year)
+	public function _is_leap_year($year)
 	{
 		if ($year % 4 != 0) return false;
 
@@ -291,7 +288,7 @@ class BitDate {
 	 * @param int
 	 * @return bool
 	 */
-	function is_leap_year($year)
+	public function is_leap_year($year)
 	{
 		return  $this->_is_leap_year($this->year_digit_check($year));
 	}
@@ -303,7 +300,7 @@ class BitDate {
 	 * @param int
 	 * @return int
 	 */
-	function year_digit_check($y) {
+	public function year_digit_check($y) {
 		if ($y < 100) {
 
 			$yr = (integer) date("Y");
@@ -330,7 +327,7 @@ class BitDate {
 	 * @param boolean
 	 * @return array
 	 */
-	function getDate($d=false,$fast=false) {
+	public function getDate($d=false,$fast=false) {
 		if ($d === false) return $this->getdate();
 		if ((abs($d) <= 0x7FFFFFFF)) { // check if number in 32-bit signed range
 			if (!defined('ADODB_NO_NEGATIVE_TS') || $d >= 0) // if windows, must be +ve integer
@@ -369,7 +366,7 @@ class BitDate {
 	 * @param boolean Ignore timezone
 	 * @return array
 	 */
-	function _getDate($origd=false,$fast=false,$is_gmt=false ) {
+	public function _getDate($origd=false,$fast=false,$is_gmt=false ) {
 		static $YRS;
 
 		$d =  $origd - ($is_gmt ? 0 : adodb_get_gmt_diff(false,false,false));
@@ -380,53 +377,54 @@ class BitDate {
 
 		if ($d < -12219321600) $d -= 86400*10; // if 15 Oct 1582 or earlier, gregorian correction
 
-		$_month_table_normal = array("",31,28,31,30,31,30,31,31,30,31,30,31);
-		$_month_table_leaf = array("",31,29,31,30,31,30,31,31,30,31,30,31);
+		$_month_table_normal = [ "", 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ];
+		$_month_table_leaf = [ "", 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ];
 
 		$d366 = $_day_power * 366;
 		$d365 = $_day_power * 365;
 
 		if ($d < 0) {
 
-			if (empty($YRS)) $YRS = array(
-				1970 => 0,
-				1960 => -315619200,
-				1950 => -631152000,
-				1940 => -946771200,
-				1930 => -1262304000,
-				1920 => -1577923200,
-				1910 => -1893456000,
-				1900 => -2208988800,
-				1890 => -2524521600,
-				1880 => -2840140800,
-				1870 => -3155673600,
-				1860 => -3471292800,
-				1850 => -3786825600,
-				1840 => -4102444800,
-				1830 => -4417977600,
-				1820 => -4733596800,
-				1810 => -5049129600,
-				1800 => -5364662400,
-				1790 => -5680195200,
-				1780 => -5995814400,
-				1770 => -6311347200,
-				1760 => -6626966400,
-				1750 => -6942499200,
-				1740 => -7258118400,
-				1730 => -7573651200,
-				1720 => -7889270400,
-				1710 => -8204803200,
-				1700 => -8520336000,
-				1690 => -8835868800,
-				1680 => -9151488000,
-				1670 => -9467020800,
-				1660 => -9782640000,
-				1650 => -10098172800,
-				1640 => -10413792000,
-				1630 => -10729324800,
-				1620 => -11044944000,
-				1610 => -11360476800,
-				1600 => -11676096000);
+			if (empty($YRS)) $YRS = [
+					1970 => 0,
+					1960 => -315619200,
+					1950 => -631152000,
+					1940 => -946771200,
+					1930 => -1262304000,
+					1920 => -1577923200,
+					1910 => -1893456000,
+					1900 => -2208988800,
+					1890 => -2524521600,
+					1880 => -2840140800,
+					1870 => -3155673600,
+					1860 => -3471292800,
+					1850 => -3786825600,
+					1840 => -4102444800,
+					1830 => -4417977600,
+					1820 => -4733596800,
+					1810 => -5049129600,
+					1800 => -5364662400,
+					1790 => -5680195200,
+					1780 => -5995814400,
+					1770 => -6311347200,
+					1760 => -6626966400,
+					1750 => -6942499200,
+					1740 => -7258118400,
+					1730 => -7573651200,
+					1720 => -7889270400,
+					1710 => -8204803200,
+					1700 => -8520336000,
+					1690 => -8835868800,
+					1680 => -9151488000,
+					1670 => -9467020800,
+					1660 => -9782640000,
+					1650 => -10098172800,
+					1640 => -10413792000,
+					1630 => -10729324800,
+					1620 => -11044944000,
+					1610 => -11360476800,
+					1600 => -11676096000
+				];
 
 			if ($is_gmt) $origd = $d;
 			// The valid range of a 32bit signed timestamp is typically from
@@ -450,7 +448,7 @@ class BitDate {
 			for (; --$a >= 0;) {
 				$lastd = $d;
 
-				if ($leaf = _adodb_is_leap_year($a)) $d += $d366;
+				if ($leaf = $this->is_leap_year($a)) $d += $d366;
 				else $d += $d365;
 
 				if ($d >= 0) {
@@ -483,7 +481,7 @@ class BitDate {
 			for ($a = 1970 ;; $a++) {
 				$lastd = $d;
 
-				if ($leaf = _adodb_is_leap_year($a)) $d -= $d366;
+				if ($leaf = $this->is_leap_year($a)) $d -= $d366;
 				else $d -= $d365;
 				if ($d < 0) {
 					$year = $a;
@@ -512,35 +510,35 @@ class BitDate {
 		$min = floor($d/$_min_power);
 		$secs = $d - $min * $_min_power;
 		if ($fast) {
-			return array(
-			'seconds' => $secs,
-			'minutes' => $min,
-			'hours' => $hour,
-			'mday' => $day,
-			'mon' => $month,
-			'year' => $year,
-			'yday' => floor($secsInYear/$_day_power),
-			'leap' => $leaf,
-			'ndays' => $ndays
-			);
+			return [
+				'seconds' => $secs,
+				'minutes' => $min,
+				'hours'   => $hour,
+				'mday'    => $day,
+				'mon'     => $month,
+				'year'    => $year,
+				'yday'    => floor( $secsInYear / $_day_power ),
+				'leap'    => $leaf,
+				'ndays'   => $ndays,
+			];
 		}
 
 
 		$dow = adodb_dow($year,$month,$day);
 
-		return array(
+		return [
 			'seconds' => $secs,
 			'minutes' => $min,
-			'hours' => $hour,
-			'mday' => $day,
-			'wday' => $dow,
-			'mon' => $month,
-			'year' => $year,
-			'yday' => floor($secsInYear/$_day_power),
-			'weekday' => gmdate('l',$_day_power*(3+$dow)),
-			'month' => gmdate('F',mktime(0,0,0,$month,2,1971)),
-			0 => $origd
-		);
+			'hours'   => $hour,
+			'mday'    => $day,
+			'wday'    => $dow,
+			'mon'     => $month,
+			'year'    => $year,
+			'yday'    => floor( $secsInYear / $_day_power ),
+			'weekday' => gmdate( 'l', $_day_power * ( 3 + $dow ) ),
+			'month'   => gmdate( 'F', mktime( 0, 0, 0, $month, 2, 1971 ) ),
+			0         => $origd,
+		];
 	}
 
 	/*
@@ -551,7 +549,7 @@ class BitDate {
 	 * @param boolean Ignore timezone
 	 * @return string In the format specified by $fmt
 	 */
-	function date2($fmt, $d=false, $is_gmt=false) {
+	public function date2($fmt, $d=false, $is_gmt=false) {
 		if ( is_numeric($d) ) $this->date($fmt,$d,$is_gmt);
 
 		if ($d !== false) {
@@ -578,7 +576,7 @@ class BitDate {
 	 * @param boolean Ignore timezone
 	 * @return string In the format specified by $fmt
 	 */
-	function date($fmt,$d=false,$is_gmt=false){
+	public function date($fmt,$d=false,$is_gmt=false){
 	static $daylight;
 		if ($d === false) return $is_gmt ? @gmdate($fmt) : @date($fmt);
 			if ((abs($d) <= 0x7FFFFFFF)) { // check if number in 32-bit signed range
@@ -608,14 +606,14 @@ class BitDate {
 		*/
 		for ($i=0; $i < $max; $i++) {
 			switch($fmt[$i]) {
-				case 'T': $dates .= date('T'); break;
+				case 'T': $dates .= $this->date('T'); break;
 				// YEAR
 				case 'L': $dates .= $arr['leap'] ? '1' : '0'; break;
 				case 'r': // Thu, 21 Dec 2000 16:01:07 +0200
 
 					// 4.3.11 uses '04 Jun 2004'
 					// 4.3.8 uses  ' 4 Jun 2004'
-					$dates .= gmdate('D',$_day_power*(3+$this->adodb_dow($year,$month,$day))).', '
+					$dates .= gmdate('D',$_day_power*(3+\adodb_dow($year,$month,$day))).', '
 						. ($day<10?'0'.$day:$day) . ' '.date('M',mktime(0,0,0,$month,2,1971)).' '.$year.' ';
 
 					if ($hour < 10) $dates .= '0'.$hour; else $dates .= $hour;
@@ -714,7 +712,7 @@ class BitDate {
 	 * @param int $is_dst is not implemented and is ignored
 	 * @return int 
 	 */
-	function gmmktime($hr,$min,$sec,$mon=false,$day=false,$year=false,$is_dst=false)
+	public function gmmktime($hr,$min,$sec,$mon=false,$day=false,$year=false,$is_dst=false)
 	{
 		return $this->mktime($hr,$min,$sec,$mon,$day,$year,$is_dst,true);
 	}
@@ -731,7 +729,7 @@ class BitDate {
 	 * @param int $is_dst is not implemented and is ignored
 	 * @return int 
 	 */
-	function mktime($hr,$min,$sec,$mon=false,$day=false,$year=false,$is_dst=false,$is_gmt=false)
+	public function mktime($hr,$min,$sec,$mon=false,$day=false,$year=false,$is_dst=false,$is_gmt=false)
 	{
 		if ($mon === false) {
 			return $is_gmt? @gmmktime($hr,$min,$sec): @mktime($hr,$min,$sec);
@@ -779,13 +777,13 @@ class BitDate {
 		$_hour_power = 3600;
 		$_min_power = 60;
 
-		$_month_table_normal = array("",31,28,31,30,31,30,31,31,30,31,30,31);
-		$_month_table_leaf = array("",31,29,31,30,31,30,31,31,30,31,30,31);
+		$_month_table_normal = [ "", 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ];
+		$_month_table_leaf = [ "", 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ];
 
 		$_total_date = 0;
 		if ($year >= 1970) {
 			for ($a = 1970 ; $a <= $year; $a++) {
-				$leaf = _adodb_is_leap_year($a);
+				$leaf = $this->is_leap_year($a);
 				if ($leaf == true) {
 					$loop_table = $_month_table_leaf;
 					$_add_date = 366;
@@ -806,7 +804,7 @@ class BitDate {
 
 		} else {
 			for ($a = 1969 ; $a >= $year; $a--) {
-				$leaf = _adodb_is_leap_year($a);
+				$leaf = $this->is_leap_year($a);
 				if ($leaf == true) {
 					$loop_table = $_month_table_leaf;
 					$_add_date = 366;
@@ -833,12 +831,12 @@ class BitDate {
 		return $ret;
 	}
 
-	function gmstrftime($fmt, $ls=false)
+	public function gmstrftime($fmt, $ls=false)
 	{
 		return $this->strftime($fmt,$ls,true);
 	}
 
-	function strtotime($time, $now=null)
+	public function strtotime($time, $now=null)
 	{
 		if ($now == null) 
 			return strtotime($time);
@@ -938,7 +936,7 @@ class BitDate {
 		}
 		//echo "fmt=",$fmtdate,"<br>";
 		if ($ls === false) $ls = time();
-		$ret = date($fmtdate, $ls, $is_gmt);
+		$ret = $is_gmt ? gmdate( $fmtdate, $ls ) : date( $fmtdate, $ls );
 		return $ret;
 	}
 
@@ -955,7 +953,7 @@ class BitDate {
 	 * @access public
 	 */
 	// Transcribed to PHP by Jesus M. Castagnetto (blame him if it is fubared ;-)
-	function gregorianToISO($year, $month, $day) {
+	public function gregorianToISO($year, $month, $day) {
 		$mnth = array (0,31,59,90,120,151,181,212,243,273,304,334);
 		if ($month == 0) {
 			$year--;
@@ -1009,7 +1007,7 @@ class BitDate {
 	/**
 	 * Get a list of timezones to be worked with
 	 */
-	function get_timezone_list($use_default = false) {
+	public function get_timezone_list($use_default = false) {
 		static $timezone_options;
 
 		if (!$timezone_options) {
@@ -1035,11 +1033,11 @@ class BitDate {
 	/**
 	 * Per http://www.w3.org/TR/NOTE-datetime
 	 */
-	function get_iso8601_datetime($timestamp, $user = false) {
+	public function get_iso8601_datetime($timestamp, $user = false) {
 		return $this->strftime('%Y-%m-%dT%H:%M:%S%O', $timestamp, $user);
 	}
 
-	function get_rfc2822_datetime($timestamp = false, $user = false) {
+	public function get_rfc2822_datetime($timestamp = false, $user = false) {
 		if (!$timestamp)
 			$timestamp = time();
 
@@ -1056,7 +1054,14 @@ class BitDate {
 		return $rv;
 	}
 
-	function get_rfc2822_timezone_offset($time = false, $no_colon = false, $user = false) {
+	/**
+	 * Summary of get_rfc2822_timezone_offset
+	 * @param mixed $time
+	 * @param mixed $no_colon
+	 * @param mixed $user
+	 * @return string
+	 */
+	public function get_rfc2822_timezone_offset($time = false, $no_colon = false, $user = false) {
 		if ($time === false)
 			$time = time();
 
@@ -1076,19 +1081,30 @@ class BitDate {
 		return sprintf("%s%02d%s%02d", $sign, $mins / 60, $colon, $mins % 60);
 	}
 
-	function set_locale($user = false) {
-		static $locale = false;
+	/**
+	 * Summary of set_locale - not used an nothing defined for get_locale
+	 * @param mixed $user
+	 * @return bool|string
+*	public function set_locale($user = false) {
+*		static $locale = false;
+*
+*		if (!$locale) {
+*			# breaks the RFC 2822 code
+*			$locale = @setlocale(LC_TIME, get_locale($user));
+*			#print "<pre>set_locale(): locale=$locale\n</pre>";
+*		}
+*
+*		return $locale;
+*	}
+ */
 
-		if (!$locale) {
-			# breaks the RFC 2822 code
-			$locale = @setlocale(LC_TIME, get_locale($user));
-			#print "<pre>set_locale(): locale=$locale\n</pre>";
-		}
-
-		return $locale;
-	}
-
-	function daysInMonth( $month, $year ) {
+	/**
+	 * Returns the number of days in a month allowing for leap year
+	 * @param integer $month
+	 * @param integer $year
+	 * @return integer (or fails if not between 0 and 12)
+	 */
+	public function daysInMonth( $month, $year ) {
 		switch( $month ) {
 			case 1:
 			case 3:
@@ -1112,6 +1128,7 @@ class BitDate {
 			default:
 				assert( false );
 		}
+		return 0;
 	}
 
 	/**
@@ -1120,7 +1137,7 @@ class BitDate {
 	* @param string $pCountryCode -- the country in question - only US is supported currently
 	* @return array an associative array containing the holidays occuring in the given year they key is a date stamp of the form Y-m-d, the value is the name of the corresponding holiday
 	**/
-	static function getHolidays( $pYear=null, $pCountryCode='US' ) {
+	public static function getHolidays( $pYear=null, $pCountryCode='US' ) {
 		$return = [];
 
 		if( empty( $pYear ) ) {
@@ -1188,71 +1205,78 @@ class BitDate {
 		$retval     = $dateTime;
 		$timeStamp  = strtotime( $dateTime );
 
-		$timeZonesArray = array( 'GMT' => array( 'GMT' => +0 // GMT
-                                                     ),
-				'North America'  =>  array( 'NST' => -3.5, // Newfoundland Standard Time
-											'NDT' => -2.5, // Newfoundland Daylight Time
-											'AST' => -4, // Atlantic Standard Time
-											'ADT' => -3, // Atlantic Daylight Time
-											'EST' => -5, // Eastern Standard Time
-											'EDT' => -4, // Eastern Daylight Time
-											'CST' => -6, // Central Standard Time
-											'CDT' => -5, // Central Daylight Time
-											'MST' => -7, // Central Daylight Time
-											'MDT' => -6, // Mountain Daylight Time
-											'PST' => -8, // Pacific Standard Time
-											'PDT' => -7, // Pacific Daylight Time
-											'AKST' => -9, // Alaska Standard Time
-											'AKDT' => -8, // Alaska Daylight Time
-											'HAST' => -10, // Hawaii-Aleutian Standard Time
-											'HADT' => -9 // Hawaii-Aleutian Daylight Time
-											),
-				'Australia'      =>  array( 'NFT' => +11.5, // Norfolk (Island) Time
-											'EST' => +10, // Eastern Standard Time
-											'EDT' => +11, // Eastern Daylight Time
-											'CST' => +9.5, // Central Standard Time
-											'CDT' => +10.5, // Central Daylight Time
-											'WST' => +8, // Western Standard Time
-											'CXT' => +7, // Christmas Island Time
-											),
-				'Europe'         =>  array( 'GMT' => +0, // Greenwich Mean Time
-											'BST' => +1, // British Summer Time
-											'IST' => +1, // Irish Summer Time
-											'WET' => +0, // Western European Time
-											'WEST' => +1, // Western European Summer Time
-											'CET' => +1, // Central European Time
-											'CEST' => +2, // Central European Summer Time
-											'EET' => +2, // Eastern European Time
-											'EEST' => +3 // Eastern European Summer Time
-											),
-				'Military'       =>  array( 'Z' => +0, // Zulu Time Zone
-											'Y' => -12, // Yankee Time Zone
-											'X' => -11, // X-ray Time Zone
-											'W' => -10, // Whiskey Time Zone
-											'V' => -9, // Victor Time Zone
-											'U' => -8, // Uniform Time Zone
-											'T' => -7, // Tango Time Zone
-											'S' => -6, // Sierra Time Zone
-											'R' => -5, // Romeo Time Zone
-											'Q' => -4, // Quebec Time Zone
-											'P' => -3, // Papa Time Zone
-											'O' => -2, // Oscar Time Zone
-											'N' => -1, // November Time Zone
-											'A' => +1, // Alpha Time Zone
-											'B' => +2, // Bravo Time Zone
-											'C' => +3, // Charlie Time Zone
-											'D' => +4, // Delta Time Zone
-											'E' => +5, // Echo Time Zone
-											'F' => +6, // Foxtrot Time Zone
-											'G' => +7, // Golf Time Zone
-											'H' => +8, // Hotel Time Zone
-											'I' => +9, // India Time Zone
-											'K' => +10, // Kilo Time Zone
-											'L' => +11, // Lima Time Zone
-											'M' => +12 // Mike Time Zone
-											));
+		$timeZonesArray = [
+			'GMT'           => [
+				'GMT' => +0 // GMT
+			],
+			'North America' => [
+				'NST'  => -3.5, // Newfoundland Standard Time
+				'NDT'  => -2.5, // Newfoundland Daylight Time
+				'AST'  => -4, // Atlantic Standard Time
+				'ADT'  => -3, // Atlantic Daylight Time
+				'EST'  => -5, // Eastern Standard Time
+				'EDT'  => -4, // Eastern Daylight Time
+				'CST'  => -6, // Central Standard Time
+				'CDT'  => -5, // Central Daylight Time
+				'MST'  => -7, // Central Daylight Time
+				'MDT'  => -6, // Mountain Daylight Time
+				'PST'  => -8, // Pacific Standard Time
+				'PDT'  => -7, // Pacific Daylight Time
+				'AKST' => -9, // Alaska Standard Time
+				'AKDT' => -8, // Alaska Daylight Time
+				'HAST' => -10, // Hawaii-Aleutian Standard Time
+				'HADT' => -9 // Hawaii-Aleutian Daylight Time
+			],
+			'Australia'     => [
+				'NFT' => +11.5, // Norfolk (Island) Time
+				'EST' => +10, // Eastern Standard Time
+				'EDT' => +11, // Eastern Daylight Time
+				'CST' => +9.5, // Central Standard Time
+				'CDT' => +10.5, // Central Daylight Time
+				'WST' => +8, // Western Standard Time
+				'CXT' => +7, // Christmas Island Time
+			],
+			'Europe'        => [
+				'GMT'  => +0, // Greenwich Mean Time
+				'BST'  => +1, // British Summer Time
+				'IST'  => +1, // Irish Summer Time
+				'WET'  => +0, // Western European Time
+				'WEST' => +1, // Western European Summer Time
+				'CET'  => +1, // Central European Time
+				'CEST' => +2, // Central European Summer Time
+				'EET'  => +2, // Eastern European Time
+				'EEST' => +3 // Eastern European Summer Time
+			],
+			'Military'      => [
+				'Z' => +0, // Zulu Time Zone
+				'Y' => -12, // Yankee Time Zone
+				'X' => -11, // X-ray Time Zone
+				'W' => -10, // Whiskey Time Zone
+				'V' => -9, // Victor Time Zone
+				'U' => -8, // Uniform Time Zone
+				'T' => -7, // Tango Time Zone
+				'S' => -6, // Sierra Time Zone
+				'R' => -5, // Romeo Time Zone
+				'Q' => -4, // Quebec Time Zone
+				'P' => -3, // Papa Time Zone
+				'O' => -2, // Oscar Time Zone
+				'N' => -1, // November Time Zone
+				'A' => +1, // Alpha Time Zone
+				'B' => +2, // Bravo Time Zone
+				'C' => +3, // Charlie Time Zone
+				'D' => +4, // Delta Time Zone
+				'E' => +5, // Echo Time Zone
+				'F' => +6, // Foxtrot Time Zone
+				'G' => +7, // Golf Time Zone
+				'H' => +8, // Hotel Time Zone
+				'I' => +9, // India Time Zone
+				'K' => +10, // Kilo Time Zone
+				'L' => +11, // Lima Time Zone
+				'M' => +12 // Mike Time Zone
+			],
+		];
 
-			$fromGMTDiff  = $timeZonesArray[$fromLocation][$fromTZ];
+		$fromGMTDiff  = $timeZonesArray[$fromLocation][$fromTZ];
 			$toGMTDiff    = $timeZonesArray[$toLocation][$toTZ];
 
 			if(( '' != trim( $fromGMTDiff )) && ( '' != trim( $toGMTDiff ))) {
