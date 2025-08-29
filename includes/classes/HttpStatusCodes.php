@@ -8,6 +8,9 @@
  * @license MIT 
  * @package recess.http
  */
+
+namespace Bitweaver;
+ 
 class HttpStatusCodes {
 	// [Informational 1xx]
 	const HTTP_CONTINUE = 100;

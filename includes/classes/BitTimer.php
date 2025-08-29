@@ -5,25 +5,37 @@
  *
  * @package kernel
  */
- 
+
+ namespace Bitweaver;
+
 /**
  * @package kernel
  */
 class BitTimer {
-	function parseMicro( $micro ) {
+	/**
+	 * Store of active timers
+	 * @public
+	 */
+	public $mTimer = [];
+
+	public function parseMicro( $micro ) {
 		list( $micro, $sec ) = explode( ' ', microtime() );
 		return $sec + $micro;
 	}
 
-	function start( $timer = 'default' ) {
+	public function start( $timer = 'default' ) {
 		$this->mTimer[$timer] = $this->parseMicro( microtime() );
 	}
 
-	function stop( $timer = 'default' ) {
+	public function current( $timer = 'default' ) {
+		return $this->mTimer[$timer] ?? 0;
+	}
+
+	public function stop( $timer = 'default' ) {
 		return $this->current( $timer );
 	}
 
-	function elapsed( $timer = 'default' ) {
+	public function elapsed( $timer = 'default' ) {
 		return $this->parseMicro( microtime() ) - $this->mTimer[$timer];
 	}
 }
@@ -32,6 +44,7 @@ class BitTimer {
  * Create timer
  */
 global $gBitTimer;
-$gBitTimer = new BitTimer();
-$gBitTimer->start();
-?>
+if (!isset($gBitTimer)) {
+	$gBitTimer = new BitTimer();
+	$gBitTimer->start();
+}

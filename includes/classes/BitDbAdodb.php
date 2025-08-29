@@ -14,6 +14,11 @@
  * @author spider <spider@steelsun.com>
  */
 
+namespace Bitweaver;
+
+require_once EXTERNAL_LIBS_PATH.'adodb/adodb.inc.php';
+// require_once EXTERNAL_LIBS_PATH.'adodb/session/adodb-session.php';
+
 /**
  * This code must execute before adodb/adodb.inc.php runs
  * Otherwsie $ADODB_CACHE_DIR ends up being set to '/tmp'
@@ -22,10 +27,7 @@ global $ADODB_CACHE_DIR;
 if( empty( $ADODB_CACHE_DIR )) {
 	$ADODB_CACHE_DIR = sys_get_temp_dir().'/php/adodb/'.$_SERVER['HTTP_HOST'].'/';
 }
-mkdir_p( $ADODB_CACHE_DIR );
-
-require_once( EXTERNAL_LIBS_PATH.'adodb/adodb.inc.php' );
-require_once( KERNEL_PKG_CLASS_PATH.'BitDbBase.php' );
+// \mkdir_p( $ADODB_CACHE_DIR );
 
 /**
  * This class is used for database access and provides a number of functions to help
@@ -37,15 +39,15 @@ require_once( KERNEL_PKG_CLASS_PATH.'BitDbBase.php' );
  * @package kernel
  */
 class BitDbAdodb extends BitDb {
-	function __construct( $pConnectionHash = NULL ) {
+	public function __construct( $pConnectionHash = null ) {
 		global $ADODB_FETCH_MODE;
-		if( is_null( $pConnectionHash ) ) {
+		if( $pConnectionHash === null ) {
 			global $gBitDbType, $gBitDbHost, $gBitDbUser, $gBitDbPassword, $gBitDbName;
-			$pConnectionHash['db_type'] = $gBitDbType;
-			$pConnectionHash['db_host'] = $gBitDbHost;
-			$pConnectionHash['db_user'] = $gBitDbUser;
-			$pConnectionHash['db_password'] = $gBitDbPassword;
-			$pConnectionHash['db_name'] = $gBitDbName;
+			$pConnectionHash['db_type'] 	= $gBitDbType;
+			$pConnectionHash['db_host']		= $gBitDbHost;
+			$pConnectionHash['db_user']		= $gBitDbUser;
+			$pConnectionHash['db_password']	= $gBitDbPassword;
+			$pConnectionHash['db_name']		= $gBitDbName;
 		}
 
 		parent::__construct();
@@ -70,8 +72,16 @@ class BitDbAdodb extends BitDb {
 			}
 			$this->preDBConnection();
 			$this->mDb = ADONewConnection( $pConnectionHash['db_type'] );
-			$this->mDb->Connect( $pConnectionHash['db_host'], $pConnectionHash['db_user'], $pConnectionHash['db_password'], $pConnectionHash['db_name'] );
+			$this->mDb->pdoParameters = [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION];
 
+			if( $pConnectionHash['db_type'] != 'pdo' ) {
+				$this->mDb->Connect( $pConnectionHash['db_host'], $pConnectionHash['db_user'], $pConnectionHash['db_password'], $pConnectionHash['db_name'] );
+				$split = explode( ':', $gBitDbHost );
+				$this->mType = 'pdo_' . $split[0];
+			} else {
+//			$dsnString = $pConnectionHash['db_type'] . ':host=localhost;dbname=' . $pConnectionHash['db_name'];
+				$this->mDb->Connect( $pConnectionHash['db_host'], $pConnectionHash['db_user'], $pConnectionHash['db_password'] );
+			}
 			if( !$this->mDb ) {
 				die( "Unable to login to the database $pConnectionHash[db_type] on $pConnectionHash[db_host] as `user` $pConnectionHash[db_user]<p>".$this->mDb->ErrorMsg() );
 			}
@@ -88,24 +98,22 @@ class BitDbAdodb extends BitDb {
 	/**
 	 * Used to create tables - most commonly from package/schema_inc.php files
 	 * @todo remove references to BIT_DB_PREFIX, us a member function
-	 * @param pTables an array of tables and creation information in DataDict
+	 * @param array pTables an array of tables and creation information in DataDict
 	 * style
-	 * @param pOptions an array of options used while creating the tables
-	 * @return TRUE|FALSE
-	 * TRUE if created with no errors | FALSE if errors are stored in $this->mFailed
+	 * @param array pOptions an array of options used while creating the tables
+	 * @return bool true|false
+	 * true if created with no errors | false if errors are stored in $this->mFailed
 	 */
-	function createTables( $pTables, $pOptions = array() ) {
+	public function createTables( array $pTables, array $pOptions = [] ): bool {
 		// If server support InnoDB for MySql set the selected engine
 		if( isset( $_SESSION['use_innodb'] )) {
-			if( $_SESSION['use_innodb'] == TRUE ) {
-				$pOptions = array_merge( $pOptions, array( 'MYSQL' => 'ENGINE=INNODB' ));
-			} else {
-				$pOptions = array_merge( $pOptions, array( 'MYSQL' => 'ENGINE=MYISAM' ));
-			}
+			$pOptions = $_SESSION['use_innodb'] == true 
+				? array_merge( $pOptions, array( 'MYSQL' => 'ENGINE=INNODB' ))
+				: array_merge( $pOptions, array( 'MYSQL' => 'ENGINE=MYISAM' ));
 		}
 		$dict = NewDataDictionary( $this->mDb );
-		$this->mFailed = array();
-		$result = TRUE;
+		$this->mFailed = [];
+		$result = true;
 		foreach( array_keys( $pTables ) AS $tableName ) {
 			$completeTableName = ( defined( "BIT_DB_PREFIX" )) ? BIT_DB_PREFIX.$tableName : $tableName;
 			$sql = $dict->CreateTableSQL($completeTableName, $pTables[$tableName], $pOptions);
@@ -113,7 +121,7 @@ class BitDbAdodb extends BitDb {
 				// Success
 			} else {
 				// Failure
-				$result = FALSE;
+				$result = false;
 				array_push( $this->mFailed, $sql.": ".$this->mDb->ErrorMsg() );
 			}
 		}
@@ -123,28 +131,28 @@ class BitDbAdodb extends BitDb {
 	/**
 	 * Used to check if tables already exists.
 	 * @todo should be used to confirm tables are already created
-	 * @param pTable the table name
-	 * @return TRUE if table already exists
+	 * @param string pTable the table name
+	 * @return bool true if table already exists
 	 */
-	function tableExists( $pTable ) {
+	public function tableExists( string $pTable ): bool {
 		$dict = NewDataDictionary( $this->mDb );
 		$pTable = preg_replace( "/`/", "", $pTable );
-		$tables = $dict->MetaTables( FALSE, FALSE, $pTable );
-		return array_search( $pTable, $tables ) !== FALSE;
+		$tables = $dict->MetaTables( );
+		return array_search( $pTable, $tables ) !== false;
 	}
 
 	/**
 	 * Used to drop tables
 	 * @todo remove references to BIT_DB_PREFIX, us a member function
-	 * @param pTables an array of table names to drop
-	 * @return TRUE | FALSE
-	 * TRUE if dropped with no errors |
-	 * FALSE if errors are stored in $this->mFailed
+	 * @param array pTables an array of table names to drop
+	 * @return bool true | false
+	 * true if dropped with no errors |
+	 * false if errors are stored in $this->mFailed
 	 */
-	function dropTables( $pTables ) {
+	public function dropTables( array $pTables ): bool {
 		$dict = NewDataDictionary( $this->mDb );
-		$this->mFailed = array();
-		$return = TRUE;
+		$this->mFailed = [];
+		$return = true;
 		foreach( $pTables AS $tableName ) {
 			$completeTableName = ( defined( "BIT_DB_PREFIX" )) ? BIT_DB_PREFIX.$tableName : $tableName;
 			$sql = $dict->DropTableSQL( $completeTableName );
@@ -152,7 +160,7 @@ class BitDbAdodb extends BitDb {
 				//echo "Success<br>";
 			} else {
 				//echo "Failure<br>";
-				$return = FALSE;
+				$return = false;
 				array_push($this->mFailed, $sql);
 			}
 		}
@@ -163,10 +171,10 @@ class BitDbAdodb extends BitDb {
 	 * Quotes a string to be sent to the database which is
 	 * passed to function on to AdoDB->qstr().
 	 * @todo not sure what its supposed to do
-	 * @param pStr string to be quotes
-	 * @return quoted string using AdoDB->qstr()
+	 * @param string pStr string to be quotes
+	 * @return string quoted string using AdoDB->qstr()
 	 */
-	function qstr( $pStr ) {
+	public function qstr( string $pStr ): string {
 		return $this->mDb->qstr( $pStr );
 	}
 	
@@ -174,8 +182,16 @@ class BitDbAdodb extends BitDb {
 	 * Returns SUBSTRING function appropiate for database.
 	 * @return string using AdoDB->substr property
 	 */
-	function substr() {
+	public function substr() {
 		return $this->mDb->substr;
+	}
+
+	/**
+	 * Returns MOD function appropiate for database.
+	 * @return string using AdoDB->mod property
+	 */
+	public function mod_function() {
+		return $this->mDb->mod;
 	}
 
 	/**
@@ -190,27 +206,25 @@ class BitDbAdodb extends BitDb {
 
 	/** Queries the database, returning an error if one occurs, rather
 	 * than exiting while printing the error. -rlpowell
-	 * @param pQuery the SQL query. Use backticks (`) to quote all table
+	 * @param string pQuery the SQL query. Use backticks (`) to quote all table
 	 * and attribute names for AdoDB to quote appropriately.
-	 * @param pError the error string to modify and return
-	 * @param pValues an array of values used in a parameterised query
-	 * @param pNumRows the number of rows (LIMIT) to return in this query
-	 * @param pOffset the row number to begin returning rows from. Used in
-	 * @return an AdoDB RecordSet object
+	 * @param string pError the error string to modify and return
+	 * @param array pValues an array of values used in a parameterised query
+	 * @param int pNumRows the number of rows (LIMIT) to return in this query
+	 * @param int pOffset the row number to begin returning rows from. Used in
+	 * @return array an AdoDB RecordSet object
 	 * conjunction with $pNumRows
 	 * @todo currently not used anywhere.
 	 */
-	function queryError( $pQuery, &$pError, $pValues = FALSE, $pNumRows = -1, $pOffset = -1 ) {
+	public function queryError( string $pQuery, string &$pError, ?array $pValues = null, int $pNumRows = -1, int $pOffset = -1 ): array {
 		$this->convertQuery( $pQuery );
-		if( $pNumRows == -1 && $pOffset == -1 ) {
-			$result = $this->mDb->Execute($pQuery, $pValues);
-		} else {
-			$result = $this->mDb->SelectLimit($pQuery, $pNumRows, $pOffset, $pValues);
-		}
+		$result = $pNumRows == -1 && $pOffset == -1 
+			? $this->mDb->Execute($pQuery, $pValues) 
+			: $this->mDb->SelectLimit($pQuery, $pNumRows, $pOffset, $pValues);
 
 		if( !$result ) {
 			$pError = $this->mDb->ErrorMsg();
-			$result=FALSE;
+			$result=[];
 		}
 		//count the number of queries made
 		$this->mNumQueries++;
@@ -220,20 +234,20 @@ class BitDbAdodb extends BitDb {
 
 	/** Queries the database reporting an error if detected
 	 * than exiting while printing the error. -rlpowell
-	 * @param pQuery the SQL query. Use backticks (`) to quote all table
+	 * @param string pQuery the SQL query. Use backticks (`) to quote all table
 	 * and attribute names for AdoDB to quote appropriately.
-	 * @param pValues an array of values used in a parameterised query
-	 * @param pNumRows the number of rows (LIMIT) to return in this query
-	 * @param pOffset the row number to begin returning rows from. Used in
+	 * @param array|null pValues an array of values used in a parameterised query
+	 * @param int pNumRows the number of rows (LIMIT) to return in this query
+	 * @param int pOffset the row number to begin returning rows from. Used in
 	 * conjunction with $pNumRows
-	 * @return an AdoDB RecordSet object
+	 * @return \ADORecordSet|null an AdoDB RecordSet object
 	 */
-	function query( $query, $values = FALSE, $numrows = BIT_QUERY_DEFAULT, $offset = BIT_QUERY_DEFAULT, $pCacheTime=BIT_QUERY_DEFAULT ) {
+	public function query( $query, $values = false, $numrows = BIT_QUERY_DEFAULT, $offset = BIT_QUERY_DEFAULT, $pCacheTime=BIT_QUERY_DEFAULT ) {
 		$this->convertQuery( $query );
 		if( empty( $this->mDb )) {
-			return FALSE;
+			return null;
 		}
-
+		$values = is_null($values) ? false : $values;
 		$this->queryStart();
 
 		if( !is_numeric( $numrows )) {
@@ -244,19 +258,13 @@ class BitDbAdodb extends BitDb {
 			$offset = BIT_QUERY_DEFAULT;
 		}
 
-		if( $numrows == BIT_QUERY_DEFAULT && $offset == BIT_QUERY_DEFAULT ) {
-			if( !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT ) {
-				$result = $this->mDb->Execute( $query, $values );
-			} else {
-				$result = $this->mDb->CacheExecute( $pCacheTime, $query, $values );
-			}
-		} else {
-			if( !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT ) {
-				$result = $this->mDb->SelectLimit( $query, $numrows, $offset, $values );
-			} else {
-				$result = $this->mDb->CacheSelectLimit( $pCacheTime, $query, $numrows, $offset, $values );
-			}
-		}
+		$result = $numrows == BIT_QUERY_DEFAULT && $offset == BIT_QUERY_DEFAULT
+			? ( !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT 
+				? $this->mDb->Execute( $query, $values ) 
+				: $this->mDb->CacheExecute( $pCacheTime, $query, $values ) )
+			: ( !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT
+				? $this->mDb->SelectLimit( $query, $numrows, $offset, $values )
+				: $this->mDb->CacheSelectLimit( $pCacheTime, $query, $numrows, $offset, $values ) );
 
 		$this->queryComplete();
 		return $result;
@@ -266,28 +274,28 @@ class BitDbAdodb extends BitDb {
 	 * List columns in a database as an array of ADOFieldObjects.
 	 * See top of file for definition of object.
 	 *
-	 * @param table	table name to query
-	 * @param upper	uppercase table name (required by some databases)
-	 * @param schema is optional database schema to use - not supported by all databases.
+	 * @param string tabletable name to query
+	 * @param bool upper	uppercase table name (required by some databases)
+	 * @param bool schema is optional database schema to use - not supported by all databases.
 	 *
-	 * @return  array of ADOFieldObjects for current table.
+	 * @return array of ADOFieldObjects for current table.
 	 */
-	function MetaColumns( $table,$normalize=TRUE, $schema=FALSE ) {
+	public function MetaColumns( string $table, bool $normalize=true, bool $schema=false ): array {
 		$table = str_replace( '`', '', $table );
-		return $this->mDb->MetaColumns( $table, $normalize, $schema );
+		return $this->mDb->MetaColumns( $table, $normalize );
 	}
 
 	/**
 	 * List indexes in a database as an array of ADOFieldObjects.
 	 * See top of file for definition of object.
 	 *
-	 * @param table	table name to query
-	 * @param primary list primary indexes
-	 * @param owner list owner of index
+	 * @param string table	table name to query
+	 * @param bool primary list primary indexes
+	 * @param bool owner list owner of index
 	 *
 	 * @return  array of ADOFieldObjects for current table.
 	 */
-	function MetaIndexes( $table,$primary=FALSE, $owner=FALSE ) {
+	public function MetaIndexes( string $table, bool $primary=false, bool $owner=false): array {
 		$table = str_replace( '`', '', $table );
 		return $this->mDb->MetaIndexes( $table, $primary, $owner );
 	}
@@ -299,45 +307,41 @@ class BitDbAdodb extends BitDb {
 	 * @param array $pValues 
 	 * @param numeric $pCacheTime 
 	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return array|bool true on success, false on failure - mErrors will contain reason for failure
 	 */
-	function getAll( $pQuery, $pValues = FALSE, $pCacheTime=BIT_QUERY_DEFAULT ) {
+	public function getAll( $pQuery, $pValues = [], $pCacheTime=BIT_QUERY_DEFAULT ) {
 		if( empty( $this->mDb )) {
-			return FALSE;
+			return false;
 		}
 		$this->queryStart();
 		$this->convertQuery( $pQuery );
-		if( !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT ) {
-			$result = $this->mDb->GetAll( $pQuery, $pValues );
-		} else {
-			$result = $this->mDb->CacheGetAll($pCacheTime, $pQuery, $pValues );
-		}
+		$result = !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT 
+		? $this->mDb->GetAll( $pQuery, $pValues )
+		: $this->mDb->CacheGetAll($pCacheTime, $pQuery, $pValues );
 		//count the number of queries made
 		$this->queryComplete();
 		return $result;
 	}
 
-	/** Executes the SQL and returns all elements of the first column as a 1-dimensional array. The recordset is discarded for you automatically. If an error occurs, FALSE is returned.
+	/** Executes the SQL and returns all elements of the first column as a 1-dimensional array. The recordset is discarded for you automatically. If an error occurs, false is returned.
 	 * See AdoDB GetCol() function for more detail.
-	 * @param pQuery the SQL query. Use backticks (`) to quote all table
+	 * @param string pQuery the SQL query. Use backticks (`) to quote all table
 	 * and attribute names for AdoDB to quote appropriately.
-	 * @param pValues an array of values used in a parameterised query
-	 * @param pForceArray if set to TRUE, when an array is created for each value
-	 * @param pFirst2Cols if set to TRUE, only returns the first two columns
-	 * @return the associative array, or FALSE if an error occurs
+	 * @param array pValues an array of values used in a parameterised query
+	 * @param bool pForceArray if set to true, when an array is created for each value
+	 * @param bool pFirst2Cols if set to true, only returns the first two columns
+	 * @return array|bool the associative array, or false if an error occurs
 	 * @todo not currently used anywhere
 	 */
-	function getCol( $pQuery, $pValues = FALSE, $pTrim=FALSE, $pCacheTime=BIT_QUERY_DEFAULT ) {
+	public function getCol( $pQuery, $pValues = false, $pTrim=false, $pCacheTime=BIT_QUERY_DEFAULT ) {
 		if( empty( $this->mDb )) {
-			return FALSE;
+			return false;
 		}
 		$this->queryStart();
 		$this->convertQuery( $pQuery );
-		if( !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT ) {
-			$result = $this->mDb->GetCol( $pQuery, $pValues, $pTrim );
-		} else {
-			$result = $this->mDb->CacheGetCol( $pCacheTime, $pQuery, $pValues, $pTrim );
-		}
+		$result = !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT
+			? $this->mDb->GetCol( $pQuery, $pValues, $pTrim )
+			: $this->mDb->CacheGetCol( $pCacheTime, $pQuery, $pValues, $pTrim );
 		//count the number of queries made
 		$this->queryComplete();
 		return $result;
@@ -345,88 +349,81 @@ class BitDbAdodb extends BitDb {
 
 	/** Returns an associative array for the given query.
 	 * See AdoDB GetAssoc() function for more detail.
-	 * @param pQuery the SQL query. Use backticks (`) to quote all table
+	 * @param string pQuery the SQL query. Use backticks (`) to quote all table
 	 * and attribute names for AdoDB to quote appropriately.
-	 * @param pValues an array of values used in a parameterised query
-	 * @param pForceArray if set to TRUE, when an array is created for each value
-	 * @param pFirst2Cols if set to TRUE, only returns the first two columns
-	 * @return the associative array, or FALSE if an error occurs
+	 * @param array pValues an array of values used in a parameterised query
+	 * @param bool pForceArray if set to true, when an array is created for each value
+	 * @param bool pFirst2Cols if set to true, only returns the first two columns
+	 * @return array|bool associative array, or false if an error occurs
 	 */
-	function getArray( $pQuery, $pValues = FALSE, $pForceArray=FALSE, $pFirst2Cols=FALSE, $pCacheTime=BIT_QUERY_DEFAULT ) {
+	public function getArray( $pQuery, $pValues = false, $pForceArray=false, $pFirst2Cols=false, $pCacheTime=BIT_QUERY_DEFAULT ) {
 		if( empty( $this->mDb )) {
-			return FALSE;
+			return false;
 		}
 		$this->queryStart();
 		$this->convertQuery( $pQuery );
-		if( !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT ) {
-			$result = $this->mDb->GetArray( $pQuery, $pValues, $pForceArray, $pFirst2Cols );
-		} else {
-			$result = $this->mDb->CacheGetArray( $pCacheTime, $pQuery, $pValues, $pForceArray, $pFirst2Cols );
-		}
+		$result = !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT
+			? $this->mDb->GetArray( $pQuery, $pValues )
+			: $this->mDb->CacheGetArray( $pCacheTime, $pQuery, $pValues );
 		$this->queryComplete();
 		return $result;
 	}
 
 	/** Returns an associative array for the given query.
 	 * See AdoDB GetAssoc() function for more detail.
-	 * @param pQuery the SQL query. Use backticks (`) to quote all table
+	 * @param string pQuery the SQL query. Use backticks (`) to quote all table
 	 * and attribute names for AdoDB to quote appropriately.
-	 * @param pValues an array of values used in a parameterised query
-	 * @param pForceArray if set to TRUE, when an array is created for each value
-	 * @param pFirst2Cols if set to TRUE, only returns the first two columns
-	 * @return the associative array, or FALSE if an error occurs
+	 * @param array pValues an array of values used in a parameterised query
+	 * @param bool pForceArray if set to true, when an array is created for each value
+	 * @param bool pFirst2Cols if set to true, only returns the first two columns
+	 * @return array|false the associative array, or false if an error occurs
 	 */
-	function getAssoc( $pQuery, $pValues = FALSE, $pForceArray=FALSE, $pFirst2Cols=FALSE, $pCacheTime=BIT_QUERY_DEFAULT ) {
+	public function getAssoc( $pQuery, $pValues = false, $pForceArray=false, $pFirst2Cols=false, $pCacheTime=BIT_QUERY_DEFAULT ) {
 		if( empty( $this->mDb )) {
-			return FALSE;
+			return false;
 		}
 		$this->queryStart();
 		$this->convertQuery( $pQuery );
-		if( !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT ) {
-			$result = $this->mDb->GetAssoc( $pQuery, $pValues, $pForceArray, $pFirst2Cols );
-		} else {
-			$result = $this->mDb->CacheGetAssoc( $pCacheTime, $pQuery, $pValues, $pForceArray, $pFirst2Cols );
-		}
+		$result = !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT
+			? $this->mDb->GetAssoc( $pQuery, $pValues, $pForceArray, $pFirst2Cols )
+			: $this->mDb->CacheGetAssoc( $pCacheTime, $pQuery, $pValues, $pForceArray, $pFirst2Cols );
 		$this->queryComplete();
 		return $result;
 	}
 
-	/** Executes the SQL and returns the first row as an array. The recordset and remaining rows are discarded for you automatically. If an error occurs, FALSE is returned.
+	/** Executes the SQL and returns the first row as an array. The recordset and remaining rows are discarded for you automatically. If an error occurs, false is returned.
 	 * See AdoDB GetRow() function for more detail.
-	 * @param pQuery the SQL query. Use backticks (`) to quote all table
+	 * @param string pQuery the SQL query. Use backticks (`) to quote all table
 	 * and attribute names for AdoDB to quote appropriately.
-	 * @param pValues an array of values used in a parameterised query
-	 * @return returns the first row as an array, or FALSE if an error occurs
+	 * @param array pValues an array of values used in a parameterised query
+	 * @return array returns the first row as an array, or false if an error occurs
 	 */
-	function getRow( $pQuery, $pValues = FALSE, $pCacheTime=BIT_QUERY_DEFAULT ) {
+	public function getRow( $pQuery, $pValues = [], $pCacheTime=BIT_QUERY_DEFAULT ) {
 		if( empty( $this->mDb ) ) {
-			return FALSE;
+			return [];
 		}
 		$this->queryStart();
 		$this->convertQuery($pQuery);
-		if( !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT ) {
-			$result = $this->mDb->GetRow( $pQuery, $pValues );
-		} else {
-			$result = $this->mDb->CacheGetRow( $pCacheTime, $pQuery, $pValues );
-		}
+		$result = !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT
+			? $this->mDb->GetRow( $pQuery, $pValues )
+			: $this->mDb->CacheGetRow( $pCacheTime, $pQuery, $pValues );
 		$this->queryComplete();
 		return $result;
 	}
 
 	/** Returns a single column value from the database.
-	 * @param pQuery the SQL query. Use backticks (`) to quote all table
+	 * @param string pQuery the SQL query. Use backticks (`) to quote all table
 	 * and attribute names for AdoDB to quote appropriately.
-	 * @param pValues an array of values used in a parameterised query
-	 * @param pReportErrors report errors to STDOUT
-	 * @param pOffset the row number to begin returning rows from.
-	 * @return the associative array, or FALSE if an error occurs
+	 * @param array pValues an array of values used in a parameterised query
+	 * @param int pOffset the row number to begin returning rows from.
+	 * @return string the associative array, or false if an error occurs
 	 */
-	function getOne( $pQuery, $pValues = FALSE, $pNumRows=NULL, $pOffset=NULL, $pCacheTime = BIT_QUERY_DEFAULT ) {
+	public function getOne( $pQuery, $pValues = [], $pNumRows=BIT_QUERY_DEFAULT, $pOffset=BIT_QUERY_DEFAULT, $pCacheTime = BIT_QUERY_DEFAULT ) {
 		$result = $this->query($pQuery, $pValues, 1, $pOffset, $pCacheTime );
-		$res = ( $result != NULL ) ? $result->fetchRow() : FALSE;
-		if( $res === FALSE ) {
+		$res = ( $result != null ) ? $result->fetchRow() : false;
+		if( $res === false ) {
 			//simulate pears behaviour
-			return NULL;
+			return '';
 		}
 
 		$ret = current( $res );
@@ -436,34 +433,30 @@ class BitDbAdodb extends BitDb {
 	/**
 	 * A database portable Sequence management function.
 	 *
-	 * @param pSequenceName Name of the sequence to be used
+	 * @param string pSequenceName Name of the sequence to be used
 	 *		It will be created if it does not already exist
 	 * @return		0 if not supported, otherwise a sequence id
 	 */
-	function GenID( $pSequenceName, $pUseDbPrefix = TRUE ) {
+	public function GenID( $pSequenceName, $pUseDbPrefix = true ) {
 		if( empty( $this->mDb )) {
-			return FALSE;
+			return false;
 		}
-		if( $pUseDbPrefix ) {
-			$prefix = str_replace( "`", "", BIT_DB_PREFIX );
-		} else {
-			$prefix = '';
-		}
+		$prefix = $pUseDbPrefix ? str_replace( "`", "", BIT_DB_PREFIX ) : '';
 		return $this->mDb->GenID( $prefix.$pSequenceName );
 	}
 
 	/**
 	 * A database portable Sequence management function.
 	 *
-	 * @param pSequenceName Name of the sequence to be used
+	 * @param string pSequenceName Name of the sequence to be used
 	 *		It will be created if it does not already exist
-	 * @param pStartID Allows setting the initial value of the sequence
-	 * @return		0 if not supported, otherwise a sequence id
+	 * @param int pStartID Allows setting the initial value of the sequence
+	 * @return bool		0 if not supported, otherwise a sequence id
 	 * @todo	To be combined with GenID
 	 */
-	function CreateSequence( $pSeqname='adodbseq',$startID=1 ) {
+	public function CreateSequence( $pSeqname='adodbseq',$startID=1 ) {
 		if( empty( $this->mDb->_genSeqSQL )) {
-			return FALSE;
+			return false;
 		}
 		return $this->mDb->CreateSequence( $pSeqname, $startID );
 	}
@@ -471,37 +464,36 @@ class BitDbAdodb extends BitDb {
 	/**
 	 * A database portable Sequence management function.
 	 *
-	 * @param pSequenceName Name of the sequence to be dropped
-	 *
-	 * @return	FALSE if not supported
+	 * @param string pSequenceName Name of the sequence to be dropped
+	 * @return	false if not supported
 	 */
-	function DropSequence( $pSeqname='adodbseq' ) {
+	public function DropSequence( $pSeqname='adodbseq' ) {
 		if( empty( $this->mDb->_dropSeqSQL )) {
-			return FALSE;
+			return false;
 		}
 		return $this->mDb->DropSequence( $pSeqname );
 	}
 
 	/**
-	 * A database portable IFNULL function.
+	 * A database portable IFnull function.
 	 *
-	 * @param pField argument to compare to NULL
-	 * @param pNullRepl the NULL replacement value
-	 * @return a string that represents the function that checks whether
-	 * $pField is NULL for the given database, and if NULL, change the
+	 * @param string pField argument to compare to null
+	 * @param string pNullRepl the null replacement value
+	 * @return string that represents the function that checks whether
+	 * $pField is null for the given database, and if null, change the
 	 * value returned to $pNullRepl.
 	 */
-	function ifNull( $pField, $pNullRepl ) {
+	public function ifNull($pField, $pNullRepl): string {
 		return $this->mDb->ifNull( $pField, $pNullRepl );
 	}
 
 	/** Format the timestamp in the format the database accepts.
-	 * @param pDate a Unix integer timestamp or an ISO format Y-m-d H:i:s
-	 * @return the timestamp as a quoted string.
+	 * @param int pDate a Unix integer timestamp or an ISO format Y-m-d H:i:s
+	 * @return string the timestamp as a quoted string.
 	 * @todo could be used to later convert all int timestamps into db
 	 * timestamps. Currently not used anywhere.
 	 */
-	function ls( $pDate ) {
+	public function ls( $pDate ) {
 		// not sure what this did - maybe someone can comment why its here
 		//return preg_replace("/'/","", $this->mDb->DBTimeStamp($pDate));
 		return $this->mDb->DBTimeStamp($pDate);
@@ -510,7 +502,7 @@ class BitDbAdodb extends BitDb {
 	/**
 	 * Format date column in sql string given an input format that understands Y M D
 	 */
-	function SQLDate( $pDateFormat, $pBaseDate=FALSE ) {
+	function SQLDate( $pDateFormat, $pBaseDate=false ) {
 		return $this->mDb->SQLDate( $pDateFormat, $pBaseDate );
 	}
 
@@ -518,27 +510,27 @@ class BitDbAdodb extends BitDb {
 	 * Calculate the offset of a date for a particular database and generate
 	 * appropriate SQL. Useful for calculating future/past dates and storing
 	 * in a database.
-	 * @param pDays Number of days to offset by
+	 * @param float pDays Number of days to offset by
 	 *		If dayFraction=1.5 means 1.5 days from now, 1.0/24 for 1 hour.
-	 * @param pColumn Value to be offset
-	 *		If NULL an offset from the current time is supplied
-	 * @return New number of days
+	 * @param string pColumn Value to be offset
+	 *		If null an offset from the current time is supplied
+	 * @return string New number of days
 	 *
 	 * @todo Not currently used - this is database specific and uses TIMESTAMP
 	 * rather than unix seconds
 	 */
-	function OffsetDate( $pDays, $pColumn=NULL ) {
+	public function OffsetDate( $pDays, $pColumn=null ) {
 		return $this->mDb->OffsetDate( $pDays, $pColumn );
 	}
 
 	/** Converts backtick (`) quotes to the appropriate quote for the
 	 * database.
 	 * @private
-	 * @param pQuery the SQL query using backticks (`)
-	 * @return the correctly quoted SQL statement
+	 * @param string pQuery the SQL query using backticks (`)
+	 * @return void the correctly quoted SQL statement
 	 * @todo investigate replacement by AdoDB NameQuote() function
 	 */
-	function convertQuery( &$pQuery ) {
+	public function convertQuery( string &$pQuery ): void {
 		if( !empty( $this->mType )) {
 			switch( $this->mType ) {
 			case "oci8":
@@ -557,9 +549,9 @@ class BitDbAdodb extends BitDb {
 	}
 
 	/** will activate ADODB's native debugging output
-	 * @param pLevel debugging level - FALSE is off, TRUE is on, 99 is verbose
+	 * @param bool|int pLevel debugging level - false is off, true is on, 99 is verbose
 	 **/
-	function debug( $pLevel=99 ) {
+	public function debug( bool|int $pLevel=99 ): void {
 		parent::debug( $pLevel );
 		if( is_object( $this->mDb )) {
 			$this->mDb->debug = $pLevel;
@@ -567,10 +559,10 @@ class BitDbAdodb extends BitDb {
 	}
 
 	/** returns the level of query debugging output
-	 * @return pLevel debugging level - FALSE is off, TRUE is on, 99 is verbose
+	 * @return bool|int pLevel debugging level - false is off, true is on, 99 is verbose
 	 **/
-	function getDebugLevel() {
-		return( $this->mDebug );
+	public function getDebugLevel(): bool|int {
+		return $this->mDebug ?? false;
 	}
 
 	/**
@@ -591,38 +583,38 @@ class BitDbAdodb extends BitDb {
 	 *	Used together with StartTrans() to end a transaction. Monitors connection
 	 *	for sql errors, and will commit or rollback as appropriate.
 	 *
-	 *	autoComplete if TRUE, monitor sql errors and commit and rollback as appropriate,
-	 *	and if set to FALSE force rollback even if no SQL error detected.
-	 *	@returns TRUE on commit, FALSE on rollback.
+	 *	autoComplete if true, monitor sql errors and commit and rollback as appropriate,
+	 *	and if set to false force rollback even if no SQL error detected.
+	 *	@return bool true on commit, false on rollback.
 	 */
 	function CompleteTrans() {
 		return is_object( $this->mDb ) && $this->mDb->CompleteTrans();
 	}
 
 	/**
-	 * If database does not support transactions, rollbacks always fail, so return FALSE
-	 * otherwise returns TRUE if the Rollback was successful
+	 * If database does not support transactions, rollbacks always fail, so return false
+	 * otherwise returns true if the Rollback was successful
 	 *
-	 * @return TRUE/FALSE.
+	 * @return bool true/false.
 	 */
 	function RollbackTrans() {
 		$this->mDb->FailTrans();
-		return $this->mDb->CompleteTrans( FALSE );
+		return $this->mDb->CompleteTrans( false );
 	}
 
 	/**
 	 * Create a list of tables available in the current database
 	 *
-	 * @param ttype can either be 'VIEW' or 'TABLE' or FALSE.
-	 * 		If FALSE, both views and tables are returned.
+	 * @param bool|string ttype can either be 'VIEW' or 'TABLE' or false.
+	 * 		If false, both views and tables are returned.
 	 *		"VIEW" returns only views
 	 *		"TABLE" returns only tables
-	 * @param showSchema returns the schema/user with the table name, eg. USER.TABLE
-	 * @param mask  is the input mask - only supported by oci8 and postgresql
+	 * @param bool showSchema returns the schema/user with the table name, eg. USER.TABLE
+	 * @param bool mask  is the input mask - only supported by oci8 and postgresql
 	 *
-	 * @return  array of tables for current database.
+	 * @return array of tables for current database.
 	 */
-	function MetaTables( $ttype = FALSE, $showSchema = FALSE, $mask=FALSE ) {
+	public function MetaTables( bool|string $ttype = false, bool $showSchema = false, bool $mask = false ): bool|array {
 		return $this->mDb->MetaTables( $ttype, $showSchema, $mask );
 	}
 
@@ -650,14 +642,14 @@ function bitdb_error_handler( $dbms, $fn, $errno, $errmsg, $p1, $p2, &$thisConne
 		return; // obey @ protocol
 	}
 
-	$dbParams = array(
+	$dbParams = [
 		'db_type'=>$dbms,
 		'call_func'=>$fn,
 		'errno'=>$errno,
 		'db_msg'=>$errmsg,
 		'sql'=>$p1,
 		'p2'=>$p2
-	);
+	];
 	$logString = bit_error_string( $dbParams );
 
 	/*
@@ -677,11 +669,10 @@ function bitdb_error_handler( $dbms, $fn, $errno, $errmsg, $p1, $p2, &$thisConne
 	error_log( $logString,0 );
 	$subject = isset( $_SERVER['SERVER_NAME'] ) ? $_SERVER['SERVER_NAME'] : 'BITWEAVER';
 
-	$fatal = FALSE;
+	$fatal = false;
 	if(( $fn == 'EXECUTE' ) && ( $thisConnection->MetaError() != -5 ) && (empty( $gBitDb ) || $gBitDb->isFatalActive()) ) {
-		$fatal = TRUE;
+		$fatal = true;
 	}
 
 	bit_display_error( $logString, $dbParams['db_msg'], $fatal );
 }
-?>

@@ -9,6 +9,8 @@
  * Created on: Sat Jul 26 11:51:31 CDT 2003
  */
 
+ namespace Bitweaver;
+ 
 /**
  * BitDate
  *
@@ -74,30 +76,29 @@ class BitDate {
 		else if ( $display_tz == "Fixed" )
 			$this->display_offset = $gBitUser->getPreference( 'site_display_timezone', 0 ); 
 			if ( version_compare( phpversion(), "5.1.0", ">=" ) and !is_numeric( $this->display_offset ) ) {
-				$dateTimeZoneUser = new DateTimeZone( $this->display_offset );
-				$dtNow = new DateTime( "now" );
+				$dateTimeZoneUser = new \DateTimeZone( $this->display_offset );
+				$dtNow = new \DateTime( "now" );
 				$this->display_offset = $dateTimeZoneUser->getOffset( $dtNow );
 			}
-		return $this->display_offset;
+           return $this->display_offset;
 	}
 
 	/**
 	 * Convert a UTC timestamp to the preferred display offset.
-	 * @param timestamp ISO format date
+	 * @param string timestamp ISO format date
 	 *	yYYY-mM-dD hH:mM:sS.s ( Lower case letters optional, but should be 0 )
 	 * @return int Seconds count based on 1st Jan 1970<br>
 	 */
-	function getDisplayDateFromUTC($_timestamp) {
+	public function getDisplayDateFromUTC($_timestamp) {
 		global $gBitUser;
 		
 		if ( $gBitUser->getPreference('site_display_utc', "Local") == "Fixed" && class_exists( 'DateTime' ) ) {
 			date_default_timezone_set( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
-			if ( is_numeric( $_timestamp )) {
-				$dateTimeUser = new DateTime( '@'.$_timestamp );
-			} else  {
-				$dateTimeUser = new DateTime( $_timestamp );
-			}
-			$dateTimeUserZone = new DateTimeZone( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
+			$dateTimeUser = is_numeric( $_timestamp )
+				? new \DateTime( '@'.$_timestamp )
+				: new \DateTime( $_timestamp );
+
+			$dateTimeUserZone = new \DateTimeZone( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
 			return strtotime( $dateTimeUser->format(DATE_ATOM) ) + timezone_offset_get( $dateTimeUserZone, $dateTimeUser );
 		} else {
 			return $this->getTimestampFromISO($_timestamp) + $this->display_offset;
@@ -106,21 +107,20 @@ class BitDate {
 
 	/**
 	 * Convert a display-offset timestamp to UTC.
-	 * @param timestamp ISO format date
+	 * @param string timestamp ISO format date
 	 *	yYYY-mM-dD hH:mM:sS.s ( Lower case letters optional, but should be 0 )
 	 * @return int Seconds count based on 1st Jan 1970<br>
 	 */
-	function getUTCFromDisplayDate($_timestamp) {
+	public function getUTCFromDisplayDate($_timestamp) {
 		global $gBitUser;
 		
 		if ( $gBitUser->getPreference('site_display_utc', "Local") == "Fixed" ) {
 			date_default_timezone_set( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
-			if ( is_numeric( $_timestamp )) {
-				$dateTimeUser = new DateTime( '@'.$_timestamp );
-			} else  {
-				$dateTimeUser = new DateTime( $_timestamp );
-			}
-			$dateTimeUserZone = new DateTimeZone( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
+			$dateTimeUser = is_numeric( $_timestamp )
+				? new \DateTime( '@'.$_timestamp )
+				: new \DateTime( $_timestamp );
+
+			$dateTimeUserZone = new \DateTimeZone( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
 			return strtotime( $dateTimeUser->format(DATE_ATOM) ) - timezone_offset_get( $dateTimeUserZone, $dateTimeUser );
 		} else {
 			return $this->getTimestampFromISO($_timestamp) - $this->display_offset;
@@ -129,19 +129,19 @@ class BitDate {
 
 	/**
 	 * Convert a UTC timestamp to the local server time.
-	 * @param  timestamp UTC timestamp to convert.
-	 * @return timestamp Server timestamp.
+	 * @param  string timestamp UTC timestamp to convert.
+	 * @return string timestamp Server timestamp.
 	 */
-	function getServerDateFromUTC($_timestamp) {
+	public function getServerDateFromUTC($_timestamp) {
 		return $this->getTimestampFromISO($_timestamp) + $this->server_offset;
 	}
 
 	/**
 	 * Convert a local server timestamp to UTC.
-	 * @param  timestamp Server timestamp to convert.
-	 * @return timestamp UTC timestamp.
+	 * @param  string timestamp Server timestamp to convert.
+	 * @return string timestamp UTC timestamp.
 	 */
-	function getUTCFromServerDate($_timestamp) {
+	public function getUTCFromServerDate($_timestamp) {
 		return $this->getTimestampFromISO($_timestamp) - $this->server_offset;
 	}
 
@@ -149,7 +149,7 @@ class BitDate {
 	 * Retrieve a current UTC timestamp as Unix epoch.
 	 * @return int Unix epoch
 	 */
-	function getUTCTime() {
+	public function getUTCTime() {
 		return time();
 	}
 
@@ -157,7 +157,7 @@ class BitDate {
 	 * Retrieve a current UTC Timestamp as an ISO formated date/time.
 	 * @return string Current ISO formated date/time
 	 */
-	function getUTCTimestamp() {
+	public function getUTCTimestamp() {
 		return $this->date("Y-m-d H:i:s",time(),true);
 	}
 
@@ -165,7 +165,7 @@ class BitDate {
 	 * Retrieve a current UTC Date as an ISO formated date
 	 * @return string Current ISO formated date
 	 */
-	function getUTCDate() {
+	public function getUTCDate() {
 		return $this->date("Y-m-d",time(),true);
 	}
 
@@ -174,7 +174,7 @@ class BitDate {
 	 * Currently, only "UTC" or an empty string (Local).
 	 * @return string Current timezone
 	 */
-	function getTzName() {
+	public function getTzName() {
 		if ($this->display_offset == 0)
 			return "UTC";
 		else
@@ -189,7 +189,7 @@ class BitDate {
 	 * @return int Seconds count based on 1st Jan 1970<br>
 	 * returns $iso_date if it is a number, or 0 if format invalid
 	 */
-	function getTimestampFromISO( $iso_date, $reverse = false ) {
+	public function getTimestampFromISO( $iso_date, $reverse = false ) {
 		$ret = 0;
 		if ( is_numeric($iso_date) ) { 
 			$ret = $iso_date;
@@ -197,18 +197,18 @@ class BitDate {
 			// Input d.m.y, h:m:s
 			if (preg_match(
 				"|^([0-9]{1,2})[-/\.]?([0-9]{1,2})[-/\.]?([0-9]{3,4}), ?(([0-9]{1,2}):?([0-9]{1,2}):?([0-9\.]{1,8}))?|",
-				($iso_date), $rr)) {
-					if (!isset($rr[5])) $ret = $this->gmmktime(0,0,0,$rr[2],$rr[1],$rr[3]);
-					else $ret = @$this->gmmktime($rr[5],$rr[6],$rr[7],$rr[2],$rr[1],$rr[3]);
-				}
+				$iso_date, $rr))
+				$ret = !isset($rr[5])
+					? $this->gmmktime(0,0,0,$rr[2],$rr[1],$rr[3])
+					: $ret = @$this->gmmktime($rr[5],$rr[6],$rr[7],$rr[2],$rr[1],$rr[3]);
 		} else {	
 				// Input y.m.d h:m:s
 				if (preg_match(
 					"|^([0-9]{3,4})[-/\.]?([0-9]{1,2})[-/\.]?([0-9]{1,2})[ -]?(([0-9]{1,2}):?([0-9]{1,2}):?([0-9\.]{1,4}))?|",
-					($iso_date), $rr)) {
-						if (!isset($rr[5])) $ret = $this->gmmktime(0,0,0,$rr[2],$rr[3],$rr[1]);
-						else $ret = @$this->gmmktime($rr[5],$rr[6],$rr[7],$rr[2],$rr[3],$rr[1]);
-			}
+					$iso_date, $rr))
+					$ret = !isset($rr[5])
+						? $this->gmmktime(0,0,0,$rr[2],$rr[3],$rr[1])
+						: $ret = @$this->gmmktime($rr[5],$rr[6],$rr[7],$rr[2],$rr[3],$rr[1]);
 		}
 		return $ret;
 	}
@@ -221,8 +221,7 @@ class BitDate {
 	 * @param int
 	 * @return int
 	 */
-	function dayOfWeek($year, $month, $day)
-	{
+	function dayOfWeek($year, $month, $day) {
 	/*
 	Pope Gregory removed 10 days - October 5 to October 14 - from the year 1582 and
 	proclaimed that from that time onwards 3 days would be dropped from the calendar
@@ -230,13 +229,8 @@ class BitDate {
 
 	Thursday, October 4, 1582 (Julian) was followed immediately by Friday, October 15, 1582 (Gregorian).
 	*/
-		if ($year <= 1582) {
-			if ($year < 1582 ||
-				($year == 1582 && ($month < 10 || ($month == 10 && $day < 15)))) $greg_correction = 3;
-		 	else
-				$greg_correction = 0;
-		} else
-			$greg_correction = 0;
+	$greg_correction = $year <= 1582 
+		? ($year < 1582 || ($year == 1582 && ($month < 10 || ($month == 10 && $day < 15))) ? 3: 0) : 0;
 
 		if($month > 2)
 			$month -= 2;
@@ -276,7 +270,7 @@ class BitDate {
 	 * Checks for leap year, returns true if it is. No 2-digit year check. Also
 	 * handles julian calendar correctly.
 	 * @param int
-	 * @return boolean
+	 * @return bool
 	 */
 	function _is_leap_year($year)
 	{
@@ -295,7 +289,7 @@ class BitDate {
 	/**
 	 * checks for leap year, returns true if it is. Has 2-digit year check
 	 * @param int
-	 * @return boolean
+	 * @return bool
 	 */
 	function is_leap_year($year)
 	{
@@ -309,8 +303,7 @@ class BitDate {
 	 * @param int
 	 * @return int
 	 */
-	function year_digit_check($y)
-	{
+	function year_digit_check($y) {
 		if ($y < 100) {
 
 			$yr = (integer) date("Y");
@@ -326,8 +319,7 @@ class BitDate {
 			$c1 *= 100;
 			// if 2-digit year is less than 30 years in future, set it to this century
 			// otherwise if more than 30 years in future, then we set 2-digit year to the prev century.
-			if (($y + $c1) < $yr+30) $y = $y + $c1;
-			else $y = $y + $c0*100;
+			$y = ($y + $c1) < $yr+30 ? $y + $c1 : $y + $c0*100;
 		}
 		return $y;
 	}
@@ -338,17 +330,13 @@ class BitDate {
 	 * @param boolean
 	 * @return array
 	 */
-	function getDate($d=false,$fast=false)
-	{
-		return getdate( $d );
-/* 2025-05-24 spiderr - REMOVED - this looks like early PHP madness
+	function getDate($d=false,$fast=false) {
 		if ($d === false) return $this->getdate();
 		if ((abs($d) <= 0x7FFFFFFF)) { // check if number in 32-bit signed range
 			if (!defined('ADODB_NO_NEGATIVE_TS') || $d >= 0) // if windows, must be +ve integer
 				return @$this->_getDate($d);
 		}
 		return $this->_getDate($d,$fast);
-*/
 	}
 
 	/*
@@ -381,10 +369,7 @@ class BitDate {
 	 * @param boolean Ignore timezone
 	 * @return array
 	 */
-/* 2025-05-24 spiderr - REMOVED - this code is as ancient as the dates it handles. use php getdate() function instead
-
-	function _getDate($origd=false,$fast=false,$is_gmt=false)
-	{
+	function _getDate($origd=false,$fast=false,$is_gmt=false ) {
 		static $YRS;
 
 		$d =  $origd - ($is_gmt ? 0 : adodb_get_gmt_diff(false,false,false));
@@ -477,7 +462,7 @@ class BitDate {
 			$secsInYear = 86400 * ($leaf ? 366 : 365) + $lastd;
 
 			$d = $lastd;
-			$mtab = ($leaf) ? $_month_table_leaf : $_month_table_normal;
+			$mtab = $leaf ? $_month_table_leaf : $_month_table_normal;
 			for ($a = 13 ; --$a > 0;) {
 				$lastd = $d;
 				$d += $mtab[$a] * $_day_power;
@@ -489,7 +474,7 @@ class BitDate {
 			}
 
 			$d = $lastd;
-			$day = $ndays + ceil(($d+1) / ($_day_power));
+			$day = $ndays + ceil(($d+1) / $_day_power);
 
 			$d += ($ndays - $day+1)* $_day_power;
 			$hour = floor($d/$_hour_power);
@@ -507,7 +492,7 @@ class BitDate {
 			}
 			$secsInYear = $lastd;
 			$d = $lastd;
-			$mtab = ($leaf) ? $_month_table_leaf : $_month_table_normal;
+			$mtab = $leaf ? $_month_table_leaf : $_month_table_normal;
 			for ($a = 1 ; $a <= 12; $a++) {
 				$lastd = $d;
 				$d -= $mtab[$a] * $_day_power;
@@ -519,7 +504,7 @@ class BitDate {
 			}
 			$d = $lastd;
 			$day = ceil(($d+1) / $_day_power);
-			$d = $d - ($day-1) * $_day_power;
+			$d -= ($day-1) * $_day_power;
 			$hour = floor($d /$_hour_power);
 		}
 
@@ -557,7 +542,6 @@ class BitDate {
 			0 => $origd
 		);
 	}
-*/
 
 	/*
 	 * Accepts unix timestamp and iso date format
@@ -567,19 +551,20 @@ class BitDate {
 	 * @param boolean Ignore timezone
 	 * @return string In the format specified by $fmt
 	 */
-	function date2($fmt, $d=false, $is_gmt=false)
-	{	if ( is_numeric($d) ) $this->date($fmt,$d,$is_gmt);
+	function date2($fmt, $d=false, $is_gmt=false) {
+		if ( is_numeric($d) ) $this->date($fmt,$d,$is_gmt);
 
 		if ($d !== false) {
 			if (!preg_match(
 				"|^([0-9]{3,4})[-/\.]?([0-9]{1,2})[-/\.]?([0-9]{1,2})[ -]?(([0-9]{1,2}):?([0-9]{1,2}):?([0-9\.]{1,4}))?|",
-				($d), $rr)) return $this->date($fmt,false,$is_gmt);
+				$d, $rr)) return $this->date($fmt,false,$is_gmt);
 
 			if ($rr[1] <= 100 && $rr[2]<= 1) return adodb_date($fmt,false,$is_gmt);
 
 			// h-m-s-MM-DD-YY
-			if (!isset($rr[5])) $d = adodb_mktime(0,0,0,$rr[2],$rr[3],$rr[1]);
-			else $d = @adodb_mktime($rr[5],$rr[6],$rr[7],$rr[2],$rr[3],$rr[1]);
+			$d = !isset($rr[5])
+				? adodb_mktime(0,0,0,$rr[2],$rr[3],$rr[1])
+				: @adodb_mktime($rr[5],$rr[6],$rr[7],$rr[2],$rr[3],$rr[1]);
 		}
 
 		return $this->date($fmt,$d,$is_gmt);
@@ -593,21 +578,16 @@ class BitDate {
 	 * @param boolean Ignore timezone
 	 * @return string In the format specified by $fmt
 	 */
-	function date($fmt,$d=false,$is_gmt=false)
-	{
+	function date($fmt,$d=false,$is_gmt=false){
 	static $daylight;
-		if ($d === false) {
-			return ($is_gmt)? @gmdate($fmt): @date($fmt);
-		}
-		if ((abs($d) <= 0x7FFFFFFF)) { // check if number in 32-bit signed range
-			if (!defined('ADODB_NO_NEGATIVE_TS') || $d >= 0) { // if windows, must be +ve integer
-				return ($is_gmt)? @gmdate($fmt,$d): @date($fmt,$d);
-			}
+		if ($d === false) return $is_gmt ? @gmdate($fmt) : @date($fmt);
+			if ((abs($d) <= 0x7FFFFFFF)) { // check if number in 32-bit signed range
+				if (!defined('ADODB_NO_NEGATIVE_TS') || $d >= 0) // if windows, must be +ve integer
+					return $is_gmt ? @gmdate($fmt,$d) : @date($fmt,$d);
 		}
 		$_day_power = 86400;
 
-//		$arr = $this->_getDate($d,true,$is_gmt);
-		$arr = getdate( $d );
+		$arr = $this->_getdate($d,true,$is_gmt);
 
 //		if (!isset($daylight)) $daylight = function_exists('adodb_daylight_sv');
 //		if ($daylight) adodb_daylight_sv($arr, $is_gmt);
@@ -628,105 +608,96 @@ class BitDate {
 		*/
 		for ($i=0; $i < $max; $i++) {
 			switch($fmt[$i]) {
-			case 'T': $dates .= date('T');break;
-			// YEAR
-			case 'L': $dates .= $arr['leap'] ? '1' : '0'; break;
-			case 'r': // Thu, 21 Dec 2000 16:01:07 +0200
+				case 'T': $dates .= date('T'); break;
+				// YEAR
+				case 'L': $dates .= $arr['leap'] ? '1' : '0'; break;
+				case 'r': // Thu, 21 Dec 2000 16:01:07 +0200
 
-				// 4.3.11 uses '04 Jun 2004'
-				// 4.3.8 uses  ' 4 Jun 2004'
-				$dates .= gmdate('D',$_day_power*(3+$this->dow($year,$month,$day))).', '
-					. ($day<10?'0'.$day:$day) . ' '.date('M',mktime(0,0,0,$month,2,1971)).' '.$year.' ';
+					// 4.3.11 uses '04 Jun 2004'
+					// 4.3.8 uses  ' 4 Jun 2004'
+					$dates .= gmdate('D',$_day_power*(3+$this->adodb_dow($year,$month,$day))).', '
+						. ($day<10?'0'.$day:$day) . ' '.date('M',mktime(0,0,0,$month,2,1971)).' '.$year.' ';
 
-				if ($hour < 10) $dates .= '0'.$hour; else $dates .= $hour;
+					if ($hour < 10) $dates .= '0'.$hour; else $dates .= $hour;
 
-				if ($min < 10) $dates .= ':0'.$min; else $dates .= ':'.$min;
+					if ($min < 10) $dates .= ':0'.$min; else $dates .= ':'.$min;
 
-				if ($secs < 10) $dates .= ':0'.$secs; else $dates .= ':'.$secs;
+					if ($secs < 10) $dates .= ':0'.$secs; else $dates .= ':'.$secs;
 
-				$gmt = adodb_get_gmt_diff();
-				$dates .= sprintf(' %s%04d',($gmt<0)?'+':'-',abs($gmt)/36); break;
+					$gmt = adodb_get_gmt_diff(false,false,false);
+					$dates .= sprintf(' %s%04d',($gmt<0)?'+':'-',abs($gmt)/36); break;
 
-			case 'Y': $dates .= $year; break;
-			case 'y': $dates .= substr($year,strlen($year)-2,2); break;
-			// MONTH
-			case 'm': if ($month<10) $dates .= '0'.$month; else $dates .= $month; break;
-			case 'Q': $dates .= ($month+3)>>2; break;
-			case 'n': $dates .= $month; break;
-			case 'M': $dates .= date('M',mktime(0,0,0,$month,2,1971)); break;
-			case 'F': $dates .= date('F',mktime(0,0,0,$month,2,1971)); break;
-			// DAY
-			case 't': $dates .= $arr['ndays']; break;
-			case 'z': $dates .= $arr['yday']; break;
-			case 'w': $dates .= adodb_dow($year,$month,$day); break;
-			case 'l': $dates .= gmdate('l',$_day_power*(3+adodb_dow($year,$month,$day))); break;
-			case 'D': $dates .= gmdate('D',$_day_power*(3+adodb_dow($year,$month,$day))); break;
-			case 'j': $dates .= $day; break;
-			case 'd': if ($day<10) $dates .= '0'.$day; else $dates .= $day; break;
-			case 'S':
-				$d10 = $day % 10;
-				if ($d10 == 1) $dates .= 'st';
-				else if ($d10 == 2 && $day != 12) $dates .= 'nd';
-				else if ($d10 == 3) $dates .= 'rd';
-				else $dates .= 'th';
-				break;
+				case 'Y': $dates .= $year; break;
+				case 'y': $dates .= substr($year,strlen($year)-2,2); break;
+				// MONTH
+				case 'm': if ($month<10) $dates .= '0'.$month; else $dates .= $month; break;
+				case 'Q': $dates .= ($month+3)>>2; break;
+				case 'n': $dates .= $month; break;
+				case 'M': $dates .= date('M',mktime(0,0,0,$month,2,1971)); break;
+				case 'F': $dates .= date('F',mktime(0,0,0,$month,2,1971)); break;
+				// DAY
+				case 't': $dates .= $arr['ndays']; break;
+				case 'z': $dates .= $arr['yday']; break;
+				case 'w': $dates .= adodb_dow($year,$month,$day); break;
+				case 'l': $dates .= gmdate('l',$_day_power*(3+adodb_dow($year,$month,$day))); break;
+				case 'D': $dates .= gmdate('D',$_day_power*(3+adodb_dow($year,$month,$day))); break;
+				case 'j': $dates .= $day; break;
+				case 'd': if ($day<10) $dates .= '0'.$day; else $dates .= $day; break;
+				case 'S':
+					$d10 = $day % 10;
+					if ($d10 == 1) $dates .= 'st';
+					else if ($d10 == 2 && $day != 12) $dates .= 'nd';
+					else if ($d10 == 3) $dates .= 'rd';
+					else $dates .= 'th';
+					break;
 
-			// HOUR
-			case 'Z':
-				$dates .= ($is_gmt) ? 0 : -adodb_get_gmt_diff(); break;
-			case 'O':
-				$gmt = ($is_gmt) ? 0 : adodb_get_gmt_diff();
-				$dates .= sprintf('%s%04d',($gmt<0)?'+':'-',abs($gmt)/36); break;
+				// HOUR
+				case 'Z':
+					$dates .= $is_gmt ? 0 : -adodb_get_gmt_diff(false,false,false); break;
+				case 'O':
+					$gmt = $is_gmt ? 0 : adodb_get_gmt_diff(false,false,false);
+					$dates .= sprintf('%s%04d',($gmt<0)?'+':'-',abs($gmt)/36); break;
 
-			case 'H':
-				if ($hour < 10) $dates .= '0'.$hour;
-				else $dates .= $hour;
-				break;
-			case 'h':
-				if ($hour > 12) $hh = $hour - 12;
-				else {
-					if ($hour == 0) $hh = '12';
-					else $hh = $hour;
-				}
+				case 'H':
+					if ($hour < 10) $dates .= '0'.$hour;
+					else $dates .= $hour;
+					break;
+				case 'h':
+					$hh = $hour > 12 ? $hour - 12 : ( $hour == 0 ? '12' : $hour );
+					if ($hh < 10) $dates .= '0'.$hh;
+					else $dates .= $hh;
+					break;
 
-				if ($hh < 10) $dates .= '0'.$hh;
-				else $dates .= $hh;
-				break;
+				case 'G':
+					$dates .= $hour;
+					break;
 
-			case 'G':
-				$dates .= $hour;
-				break;
-
-			case 'g':
-				if ($hour > 12) $hh = $hour - 12;
-				else {
-					if ($hour == 0) $hh = '12';
-					else $hh = $hour;
-				}
-				$dates .= $hh;
-				break;
-			// MINUTES
-			case 'i': if ($min < 10) $dates .= '0'.$min; else $dates .= $min; break;
-			// SECONDS
-			case 'U': $dates .= $d; break;
-			case 's': if ($secs < 10) $dates .= '0'.$secs; else $dates .= $secs; break;
-			// AM/PM
-			// Note 00:00 to 11:59 is AM, while 12:00 to 23:59 is PM
-			case 'a':
-				if ($hour>=12) $dates .= 'pm';
-				else $dates .= 'am';
-				break;
-			case 'A':
-				if ($hour>=12) $dates .= 'PM';
-				else $dates .= 'AM';
-				break;
-			default:
-				$dates .= $fmt[$i]; break;
-			// ESCAPE
-			case "\\":
-				$i++;
-				if ($i < $max) $dates .= $fmt[$i];
-				break;
+				case 'g':
+					$hh = $hour > 12 ? $hour - 12 : ( $hour == 0 ? '12' : $hour );
+					$dates .= $hh;
+					break;
+				// MINUTES
+				case 'i': if ($min < 10) $dates .= '0'.$min; else $dates .= $min; break;
+				// SECONDS
+				case 'U': $dates .= $d; break;
+				case 's': if ($secs < 10) $dates .= '0'.$secs; else $dates .= $secs; break;
+				// AM/PM
+				// Note 00:00 to 11:59 is AM, while 12:00 to 23:59 is PM
+				case 'a':
+					if ($hour>=12) $dates .= 'pm';
+					else $dates .= 'am';
+					break;
+				case 'A':
+					if ($hour>=12) $dates .= 'PM';
+					else $dates .= 'AM';
+					break;
+				default:
+					$dates .= $fmt[$i]; break;
+				// ESCAPE
+				case "\\":
+					$i++;
+					if ($i < $max) $dates .= $fmt[$i];
+					break;
 			}
 		}
 		return $dates;
@@ -778,7 +749,7 @@ class BitDate {
 */
 		}
 
-		$gmt_different = ($is_gmt) ? 0 : $this->server_offset;
+		$gmt_different = $is_gmt ? 0 : $this->server_offset;
 
 		/*
 		# disabled because some people place large values in $sec.
@@ -864,296 +835,111 @@ class BitDate {
 
 	function gmstrftime($fmt, $ls=false)
 	{
-		return strftime($fmt,$ls,true);
+		return $this->strftime($fmt,$ls,true);
 	}
 
-	function strtotime($time, $now=NULL)
+	function strtotime($time, $now=null)
 	{
-		if($now == NULL) 
+		if ($now == null) 
 			return strtotime($time);
 		else
 			return strtotime($time, $now);
 	}
 
 	// hack - convert to adodb_date
-	function strftime($format, $timestamp=false, $is_gmt=false) {
-
-/* This PHP script defines (if not exists) a strftime() function that is
- * deprecated and will be removed from standard PHP functions in the future.
- * The only thing you need to do is to load the script before everything else.
- * In this way, it is possible to run older code work based on strftime()
- * function on PHP version that doesn't support it without modifying your code.
- *
- * The script uses two methods to get the text:
- *   - using shell command;
- *   - using intl IntlDateFormatter class and additional processing.
- *
- * The choice between these two methods is automatic. The first method is used
- * if the system allows execution of shell commands and is the more reliable
- * option. The second method is not complete. I'm having trouble finding
- * a solution for the %V, %g, %G, %X, %c, %x tags.
- *
- * Pavel Tzonkov (C)2023
- */
-
-    // PARAMETER 1 CHECK
-
-        if (($format === null) || ($format === false))
-            return false;
-
-        if ($format === true)
-            return '1';
-
-        $type = gettype($format);
-
-        if (preg_match('/^(array|object|resource|resource \(closed\)|unknown type)$/', $type)) {
-            trigger_error('strftime() expects parameter 1 to be string, ' . $type . ' given', E_USER_WARNING);
-            return false;
-        }
-
-        if (preg_match('/^(integer|double)$/', $type))
-            return (string) $format;
-
-        if ($type !== 'string')
-            return false;
-
-    // PARAMETER 2 CHECK
-
-        $type = gettype($timestamp);
-
-        if ($timestamp === null)
-            $timestamp = time();
-
-        elseif (
-            !is_scalar($timestamp) ||
-            (is_string($timestamp) && !preg_match('/^(0|[1-9]\d*)$/', $timestamp))
-        ) {
-            trigger_error('strftime() expects parameter 2 to be integer, ' . $type . ' given', E_USER_WARNING);
-            return false;
-        }
-
-        if (!is_integer($timestamp))
-            $timestamp = (int) $timestamp;
-
-        $locale = setlocale(LC_TIME, '0');
-
-
-// EASY WAY - USING SHELL TO GET DATE TEXT
-
-        if (is_callable('shell_exec') && (stripos(ini_get('disable_functions'), 'shell_exec') === false)) {
-            $cmd = 'export LC_TIME=' . escapeshellarg($locale) . '; date --date @' . escapeshellarg($timestamp) . ' +' . escapeshellarg($format);
-            return preg_replace('/\r?\n$/', '', shell_exec($cmd));
-        }
-
-
-// HARD WAY - NOT COMPLETED
-
-    // CHECK FORMAT
-
-        $format = strtr($format,[
-            '%r' => '%I:%M:%S %p',
-            '%R' => '%H:%M',
-            '%T' => '%H:%M:%S',
-            '%D' => '%m/%d/%y',
-            '%F' => '%Y-%m-%d'
-        ]);
-
-        $modifiers = 'aAdejuwUVWbBhmCgGyYHkIlMpPSXzZcsxnt%';
-        if (!preg_match('/%[' . $modifiers . ']/', $format))
-            return $format;
-
-    // FORMAT MAP
-
-        $map = [    // https://unicode-org.github.io/icu/userguide/format_parse/datetime/
-                    // https://www.php.net/manual/en/function.strftime.php#refsect1-function.strftime-parameters
-
-            // DAY
-            '%a' => 'ccc',      // Mon - Sun
-            '%A' => 'cccc',     // Monday - Sunday
-            '%d' => 'dd',       // 01 - 31
-            '%e' => 'd',        // 1 - 31
-            '%j' => ['D'],      // 001 - 366
-            '%u' => ['c'],      // 1 - 7
-            '%w' => ['c'],      // 0 - 6
-
-            // WEEK
-            '%U' => ['w'],      // Week number of the given year, starting with the first Sunday as the first week
-            '%V' => ['ww'],     // Week number of the given year, starting with the first week of the year with at least 4 weekdays, with Monday being the start of the week (ISO-8601:1988)
-            '%W' => ['w'],      // A numeric representation of the week of the year, starting with the first Monday as the first week
-
-            // MONTH
-            '%b' => 'LLL',      // Jan - Dec
-            '%B' => 'LLLL',     // January - December
-            '%h' => 'LLL',      // Jan - Dec
-            '%m' => 'LL',       // 01 - 12
-
-            // YEAR
-            '%C' => ['y'],      // Two digit representation of the century (year divided by 100, truncated to an integer)
-            '%g' => ['yy'],     // Two digit representation of the year (ISO-8601:1988 see %V)
-            '%G' => ['y'],      // Full digit representation of the year (ISO-8601:1988 see %V)
-            '%y' => 'yy',       // Two digit representation of the year
-            '%Y' => 'y',        // Full digit representation of the year
-
-            // TIME
-            '%H' => 'HH',       // Hour 00 - 23
-            '%k' => 'H',        // Hour 0 - 23
-            '%I' => 'hh',       // Hour 01 - 12
-            '%l' => 'h',        // Hour 1 - 12
-            '%M' => 'mm',       // Minutes 00 - 59
-            '%p' => [],         // AM / PM
-            '%P' => [],         // am / pm
-            '%S' => 'ss',       // Seconds 00 - 59
-            '%X' => [],         // Preferred time representation based on locale, without the date. Example: 03:59:16 or 15:59:16
-            '%z' => 'Z',        // Time zone -0500 for US Eastern Time
-            '%Z' => 'z',        // Time zone EST for Eastern Time
-
-            // TIME AND DATA STAMPS
-            '%c' => [],         // Preferred date and time stamp based on locale. Example: Tue Feb 5 00:45:10 2009
-            '%s' => [],         // Unix Epoch Time timestamp (same as the time() function)
-            '%x' => [],         // Preferred date representation based on locale, without the time. Example: 02/05/09
-
-            // MISCELLANEOUS
-            '%n' => [],         // \n
-            '%t' => [],         // \t
-            '%%' => []          // %
-        ];
-
-        $timezone = date_default_timezone_get();
-
-        $return = '';
-
-        $length = strlen($format);
-
-        for ($i = 0; $i < $length; $i++) {
-
-            $current_char = $format[$i];
-            $next_char = $i < $length - 1 ? $format[$i + 1] : false;
-
-            // NORMAL TEXT
-            if ($current_char !== '%') {
-                $return .= $current_char;
-                continue;
-            }
-
-            // MODIFIER
-            else {
-
-                // LAST CHARACTER
-                if ($next_char === false) {
-                    $return .= '%';
-                    continue;
-                }
-
-                $fmt = $current_char . $next_char;
-                $i++;
-
-                // NOT FOUND
-                if (!isset($map[$fmt])) {
-                    $return .= $fmt;
-                    continue;
-                }
-
-                // SIMPLE MODIFIER
-                if (is_string($map[$fmt])) {
-                    $return .= datefmt_format(datefmt_create(
-                        $locale,
-                        IntlDateFormatter::FULL,
-                        IntlDateFormatter::FULL,
-                        $timezone,
-                        IntlDateFormatter::GREGORIAN,
-                        $map[$fmt]
-                    ), $timestamp);
-                    continue;
-                }
-
-                // SPECIAL MODIFIERS
-                if (!empty($map['fmt']))
-                    $str = datefmt_format(datefmt_create(
-                        $locale,
-                        IntlDateFormatter::FULL,
-                        IntlDateFormatter::FULL,
-                        $timezone,
-                        IntlDateFormatter::GREGORIAN,
-                        $map[$fmt][0]
-                    ), $timestamp);
-
-                if ($fmt == '%j')
-                    $return .= sprintf("%03d", $str);
-
-                elseif ($fmt == '%u')
-                    $return .= (--$str ? $str : '7');
-
-                elseif ($fmt == '%w')
-                    $return .= --$str;
-
-                elseif ($fmt == '%U') {
-
-                }
-
-                elseif ($fmt == '%V') {
-
-                }
-
-                elseif ($fmt == '%W') {
-
-                }
-
-                elseif ($fmt == '%C')
-                    $return .= (string) floor($str / 100);
-
-                elseif ($fmt == '%g') {
-
-                }
-
-                elseif ($fmt == '%G') {
-
-                }
-
-                elseif (($fmt == '%p') || ($fmt == '%P')) {
-                    $str = datefmt_format(datefmt_create(
-                        'en_US',
-                        IntlDateFormatter::FULL,
-                        IntlDateFormatter::FULL,
-                        $timezone,
-                        IntlDateFormatter::GREGORIAN,
-                        'a'
-                    ), $timestamp);
-                    $return .= ($fmt == '%p') ? strtoupper($str) : strtolower($str);
-                }
-
-                elseif ($fmt == '%X') {
-
-                }
-
-                elseif ($fmt == '%c') {
-
-                }
-
-                elseif ($fmt == '%s')
-                    $return .= $timestamp;
-
-                elseif ($fmt == '%x') {
-
-                }
-
-                elseif ($fmt == '%n')
-                    $return .= "\n";
-
-                elseif ($fmt == '%t')
-                    $return .= "\t";
-
-                elseif ($fmt == '%%')
-                    $return .= '%';
-
-                else
-                    $return .= $fmt;
-
-                continue;
-            }
-
-        }
-
-        return $return;
+	public static function strftime($fmt, $ls=false,$is_gmt=false)
+	{
+	global $ADODB_DATE_LOCALE;
+	// TODO FIX GMT DATES using IntlDateFormatter::format
+	   $formatter = new \IntlDateFormatter('en_GB', \IntlDateFormatter::LONG, \IntlDateFormatter::NONE);
+	   if ((abs($ls) <= 0x7FFFFFFF)) { // check if number in 32-bit signed range
+			if (!defined('ADODB_NO_NEGATIVE_TS') || $ls >= 0) // if windows, must be +ve integer
+			    return $is_gmt ? @$formatter->format($ls) : @$formatter->format($ls);
+		}
+
+		if (empty($ADODB_DATE_LOCALE)) {
+		     $tstr = strtoupper($formatter->format(time())); // 30 Dec 1970, 1 am
+			$sep = substr($tstr,2,1);
+			$hasAM = strrpos($tstr,'M') !== false;
+
+			$ADODB_DATE_LOCALE = [];
+			$ADODB_DATE_LOCALE[] =  strncmp($tstr,'30',2) == 0 ? 'd'.$sep.'m'.$sep.'y' : 'm'.$sep.'d'.$sep.'y';
+			$ADODB_DATE_LOCALE[]  = $hasAM ? 'h:i:s a' : 'H:i:s';
+
+		}
+		$inpct = false;
+		$fmtdate = '';
+		for ($i=0,$max = strlen($fmt); $i < $max; $i++) {
+			$ch = $fmt[$i];
+			if ($ch == '%') {
+				if ($inpct) {
+					$fmtdate .= '%';
+					$inpct = false;
+				} else
+					$inpct = true;
+			} else if ($inpct) {
+
+				$inpct = false;
+				switch($ch) {
+				case '0':
+				case '1':
+				case '2':
+				case '3':
+				case '4':
+				case '5':
+				case '6':
+				case '7':
+				case '8':
+				case '9':
+				case 'E':
+				case 'O':
+					/* ignore format modifiers */
+					$inpct = true;
+					break;
+
+				case 'a': $fmtdate .= 'D'; break;
+				case 'A': $fmtdate .= 'l'; break;
+				case 'h':
+				case 'b': $fmtdate .= 'M'; break;
+				case 'B': $fmtdate .= 'F'; break;
+				case 'c': $fmtdate .= $ADODB_DATE_LOCALE[0].$ADODB_DATE_LOCALE[1]; break;
+				case 'C': $fmtdate .= '\C?'; break; // century
+				case 'd': $fmtdate .= 'd'; break;
+				case 'D': $fmtdate .= 'm/d/y'; break;
+				case 'e': $fmtdate .= 'j'; break;
+				case 'g': $fmtdate .= '\g?'; break; //?
+				case 'G': $fmtdate .= '\G?'; break; //?
+				case 'H': $fmtdate .= 'H'; break;
+				case 'I': $fmtdate .= 'h'; break;
+				case 'j': $fmtdate .= '?z'; $parsej = true; break; // wrong as j=1-based, z=0-basd
+				case 'm': $fmtdate .= 'm'; break;
+				case 'M': $fmtdate .= 'i'; break;
+				case 'n': $fmtdate .= "\n"; break;
+				case 'p': $fmtdate .= 'a'; break;
+				case 'r': $fmtdate .= 'h:i:s a'; break;
+				case 'R': $fmtdate .= 'H:i:s'; break;
+				case 'S': $fmtdate .= 's'; break;
+				case 't': $fmtdate .= "\t"; break;
+				case 'T': $fmtdate .= 'H:i:s'; break;
+				case 'u': $fmtdate .= '?u'; $parseu = true; break; // wrong strftime=1-based, date=0-basde
+				case 'U': $fmtdate .= '?U'; $parseU = true; break;// wrong strftime=1-based, date=0-based
+				case 'x': $fmtdate .= $ADODB_DATE_LOCALE[0]; break;
+				case 'X': $fmtdate .= $ADODB_DATE_LOCALE[1]; break;
+				case 'w': $fmtdate .= '?w'; $parseu = true; break; // wrong strftime=1-based, date=0-basde
+				case 'W': $fmtdate .= '?W'; $parseU = true; break;// wrong strftime=1-based, date=0-based
+				case 'y': $fmtdate .= 'y'; break;
+				case 'Y': $fmtdate .= 'Y'; break;
+				case 'Z': $fmtdate .= 'T'; break;
+				}
+			} else if (('A' <= $ch && $ch <= 'Z' ) || ('a' <= $ch && $ch <= 'z' ))
+				$fmtdate .= "\\".$ch;
+			else
+				$fmtdate .= $ch;
+		}
+		//echo "fmt=",$fmtdate,"<br>";
+		if ($ls === false) $ls = time();
+		$ret = date($fmtdate, $ls, $is_gmt);
+		return $ret;
 	}
 
 	/**
@@ -1186,28 +972,20 @@ class BitDate {
 		$yy = ($year - 1) % 100;
 		$c = ($year - 1) - $yy;
 		$g = $yy + intval($yy/4);
-		$jan1_weekday = 1 + intval((((($c / 100) % 4) * 5) + $g) % 7);
+		$jan1_weekday = 1 + intval(($c / 100 % 4 * 5 + $g) % 7);
 		// weekday for year-month-day
 		$h = $day_of_year_number + ($jan1_weekday - 1) - 1;
 		$weekday = 1 + intval(($h - 1) % 7);
 		// find if Y M D falls in YearNumber Y-1, WeekNumber 52 or
 		if ($day_of_year_number <= (8 - $jan1_weekday) && $jan1_weekday > 4){
 			$yearnumber = $year - 1;
-			if ($jan1_weekday == 5 || ($jan1_weekday == 6 && $y_1_isleap)) {
-				$weeknumber = 53;
-			} else {
-				$weeknumber = 52;
-			}
+			$weeknumber = $jan1_weekday == 5 || ($jan1_weekday == 6 && $y_1_isleap) ? 53 : 52;
 		} else {
 			$yearnumber = $year;
 		}
 		// find if Y M D falls in YearNumber Y+1, WeekNumber 1
 		if ($yearnumber == $year) {
-			if ($y_isleap) {
-				$i = 366;
-			} else {
-				$i = 365;
-			}
+			$i =  $y_isleap ? 366 : 365;
 			if (($i - $day_of_year_number) < (4 - $weekday)) {
 				$yearnumber++;
 				$weeknumber = 1;
@@ -1235,7 +1013,7 @@ class BitDate {
 		static $timezone_options;
 
 		if (!$timezone_options) {
-			$timezone_options = array();
+			$timezone_options = [];
 
 			if ($use_default)
 				$timezone_options['default'] = '-- Use Default Time Zone --';
@@ -1245,7 +1023,7 @@ class BitDate {
 
 				$absoffset = abs($offset /= 60000);
 				$plusminus = $offset < 0 ? '-' : '+';
-				$gmtoff = sprintf("GMT%1s%02d:%02d", $plusminus, $absoffset / 60, $absoffset - (intval($absoffset / 60) * 60));
+				$gmtoff = sprintf("GMT%1s%02d:%02d", $plusminus, $absoffset / 60, $absoffset - intval($absoffset / 60) * 60);
 				$tzlongshort = $tz['longname'] . ' (' . $tz['shortname'] . ')';
 				$timezone_options[$tz_key] = sprintf('%-28.28s: %-36.36s %s', $tz_key, $tzlongshort, $gmtoff);
 			}
@@ -1266,14 +1044,14 @@ class BitDate {
 			$timestamp = time();
 
 	# rfc2822 requires dates to be en formatted
-		$saved_locale = @setlocale(0);
-		@setlocale ('en_US');
+		$saved_locale = @setlocale(0, '');
+		@setlocale (0, 'en_US');
 	#was return date('D, j M Y H:i:s ', $time) . $this->timezone_offset($time, 'no colon');
 		$rv = $this->strftime('%a, %e %b %Y %H:%M:%S', $timestamp, $user). $this->get_rfc2822_timezone_offset($timestamp, $user);
 
 	# switch back to the 'saved' locale
 		if ($saved_locale)
-			@setlocale ($saved_locale);
+			@setlocale (0, $saved_locale);
 
 		return $rv;
 	}
@@ -1303,7 +1081,7 @@ class BitDate {
 
 		if (!$locale) {
 			# breaks the RFC 2822 code
-			$locale = @setlocale(LC_TIME, $this->get_locale($user));
+			$locale = @setlocale(LC_TIME, get_locale($user));
 			#print "<pre>set_locale(): locale=$locale\n</pre>";
 		}
 
@@ -1332,19 +1110,18 @@ class BitDate {
 				return $this->is_leap_year( $year ) ? 29 : 28;
 
 			default:
-				assert( FALSE );
+				assert( false );
 		}
 	}
 
 	/**
 	* Get a hash of holidays for a given year
-	* @param $pYear the year in question
-	* @param $pCountryCode -- the country in question - only US is supported currently
-	* @return an associative array containing the holidays occuring in the given year they key is a date stamp of the form Y-m-d, the value is the name of the corresponding holiday
-	* @access public
+	* @param int $pYear the year in question
+	* @param string $pCountryCode -- the country in question - only US is supported currently
+	* @return array an associative array containing the holidays occuring in the given year they key is a date stamp of the form Y-m-d, the value is the name of the corresponding holiday
 	**/
-	static function getHolidays( $pYear=NULL, $pCountryCode='US' ) {
-		$return = array();
+	static function getHolidays( $pYear=null, $pCountryCode='US' ) {
+		$return = [];
 
 		if( empty( $pYear ) ) {
 			$pYear = date( 'Y' );
@@ -1400,11 +1177,10 @@ class BitDate {
 
 		// Easter - the Sunday after the first full moon which falls on or after the Spring Equinox
 		// Thank God (ha!) PHP has a function for that...
-		$return[date( 'Y-m-d', easter_date( $pYear ) - (3 * 86400) + 43200 )] = 'Good Friday';
-		$return[date( 'Y-m-d', easter_date( $pYear ) + 43200 )] = 'Easter';
+		$return [date( 'Y-m-d', easter_date( $pYear ) - 3 * 86400 + 43200 )] = 'Good Friday';
+		$return [date( 'Y-m-d', easter_date( $pYear ) + 43200 )] = 'Easter';
 
 		return $return;
-
 	}
 
 	function calculateTimeZoneDate( $dateTime, $fromTZ, $toTZ, $fromLocation = 'North America', $toLocation = 'GMT' ) {
@@ -1480,17 +1256,13 @@ class BitDate {
 			$toGMTDiff    = $timeZonesArray[$toLocation][$toTZ];
 
 			if(( '' != trim( $fromGMTDiff )) && ( '' != trim( $toGMTDiff ))) {
-			if( $fromGMTDiff > $toGMTDiff ) {
-				$netDiff = $fromGMTDiff - $toGMTDiff;
-			} else {
-				$netDiff = $toGMTDiff - $fromGMTDiff;
-			}
-			$retval = date( 'Y-m-d h:i:sa', ( $timeStamp + ( 3600 * $netDiff )));
+				$netDiff = $fromGMTDiff > $toGMTDiff ? $fromGMTDiff - $toGMTDiff : $toGMTDiff - $fromGMTDiff;
+
+			$retval = date( 'Y-m-d h:i:sa', $timeStamp +  3600 * $netDiff );
 
 		}
  		return $retval;
 
 	} // end function calculateTimeZoneDate()
-	
+
 }
-?>

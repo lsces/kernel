@@ -17,10 +17,11 @@
  * @author spider <spider@steelsun.com>
  */
 
+namespace Bitweaver;
+
 /**
  * required setup
  */
-require_once ( KERNEL_PKG_CLASS_PATH.'BitDbBase.php' );
 
 define( 'STORAGE_BINARY', 1 );
 define( 'STORAGE_IMAGE', 2 );
@@ -29,7 +30,6 @@ define( 'STORAGE_IMAGE', 2 );
 interface BitCacheable  {
 	public function getCacheKey(); 
 }
-
 
 
 /**
@@ -46,7 +46,7 @@ abstract class BitBase {
 	 * @todo not used yet
 	 * @private
 	 */
-	public $mErrors = array();
+	public $mErrors = [];
 
 	/**
 	 * Same idea as the error hash but this is for successful operations
@@ -87,22 +87,32 @@ abstract class BitBase {
 	/**
 	 * Data hash that represents this classes row(s) in the db
 	 **/
-	public $mInfo = array();
+	public $mInfo = [];
 
 	/**
 	 * Data hash that contains logging information relevant to database operations
 	 **/
-	public $mLogs = array();
+	public $mLogs = [];
 
-	protected $mPreventCache = FALSE;
+	/**
+	 * Last time object was cached
+	 **/
+	public $mLastOutputTime;
+
+	/**
+	 * Debug timing
+	 **/
+	public $mDebugMicrotime;
+
+	protected $mPreventCache = true;
 
 
-	const CACHE_STATE_NONE = 0;
-	const CACHE_STATE_DELETE = -1;
-	const CACHE_STATE_ADDED = 1;
-	const CACHE_STATE_STORED = 2;
+	public const int CACHE_STATE_NONE = 0;
+	public const int CACHE_STATE_DELETE = -1;
+	public const int CACHE_STATE_ADDED = 1;
+	public const int CACHE_STATE_STORED = 2;
 
-	function __construct( $pName = '' ) {
+	public function __construct( $pName = '' ) {
 		global $gBitDb;
 		$this->mName = $pName;
 		// On construct we will set the cache time to none to force a reload of everything for this singleton
@@ -110,11 +120,11 @@ abstract class BitBase {
 		if( is_object( $gBitDb ) ) {
 			$this->setDatabase($gBitDb);
 		}
-		$this->mErrors = array();
-		$this->mInfo = array();
+		$this->mErrors = [];
+		$this->mInfo = [];
 	}
 
-	function __destruct() {
+	public function __destruct() {
 		unset( $this->mDb );
 		$this->storeInCache();
 	}
@@ -123,25 +133,25 @@ abstract class BitBase {
 		unset( $this->mDb );
 		// On sleep we will set the cache time to default
 		$this->mCacheTime = self::cacheQueryDefaultTime();
-		$this->mCacheObject = TRUE;
-		return array( 'mCacheTime', 'mCacheObject' );
+		$this->mCacheObject = true;
+		return [ 'mCacheTime', 'mCacheObject' ];
 	}
 
 	public function __wakeup() {
 		global $gBitDb;
 		$this->setDatabase( $gBitDb );
-		$this->mErrors = array();
+		$this->mErrors = [];
 	}
 
 	protected function load() {
 		// load  implies to purge all existing cache data
 		$this->clearFromCache();
-		return TRUE;
+		return true;
 	}
 
 	/**
 	 * During initialisation, we assign a name which is used by the class.
-	 * @param pName a unique identified used in caching and database
+	 * @param string pName a unique identified used in caching and database
 	 * mechanisms
 	 **/
 	function BitBase( $pName = '' ) {
@@ -151,11 +161,11 @@ abstract class BitBase {
 	/**
 	 * Delete content object and all related records
 	 *
-	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return bool
 	 */
 	protected function expunge() {
 		$this->clearFromCache();
+		return true;
 	}
 
 	protected function cacheQueryTime() {
@@ -166,10 +176,10 @@ abstract class BitBase {
 		return self::isRefreshRequest() ? BIT_QUERY_CACHE_TIME : 0;
 	}
 
-	public function clearFromCache( &$pParamHash=NULL ) {
+	public function clearFromCache( &$pParamHash=null ) {
 		global $gBitSystem;
 		$this->mCacheTime = BIT_QUERY_CACHE_DISABLE;
-		$this->mPreventCache = TRUE;
+		$this->mPreventCache = true;
 		if( $gBitSystem && static::isCacheActive() && ($cacheKey = $this->getCacheUuid()) ) {
 			// if there are multiple instances of this object, there is a race condition since it's possible cleared cached objects remain by getting re-storeInCache because clear was not called on that instance. urgh.
 			// BitSystem keeps a master list of keys to purge on page destruction just in case this happens
@@ -184,34 +194,27 @@ abstract class BitBase {
 	 *
 	 * @param string $pCacheKey unique identifier for object in cache store
 	 * @access public
-	 * @return TRUE on success, FALSE on failure
+	 * @return bool true on success, false on failure
 	 */
 	protected function storeInCache() {
-		$ret = FALSE;
+		$ret = false;
 		if( static::isCacheActive() && ($cacheKey = $this->getCacheUuid()) ) {
 			global $gBitSystem;
-			if( $this->isCacheableObject()  && $gBitSystem && !$gBitSystem->isPurgedFromCache( $cacheKey ) ) {
-				if( empty( $this->mCacheObject ) ) {
-					// new to cache, or overwrite
-//var_dump( 'STORE '.get_called_class().' '.$cacheKey );
-					$ret = apcu_store( $cacheKey, $this, 3600 );
-				} else {
-//var_dump( 'ADD '.get_called_class().' '.$cacheKey );
-					$ret = apcu_add( $cacheKey, $this, 3600 );
-				}
-			} else {
-				$this->clearFromCache();
-			}
+			( $this->isCacheableObject()  && $gBitSystem && !$gBitSystem->isPurgedFromCache( $cacheKey ) ) ?
+				( $this->mCacheObject ?
+					$ret = apcu_store( $cacheKey, $this, 3600 ) :
+					$ret = apcu_add( $cacheKey, $this, 3600 ) )
+				: $this->clearFromCache();
 		}
 		return $ret;
 	}
 
-	public static function loadFromCache( $pCacheKey, $pContentTypeGuid = NULL ) {
-		$ret = NULL;
+	public static function loadFromCache( $pCacheKey, $pContentTypeGuid = null ) {
+		$ret = null;
 //vd( 'LOAD '.get_called_class().' '.static::getCacheUuidFromKey( $pCacheKey, $pContentTypeGuid ) );
 		if( static::isCacheActive() && static::isCacheableClass() && !empty( $pCacheKey ) ) {
 			if( $ret = apcu_fetch( static::getCacheUuidFromKey( $pCacheKey, $pContentTypeGuid ) ) ) {
-				$ret->mCacheObject = TRUE;
+				$ret->mCacheObject = true;
 //vd( 'LOAD SUCCESS '.get_class( $ret ).' ' .$ret->getField( 'content_id' ) );
 			} else {
 //vd( 'LOAD FAILED' );
@@ -240,10 +243,10 @@ abstract class BitBase {
 
 	public function getCacheKey() {
 		// default returns no key
-		return NULL;
+		return null;
 	}
 
-	public static function getCacheUuidFromKey( $pCacheUuid = '', $pContentTypeGuid = NULL ) {
+	public static function getCacheUuidFromKey( $pCacheUuid = '', $pContentTypeGuid = null ) {
 		global $gBitDbName, $gBitDbHost;
 		$ret = BitBase::getParameter( $_SERVER, 'HTTP_HOST', 'unknown' ).':'.$gBitDbName.'@'.$gBitDbHost.':'.($pContentTypeGuid ? $pContentTypeGuid : static::getCacheClass()).'#'.$pCacheUuid;
 		return $ret;
@@ -251,7 +254,7 @@ abstract class BitBase {
 
 	public static function isCacheActive() {
 		// only apc is supported for now.
-		return (function_exists( 'apcu_add' ) && defined( 'BIT_CACHE_OBJECTS' ) && BIT_CACHE_OBJECTS && !self::isRefreshRequest());
+		return function_exists( 'apcu_add' ) && defined( 'BIT_CACHE_OBJECTS' ) && BIT_CACHE_OBJECTS && !self::isRefreshRequest();
 	}
 
 	public function isCacheableObject() {
@@ -266,14 +269,14 @@ abstract class BitBase {
 		return apcu_exists( $this->getCacheUuid() );
 	}
 
-	public function setCacheableObject( $pCacheable = TRUE ) {
+	public function setCacheableObject( $pCacheable = true ) {
 		$this->mPreventCache = empty( $pCacheable );
 	}
 
 	public static function isRefreshRequest() {
-		static $isRefresh = NULL;
+		static $isRefresh = null;
 
-		if( $isRefresh === NULL ) {
+		if( $isRefresh === null ) {
 			$isRefresh = isset($_SERVER['HTTP_CACHE_CONTROL']) &&(/*$_SERVER['HTTP_CACHE_CONTROL'] === 'max-age=0' || */ $_SERVER['HTTP_CACHE_CONTROL'] == 'no-cache');
 		}
 
@@ -284,7 +287,7 @@ abstract class BitBase {
         return get_called_class();
     }
 
-	public function getConfig( $pName, $pDefault = NULL ) {
+	public function getConfig( string $pName, string $pDefault = '' ) {
 		global $gBitSystem;
 		return $gBitSystem->getConfig( $pName, $pDefault );
 	}
@@ -296,7 +299,7 @@ abstract class BitBase {
 
 	/**
 	 * Sets database mechanism for the instance
-	 * @param pDB the instance of the database mechanism
+	 * @param object pDB the instance of the database mechanism
 	 **/
 	public function setDatabase( &$pDB ) {
 		// set internal db and retrieve values
@@ -307,15 +310,15 @@ abstract class BitBase {
 	/**
 	 * Determines if there is a valide database connection
 	 **/
-	public function isDatabaseValid() {
-		return( !empty( $this->mDb ) && $this->mDb->isValid() );
+	public function isDatabaseValid(): bool {
+		return !empty( $this->mDb ) && $this->mDb->isValid();
 	}
 
 	/**
 	 * Return pointer to current Database
 	 **/
 	public function getDb() {
-		return ( !empty( $this->mDb ) ? $this->mDb : NULL  );
+		return !empty( $this->mDb ) ? $this->mDb : null;
 	}
 
 	/**
@@ -348,13 +351,9 @@ abstract class BitBase {
 	function debugOutput( $pString ) {
 		global $gDebug, $gArgs, $argv;
 		if( $gDebug || !defined( 'IS_LIVE' ) || !IS_LIVE || !empty( $gArgs['log'] ) ) {
-			if( empty(  $this->mLastOutputTime ) ) {
-				$elapsed = (float)0.000;
-			} else {
-				$elapsed = (microtime(1) - (float)$this->mLastOutputTime);
-			}
+			$elapsed = empty( $this->mLastOutputTime ) ? (float)0.000 : microtime(1) - (float)$this->mLastOutputTime;
 			if( !empty( $this->mDebugMicrotime ) ) {
-				$pString = "ELAPSED TIME: ".round( (float)((microtime(1) - $this->mDebugMicrotime)), 3).' sec, +'.round( $elapsed, 3 ).' '.$pString;
+				$pString = "ELAPSED TIME: ".round( microtime(1) - $this->mDebugMicrotime, 3).' sec, +'.round( $elapsed, 3 ).' '.$pString;
 			}
 			bit_error_log( $pString );
 			$this->mLastOutputTime = microtime(1);
@@ -367,7 +366,7 @@ abstract class BitBase {
 	 *
 	 * @param mixed $pId this can be a string, number or array. if it's an array, all values in the array will be checked to see if they are numeric
 	 * @access public
-	 * @return TRUE if the input was numeric, FALSE if it wasn't
+	 * @return bool true if the input was numeric, false if it wasn't
 	 */
 	public static function verifyIdParameter( &$pParamHash, $pKey ) {
 		// check all possibilities as quickly as possible as this function is called frequently
@@ -379,60 +378,45 @@ abstract class BitBase {
 	 *
 	 * @param mixed $pId this can be a string, number or array. if it's an array, all values in the array will be checked to see if they are numeric
 	 * @access public
-	 * @return TRUE if the input was numeric, FALSE if it wasn't
+	 * @return bool true if the input was numeric, false if it wasn't
 	 */
-	public static function verifyId( $pId ) {
-		if( empty( $pId )) {
-			return FALSE;
+	public static function verifyId( mixed $pId ): bool {
+		if( empty( $pId ) || ( is_int( $pId ) && $pId == -2 ) ) {
+			return false;
 		}
 		if( is_array( $pId )) {
-			foreach( $pId as $id ) {
-				if( empty( $id ) || is_bool( $id ) || (is_int( $id ) || ctype_digit( $id ) || (is_numeric( $id ) ? intval( $id ) == $id : false)) ) {
-					return FALSE;
+            foreach( $pId as $id ) {
+				if( (is_int( $id ) || ctype_digit( (string) $id ) || (is_numeric( $id ) ? intval( $id ) == $id : false)) ) {
+					return false;
 				}
 			}
-			return TRUE;
+			return true;
 		}
-		$ret = !empty( $pId ) && (is_int( $pId ) || ctype_digit( $pId ) || is_numeric( $pId )) && ($pId < 0x7FFFFFFF) && (intval( $pId ) == $pId);
-		return $ret;
+		return !empty( $pId ) && (is_int( $pId ) || ctype_digit( $pId ) || is_numeric( $pId )) && ($pId < 0x7FFFFFFF) && (intval( $pId ) == $pId);
 	}
 
 	/**
 	 * getParameter Gets a hash value it exists, or returns an optional default
 	 *
-	 * @param associativearray $pParamHash Hash of key=>value pairs
+	 * @param array $pParamHash Hash of key=>value pairs
 	 * @param string $pHashKey Key used to search for value
-	 * @param string $pDefault Default value to return if not found. NULL if nothing is passed in.
-	 * @access public
-	 * @return TRUE if the input was numeric, FALSE if it wasn't
+	 * @param string $pDefault Default value to return if not found. null if nothing is passed in.
+	 * @return array|string|null
 	 */
-	public static function getParameter( &$pParamHash, $pKey, $pDefaultValue=NULL ) {
-		if( isset( $pParamHash[$pKey] ) ) {
-			$ret = $pParamHash[$pKey];
-		} else {
-			$ret = $pDefaultValue;
-		}
-
-		return $ret;
+	public static function getParameter( array &$pParamHash, string $pKey, ?string $pDefaultValue = null ): array|string|null {
+		return $pParamHash[$pKey] ?? $pDefaultValue;
 	}
 
 	/**
 	 * getIdParameter Gets an in-bounds, integer hash value it exists, or returns an optional default
 	 *
-	 * @param associativearray $pParamHash Hash of key=>value pairs
+	 * @param array $pParamHash Hash of key=>value pairs
 	 * @param string $pHashKey Key used to search for value
-	 * @param string $pDefault Default value to return if not found. NULL if nothing is passed in.
-	 * @access public
-	 * @return TRUE if the input was numeric, FALSE if it wasn't
+	 * @param string $pDefault Default value to return if not found. null if nothing is passed in.
+	 * @return bool true if the input was numeric, false if it wasn't
 	 */
-	public static function getIdParameter( &$pParamHash, $pKey, $pDefaultValue=NULL ) {
-		if( BitBase::verifyIdParameter( $pParamHash, $pKey ) ) {
-			$ret = $pParamHash[$pKey];
-		} else {
-			$ret = $pDefaultValue;
-		}
-
-		return $ret;
+	public static function getIdParameter( array &$pParamHash, string $pKey, ?string $pDefaultValue = null ) {
+		return BitBase::verifyIdParameter( $pParamHash, $pKey ) ? $pParamHash[$pKey] : $pDefaultValue;
 	}
 
 	/**
@@ -440,19 +424,14 @@ abstract class BitBase {
 	 * access $gBitSmarty directly.
 	 *
 	 * @param string pMsg error message to be displayed
-	 * @return none this function will DIE DIE DIE!!!
+	 * @return void this function will DIE DIE DIE!!!
 	 * @access public
 	 **/
 	public function display( $pPackage, $pTemplate ) {
 		global $gBitSmarty, $gBitLanguage, $style, $style_base;
 		if( !empty( $style ) && !empty( $style_base )) {
-			if (file_exists(BIT_THEMES_PATH."styles/$style_base/$pTemplate")) {
-				// Theme has overriden template
-				$_smarty_tpl_file = 'file:'.BIT_STYLES_PATH."/$style_base/$pTemplate";
-			} else {
-				// Use default
-				$_smarty_tpl_file = 'file:'.BIT_ROOT_PATH."$pPackage/templates/$pTemplate";
-			}
+			$_smarty_tpl_file = file_exists(THEMES_PATH."styles/$style_base/$pTemplate") ?
+				'file:'.BIT_STYLES_PATH."/$style_base/$pTemplate" : 'file:'.BIT_ROOT_PATH."$pPackage/templates/$pTemplate";
 		}
 /*
 		global $gBitLanguage, $style, $style_base;
@@ -468,34 +447,37 @@ abstract class BitBase {
 
 	/**
 	 * Assign an entry to the mInfo hash if the current object is valid
-	 * @param pFieldName the hash key to retrieve the value
-	 * @param pValue the value of the hash key
+	 * @param string pFieldName the hash key to retrieve the value
+	 * @param string pValue the value of the hash key
+	 * @return bool false if not valid setting
 	 **/
-	public function setField( $pFieldName, $pValue ) {
-		$ret = FALSE;
-		if( $this->isValid() ) {
+	public function setField( string $pFieldName, string $pValue ): bool {
+		$ret = false;
+		if( $this->mDb->isValid() ) {
 			$this->mInfo[$pFieldName] = $pValue;
-			$ret = TRUE;
+			$ret = true;
 		}
 		return $ret;
 	}
 
 	/**
 	 * Returns entry from the mInfo hash if field exists
-	 * @param pFieldName the hash key to retrieve the value
-	 * @param pDefault the value to return of there is now hash value present
+	 * @param string pFieldName the hash key to retrieve the value
+	 * @param string pDefault the value to return of there is now hash value present
 	 **/
-	public function getField( $pFieldName, $pDefault = NULL ) {
-		return( !empty( $this->mInfo[$pFieldName] ) ? $this->mInfo[$pFieldName] : $pDefault );
+	public function getField( string $pFieldName, ?string $pDefault = null ) {
+		return !empty( $this->mInfo[$pFieldName] ) ? $this->mInfo[$pFieldName] : $pDefault;
 	}
 
 	/**
 	 * Prepares parameters with default values for any getList function
-	 * @param pParamHash hash of parameters for any getList() function
-	 * @return the link to display the page.
+	 * @param array pListHash hash of parameters for any getList() function
+	 * @return void the link to display the page.
 	 */
-	public static function prepGetList( &$pListHash ) {
+	public static function prepGetList( array &$pListHash ): void {
 		global $gBitSmarty, $gBitSystem;
+
+		$pListHash['page'] = !empty( $pListHash['page'] ) ? $pListHash['page'] : 1;
 
 		// valid_sort_modes are set, we check them against our selected sort_mode
 		if( !empty( $pListHash['sort_mode'] ) && !empty( $pListHash['valid_sort_modes'] ) && is_array( $pListHash['valid_sort_modes'] )) {
@@ -521,13 +503,13 @@ abstract class BitBase {
 
 		if( !isset( $pListHash['offset'] ) || !is_numeric( $pListHash['offset'] ) ) {
 			$pListHash['offset'] = 0;
-			if( static::verifyIdParameter( $pListHash, 'page' )) {
-				$pListHash['offset'] = ((int)$pListHash['page'] - 1) * $pListHash['max_records'];
+			if( static::verifyId( $pListHash['page'] )) {
+				$pListHash['offset'] = ($pListHash['page'] - 1) * $pListHash['max_records'];
 			} else {
 				if( !empty( $_REQUEST["offset"] )) {
 					$pListHash['offset'] = $_REQUEST['offset'];
 				} elseif( isset( $_REQUEST['page'] ) && is_numeric( $_REQUEST['page'] ) && $_REQUEST['page'] > 0 ) {
-					$pListHash['offset'] = ($_REQUEST['page'] - 1) * $pListHash['max_records'];
+					$pListHash['offset'] = ($_REQUEST['page'] ?? 1 - 1) * $pListHash['max_records'];
 				} elseif( isset( $_REQUEST['list_page'] ) && is_numeric( $_REQUEST['list_page'] ) && $_REQUEST['list_page'] > 0 ) {
 					$pListHash['offset'] = ( $_REQUEST['list_page'] - 1 ) * $pListHash['max_records'];
 				}
@@ -540,27 +522,19 @@ abstract class BitBase {
 		}
 
 		// Don't use  $_REQUEST["find"] as it can really screw with modules on search pages
-		if( !empty( $pListHash["find"] )) {
-			$pListHash['find']= $pListHash["find"];
-		} else {
-			$pListHash['find'] = NULL;
-		}
+		$pListHash['find'] = !empty( $pListHash["find"] ) ? $pListHash["find"] : null;
 		$gBitSmarty->assign( 'find', $pListHash['find'] );
 
-		if( isset( $_REQUEST['date'] )) {
-			$pListHash['date']= $_REQUEST['date'];
-		} else {
-			$pListHash['date'] = $gBitSystem->getUTCTime();
-		}
+		$pListHash['date'] = isset( $_REQUEST['date'] ) ? $_REQUEST['date'] : $gBitSystem->getUTCTime();
 
 		if( empty( $pListHash['load_comments'] )) {
-			$pListHash['load_comments'] = FALSE;
+			$pListHash['load_comments'] = false;
 		}
 		if( empty( $pListHash['load_num_comments'] )) {
-			$pListHash['load_num_comments'] = FALSE;
+			$pListHash['load_num_comments'] = false;
 		}
 		if( empty( $pListHash['parse_data'] )) {
-			$pListHash['parse_data'] = FALSE;
+			$pListHash['parse_data'] = false;
 		}
 	}
 
@@ -570,19 +544,19 @@ abstract class BitBase {
 	 * @param string $pSortMode sort mode to check
 	 * @param array $pValidSortModes array of available sort modes
 	 * @access public
-	 * @return TRUE on success, FALSE on failure
+	 * @return bool true on success, false on failure
 	 */
 	public static function verifySortMode( $pSortMode, $pValidSortModes ) {
 		if( !empty( $pSortMode ) && is_string( $pSortMode ) && !empty( $pValidSortModes ) && is_array( $pValidSortModes )) {
 			foreach( $pValidSortModes as $mode ) {
 				// we will not check the table - that would just be too complicated...
 				if( preg_match( "/^(\w+\.)?{$mode}_(desc|asc)$/", $pSortMode )) {
-					return TRUE;
+					return true;
 				}
 			}
 		}
 
-		return FALSE;
+		return false;
 	}
 
 
@@ -592,11 +566,9 @@ abstract class BitBase {
 	* @param array hash of parameters returned by any getList() function
 	* @return - none the hash is updated via the reference
 	*/
-	public static function postGetList( &$pListHash ) {
+	public static function postGetList( array &$pListHash ): void {
 		global $gBitSystem;
-
-		$pListHash['listInfo'] = array();
-		$pListHash['listInfo']['page_records'] = (!empty( $pListHash['page_records'] ) ? $pListHash['page_records'] : $pListHash['max_records'] );
+		$pListHash['listInfo']['page_records'] = /* !empty( $pListHash['page_records'] ? $pListHash['page_records'] : */ $pListHash['max_records'];
 		if( !isset( $pListHash['cant'] ) ) {
 			$pListHash['cant'] = $pListHash['max_records'];
 		}
@@ -607,20 +579,14 @@ abstract class BitBase {
 
 		$pListHash['listInfo']['total_records'] = $pListHash['cant'];
 		$pListHash['listInfo']['total_pages'] = ceil( $pListHash['cant'] / $pListHash['max_records'] );
-		$pListHash['listInfo']['current_page'] = 1 + ( $pListHash['offset'] / $pListHash['max_records'] );
+		$pListHash['listInfo']['current_page'] = 1 + $pListHash['offset'] / $pListHash['max_records'];
+		$pListHash['listInfo']['page'] = $pListHash['page'] ?? 1;
 
-		if( isset( $pListHash["cant"] ) && $pListHash["cant"] > ( $pListHash['offset'] + $pListHash['max_records'] ) ) {
-			$pListHash['listInfo']['next_offset'] = $pListHash['offset'] + $pListHash['max_records'];
-		} else {
-			$pListHash['listInfo']['next_offset'] = -1;
-		}
+		isset( $pListHash["cant"] ) && $pListHash["cant"] > $pListHash['offset'] + $pListHash['max_records'] ?
+			$pListHash['listInfo']['next_offset'] = $pListHash['offset'] + $pListHash['max_records'] : $pListHash['listInfo']['next_offset'] = -1;
 
 		// If offset is > 0 then prev_offset
-		if( $pListHash['offset'] > 0 ) {
-			$pListHash['listInfo']['prev_offset'] = $pListHash['offset'] - $pListHash['max_records'];
-		} else {
-			$pListHash['listInfo']['prev_offset'] = -1;
-		}
+		$pListHash['listInfo']['prev_offset'] = ($pListHash['offset'] > 0) ? $pListHash['offset'] - $pListHash['max_records'] : -1;
 
 		$pListHash['listInfo']['offset'] = $pListHash['offset'];
 		$pListHash['listInfo']['find'] = $pListHash['find'];
@@ -662,17 +628,17 @@ abstract class BitBase {
 				// replace the last of the continuous links with a ...
 				$pListHash['listInfo']['block']['prev'][$i + 1] = "&hellip;";
 				// add $skipping links to pages separated by $step pages
-				if( ( $min = $pListHash['listInfo']['current_page'] - $continuous - ( $step * $skipping ) ) < 0 ) {
+				if( ( $min = $pListHash['listInfo']['current_page'] - $continuous - $step * $skipping ) < 0 ) {
 					$min = 0;
 				}
-				for( $j = ( floor( $i / $step ) * $step ); $j > $min; $j -= $step ) {
+				for( $j = floor( $i / $step ) * $step; $j > $min; $j -= $step ) {
 					$pListHash['listInfo']['block']['prev'][$j] = $j;
 				}
 				$pListHash['listInfo']['block']['prev'][1] = 1;
 			}
 			// reverse array that links are in the correct order
 			if( !empty( $pListHash['listInfo']['block']['prev'] ) ) {
-				$pListHash['listInfo']['block']['prev'] = array_reverse( $pListHash['listInfo']['block']['prev'], TRUE );
+				$pListHash['listInfo']['block']['prev'] = array_reverse( $pListHash['listInfo']['block']['prev'], true );
 			}
 
 			// here we start adding next links
@@ -683,10 +649,10 @@ abstract class BitBase {
 				// replace the last of the continuous links with a ...
 				$pListHash['listInfo']['block']['next'][$i - 1] = "&hellip;";
 				// add $skipping links to pages separated by $step pages
-				if( ( $max = $pListHash['listInfo']['current_page'] + $continuous + ( $step * $skipping ) ) > $pListHash['listInfo']['total_pages'] ) {
+				if( ( $max = $pListHash['listInfo']['current_page'] + $continuous + $step * $skipping ) > $pListHash['listInfo']['total_pages'] ) {
 					$max = $pListHash['listInfo']['total_pages'];
 				}
-				for( $j = ( ceil( $i / $step ) * $step ); $j < $max; $j += $step ) {
+				for( $j = ceil( $i / $step ) * $step; $j < $max; $j += $step ) {
 					$pListHash['listInfo']['block']['next'][$j] = $j;
 				}
 				$pListHash['listInfo']['block']['next'][$pListHash['listInfo']['total_pages']] = $pListHash['listInfo']['total_pages'];

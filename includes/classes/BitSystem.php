@@ -17,13 +17,14 @@
  * @package  kernel
  */
 
+namespace Bitweaver;
+use Bitweaver\Users\BitHybridAuthManager;
+use Bitweaver\Wiki\BitPage;
+use Bitweaver\KernelTools;
+
 /**
  * required setup
  */
-require_once( KERNEL_PKG_CLASS_PATH.'BitSingleton.php' );
-require_once( KERNEL_PKG_CLASS_PATH.'BitDate.php' );
-require_once( THEMES_PKG_CLASS_PATH.'BitSmarty.php' );
-require_once( KERNEL_PKG_CLASS_PATH.'HttpStatusCodes.php' );
 
 define( 'DEFAULT_PACKAGE', 'kernel' );
 define( 'CENTER_COLUMN', 'c' );
@@ -51,34 +52,34 @@ class BitSystem extends BitSingleton {
 	// Initiate class variables
 
 	// Essential information about packages
-	public $mPackages = array();
+	public $mPackages = [];
 
 	// An array of object keys to clear from cache on page destruction
-	private $mClearCacheKeys = array();
+	private $mClearCacheKeys = [];
 
 	// Cross Reference Package Directory Name => Package Key used as index into $mPackages
-	public $mPackagesDirNameXref = array();
+	public $mPackagesDirNameXref = [];
 
 	// Contains site style information
-	public $mStyle = array();
+	public $mStyle = [];
 
 	// Information about package menus used in all menu modules and top bar
-	public $mAppMenu = array();
+	public $mAppMenu = [];
 
 	// The currently active page
 	private $mActivePackage;
 
 	// Modules that need to be inserted during installation
-	public $mInstallModules = array();
+	public $mInstallModules = [];
 
 	// Javascript to be added to the <body onload> attribute
-	public $mOnload = array();
+	public $mOnload = [];
 
 	// Javascript to be added to the <body onunload> attribute
-	public $mOnunload = array();
+	public $mOnunload = [];
 
 	// Used by packages to register notification events that can be subscribed to.
-	public $mNotifyEvents = array();
+	public $mNotifyEvents = [];
 
 	// Used to store contents of kernel_config
 	public $mConfig;
@@ -90,11 +91,17 @@ class BitSystem extends BitSingleton {
 	public $mPackageFileName;
 
 	// Content classes.
-	public $mContentClasses = array();
+	public $mContentClasses = [];
 
 	// Debug HTML to be displayed just after the HTML headers
 	public $mDebugHtml = "";
-
+	public $mErrorRep;
+	public $mMimeTypes = [];
+	public $mPermHash = [];
+	public$mRequirements = [];
+	public $mServerTimestamp;
+	public $mTimer;
+	
 	// Output http status
 	public $mHttpStatus = HttpStatusCodes::HTTP_OK;
 
@@ -110,13 +117,17 @@ class BitSystem extends BitSingleton {
 	 * @access public
 	 */
 	// Constructor receiving a PEAR::Db database object.
-	function __construct() {
+	public function __construct() {
 		global $gBitTimer;
 		// Call DB constructor which will create the database member variable
 		parent::__construct();
 
-		$this->mAppMenu = array();
+		$this->mAppMenu = [];
 
+		if (!isset($gBitTimer)) {
+			$gBitTimer = new BitTimer();
+			$gBitTimer->start();
+		}
 		$this->mTimer = $gBitTimer;
 		$this->mServerTimestamp = new BitDate();
 
@@ -125,44 +136,54 @@ class BitSystem extends BitSingleton {
 		// Critical Preflight Checks
 		$this->checkEnvironment();
 
-		$this->mRegisterCalled = FALSE;
+		$this->mRegisterCalled = false;
 
 		// Set the separator for PHP generated tags to be &amp; instead of &
 		// This is necessary for XHTML compliance
 		ini_set( "arg_separator.output", "&amp;" );
+		// Remove automatic quotes added to POST/COOKIE by PHP
+		foreach( $_REQUEST as $k => $v ) {
+			if( !is_array( $_REQUEST[$k] ) ) {
+				$_REQUEST[$k] = stripslashes( $v );
+			}
+		}
 
 		$this->defineTempDir();
 
 	}
 
-	function __destruct() {
+	public function __destruct() {
 		parent::__destruct();
 		// Hopefully gBitSystem is among the last objects destroyed and can force cache purging of any leftover objects that might be in an inconsistent state due to multiple object copies invoked in the same page load
 		foreach( array_keys( $this->mClearCacheKeys ) as $cacheKey ) {
-			$ret = apcu_delete( $cacheKey );
+			// $ret = apcu_delete( $cacheKey );
 		}
 	}
 
 	public function __sleep() {
-		return array_merge( parent::__sleep(), array( 'mPackages', 'mPackagesDirNameXref', 'mStyle', 'mAppMenu', 'mInstallModules', 'mOnload', 'mOnunload', 'mNotifyEvents', 'mConfig', 'mRegisterCalled', 'mPackageFileName', 'mContentClasses' ) );
+		return array_merge( parent::__sleep(), [ 'mPackages', 'mPackagesDirNameXref', 'mStyle', 'mAppMenu', 'mInstallModules', 'mOnload', 'mOnunload', 'mNotifyEvents', 'mConfig', 'mRegisterCalled', 'mPackageFileName', 'mContentClasses' ] );
 	}
 
 	public function isPurgedFromCache( $pCacheKey ) {
 		return !empty( $this->mClearCacheKeys[$pCacheKey] );
 	}
 
-	public function queueClearFromCache( $pCacheKey ) {
-		$this->mClearCacheKeys[$pCacheKey] = TRUE;
+	public function queueClearFromCache( $pCacheKey ): void {
+		$this->mClearCacheKeys[$pCacheKey] = true;
 	}
 
-	public static function loadFromCache( $pCacheKey, $pContentTypeGuid = NULL ) {
+	public static function loadFromCache( $pCacheKey, $pContentTypeGuid = null ) {
 		global $gBitTimer;
 		if( $ret = parent::loadFromCache( $pCacheKey ) ) {
 			$ret->setHttpStatus( HttpStatusCodes::HTTP_OK );
+			if (!isset($gBitTimer)) {
+				$gBitTimer = new BitTimer();
+				$gBitTimer->start();
+			}
 			$ret->mTimer = $gBitTimer;
 			$ret->mTimer->start();
-			$ret->mOnload = array();
-			$ret->mAppMenu = array();
+			$ret->mOnload = [];
+			$ret->mAppMenu = [];
 			$ret->defineTempDir();
 			$ret->mServerTimestamp = new BitDate();
 		}
@@ -176,8 +197,8 @@ class BitSystem extends BitSingleton {
 	 *
 	 * @param $pPackage optionally get preferences only for selected package
 	 */
-	function loadConfig( $pPackage = NULL ) {
-		$queryVars = array();
+	public function loadConfig( $pPackage = null ) {
+		$queryVars = [];
 		$whereClause = '';
 
 		if( $pPackage ) {
@@ -186,7 +207,7 @@ class BitSystem extends BitSingleton {
 		}
 
 		if ( empty( $this->mConfig ) ) {
-			$this->mConfig = array();
+			$this->mConfig = [];
 			$query = "SELECT `config_name` ,`config_value`, `package` FROM `" . BIT_DB_PREFIX . "kernel_config` " . $whereClause;
 			if( $rs = $this->mDb->query( $query, $queryVars, -1, -1 ) ) {
 				while( $row = $rs->fetchRow() ) {
@@ -202,34 +223,38 @@ class BitSystem extends BitSingleton {
 	 * Add getConfig / setConfig for more uniform handling of config variables instead of spreading global vars.
 	 * easily get the value of any given preference stored in kernel_config
 	 *
+	 * @param string $pName Perl regular expression
+	 * @param string $pDefault only manipulate settings with this value set
 	 * @access public
 	 **/
-	function getConfig( $pName, $pDefault = NULL ) {
+	public function getConfig( string $pName, string $pDefault = '' ): string {
 		if( empty( $this->mConfig ) ) {
 			$this->loadConfig();
 		}
-		return( empty( $this->mConfig[$pName] ) ? $pDefault : $this->mConfig[$pName] );
+		return empty( $this->mConfig[$pName] ) ? $pDefault : $this->mConfig[$pName] ?? '';
 	}
 
 	// <<< getConfigMatch
 	/**
 	 * retreive a group of config variables
 	 *
+	 * @param string $pPattern Perl regular expression
+	 * @param string $pSelectValue only manipulate settings with this value set
 	 * @access public
 	 **/
-	function getConfigMatch( $pPattern, $pSelectValue="" ) {
+	public function getConfigMatch( $pPattern, $pSelectValue = '' ): array {
 		if( empty( $this->mConfig ) ) {
 			$this->loadConfig();
 		}
 
 		$matching_keys = preg_grep( $pPattern, array_keys( $this->mConfig ));
-		$new_array = array();
+		$new_array = [];
 		foreach( $matching_keys as $key=>$value ) {
 			if ( empty( $pSelectValue ) || ( !empty( $pSelectValue ) && $this->mConfig[$value] == $pSelectValue )) {
 				$new_array[$value] = $this->mConfig[$value];
 			}
 		}
-		return( $new_array );
+		return $new_array;
 	}
 
 	/**
@@ -237,12 +262,11 @@ class BitSystem extends BitSingleton {
 	 *
 	 * @param string $pPattern Perl regular expression
 	 * @param string $pSelectValue only manipulate settings with this value set
-	 * @param string $pNewValue New value that should be set for the matching settings (NULL will remove the entries from the DB)
+	 * @param string $pNewValue New value that should be set for the matching settings (null will remove the entries from the DB)
 	 * @param string $pPackage Package for which the settings are
-	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return void
 	 */
-	function storeConfigMatch( $pPattern, $pSelectValue = "", $pNewValue = NULL, $pPackage = NULL ) {
+	public function storeConfigMatch( $pPattern, $pSelectValue = "", $pNewValue = null, $pPackage = null ): void {
 		if( empty( $this->mConfig ) ) {
 			$this->loadConfig();
 		}
@@ -264,9 +288,9 @@ class BitSystem extends BitSingleton {
 	 * @param string Hash key for the mConfig value
 	 * @param string Value for the mConfig hash key
 	 */
-	function setConfig( $pName, $pValue ) {
+	public function setConfig( $pName, $pValue ) {
 		$this->mConfig[$pName] = $pValue;
-		return( TRUE );
+		return true;
 	}
 
 	// <<< storeConfig
@@ -280,41 +304,41 @@ class BitSystem extends BitSingleton {
 	 *
 	 * @access public
 	 **/
-	function storeConfig( $pName, $pValue, $pPackage = NULL ) {
+	public function storeConfig( $pName, $pValue, $pPackage = null ) {
 		global $gMultisites;
 		//stop undefined offset error being thrown after packages are installed
 		if( !empty( $this->mConfig )) {
 			// store the pref if we have a value _AND_ it is different from the default
 			if( ( empty( $this->mConfig[$pName] ) || ( $this->mConfig[$pName] != $pValue ))) {
 				// make sure the value doesn't exceede database limitations
-				$pValue = substr( $pValue, 0, 250 );
+				$pValue = substr( $pValue ?? '', 0, 250 );
 
 				// store the preference in multisites, if used
-				if( $this->isPackageActive( 'multisites' ) && @BitBase::verifyId( $gMultisites->mMultisiteId ) && isset( $gMultisites->mConfig[$pName] )) {
+				if( $this->isPackageActive( 'multisites' ) && BitBase::verifyId( $gMultisites->mMultisiteId ) && isset( $gMultisites->mConfig[$pName] )) {
 					$query = "UPDATE `".BIT_DB_PREFIX."multisite_preferences` SET `config_value`=? WHERE `multisite_id`=? AND `config_name`=?";
-					$result = $this->mDb->query( $query, array( empty( $pValue ) ? '' : $pValue, $gMultisites->mMultisiteId, $pName ) );
+					$result = $this->mDb->query( $query, [ empty( $pValue ) ? '' : $pValue, $gMultisites->mMultisiteId, $pName ] );
 				} else {
 					$this->StartTrans();
 					$query = "DELETE FROM `".BIT_DB_PREFIX."kernel_config` WHERE `config_name`=?";
-					$result = $this->mDb->query( $query, array( $pName ) );
+					$result = $this->mDb->query( $query, [ $pName ] );
 					// make sure only non-empty values get saved, including '0'
 					if( isset( $pValue ) && ( !empty( $pValue ) || is_numeric( $pValue ))) {
 						$query = "INSERT INTO `".BIT_DB_PREFIX."kernel_config`(`config_name`,`config_value`,`package`) VALUES (?,?,?)";
-						$result = $this->mDb->query( $query, array( $pName, $pValue, strtolower( $pPackage )));
+						$result = $this->mDb->query( $query, [ $pName, $pValue, strtolower( $pPackage ) ]);
 					}
 					$this->CompleteTrans();
 				}
 
 				// Force the ADODB cache to flush
 				$isCaching = $this->mDb->isCachingActive();
-				$this->mDb->setCaching( FALSE );
+				$this->mDb->setCaching( false );
 				$this->loadConfig();
 				$this->mDb->setCaching( $isCaching );
 				$this->clearFromCache();
 			}
 		}
 		$this->setConfig( $pName, $pValue );
-		return TRUE;
+		return true;
 	}
 
 	// <<< expungePackageConfig
@@ -322,10 +346,10 @@ class BitSystem extends BitSingleton {
 	 * Delete all prefences for the given package
 	 * @access public
 	 **/
-	function expungePackageConfig( $pPackageName ) {
+	public function expungePackageConfig( $pPackageName ) {
 		if( !empty( $pPackageName ) ) {
 			$query = "DELETE FROM `".BIT_DB_PREFIX."kernel_config` WHERE `package`=?";
-			$result = $this->mDb->query( $query, array( strtolower( $pPackageName ) ) );
+			$result = $this->mDb->query( $query, [ strtolower( $pPackageName ) ] );
 			// let's force a reload of the prefs
 			unset( $this->mConfig );
 			$this->loadConfig();
@@ -336,14 +360,14 @@ class BitSystem extends BitSingleton {
 	/**
 	 * Determines if this site has a legitimate sender address set.
 	 *
-	 * @param  $mid the name of the template for the page content
+	 * @param string $pSenderEmail
 	 * @access public
 	 */
-	function hasValidSenderEmail( $pSenderEmail=NULL ) {
+	public function hasValidSenderEmail( $pSenderEmail=null ) {
 		if( empty( $pSenderEmail ) ) {
 			$pSenderEmail = $this->getConfig( 'site_sender_email' );
 		}
-		return( !empty( $pSenderEmail ) && !preg_match( '/.*localhost$/', $pSenderEmail ) );
+		return !empty( $pSenderEmail ) && !preg_match( '/.*localhost$/', $pSenderEmail );
 	}
 
 	// === getErrorEmail
@@ -352,7 +376,7 @@ class BitSystem extends BitSingleton {
 	 *
 	 * @access public
 	 */
-	function getErrorEmail() {
+	public function getErrorEmail() {
 		if( defined('ERROR_EMAIL') ) {
 			$ret = ERROR_EMAIL;
 		} elseif( $this->getConfig( 'site_sender_email' ) ) {
@@ -368,10 +392,10 @@ class BitSystem extends BitSingleton {
 	/**
 	 * centralized function for send emails
 	 *
-	 * @param  $mid the name of the template for the page content
+	 * @param array $pMailHash
 	 * @access public
 	 */
-	function sendEmail( $pMailHash ) {
+	public function sendEmail( $pMailHash ) {
 		$fromEmail = !empty( $pMailHash['from'] ) ? $pMailHash['from'] : $this->getConfig( 'site_sender_email' );
 
 		$extraHeaders = "Return-Path: $fromEmail\r\n";
@@ -396,7 +420,7 @@ class BitSystem extends BitSingleton {
 	 * @param  $pHttpStatus numerical HTTP status, most typically 404 (not found) or 403 (forbidden)
 	 * @access public
 	 */
-	function setHttpStatus( $pHttpStatus ) {
+	public function setHttpStatus( $pHttpStatus ) {
 		$this->mHttpStatus = $pHttpStatus;
 	}
 
@@ -405,17 +429,15 @@ class BitSystem extends BitSingleton {
 		// Add the user to an apache ENV variable so it can be logged, like:
 		// LogFormat "%V %h %l %{USERID}e %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{Cookie}n\""  combinedcookie
 		global $gBitUser;
-		$loginId  = '-';
-		if( is_object( $gBitUser ) && $gBitUser->isRegistered() ) {
-			$loginId = $gBitUser->getField('login', '-');
+		if( is_object( $gBitUser ) ) {
+//			apache_setenv( 'USERID', $gBitUser->getField('login', '-'), true );
 		}
-		$_SERVER['USERID'] = $loginId;
 
 		// see if we have a custom status other than 200 OK
 		header( $_SERVER["SERVER_PROTOCOL"].' '.HttpStatusCodes::getMessageForCode( $this->mHttpStatus ) );
 	}
 
-	function outputJson( $pOutput, $pStatusCode=200  ) {
+	public function outputJson( $pOutput, $pStatusCode=200  ) {
 		global $gBitSmarty, $gBitThemes;
 
 		$gBitThemes->setFormatHeader( 'json' );
@@ -425,14 +447,14 @@ class BitSystem extends BitSingleton {
 		$this->outputHeader();
 
 		if( is_array( $pOutput ) ) {
-			$gBitSmarty->assignByRef( 'jsonHash', $pOutput );
+			$gBitSmarty->assign( 'jsonHash', $pOutput );
 		}
 
 		print $gBitSmarty->fetch( 'bitpackage:kernel/json_output.tpl' );
 		die;
 	}
 
-	function outputRaw( $pOutput, $pStatusCode=200  ) {
+	public function outputRaw( $pOutput, $pStatusCode=200  ) {
 		global $gBitSmarty, $gBitThemes;
 
 		$gBitThemes->setFormatHeader( 'text' );
@@ -455,20 +477,23 @@ class BitSystem extends BitSingleton {
 	/**
 	 * Display the main page template
 	 *
-	 * @param  $mid the name of the template for the page content
-	 * @param  $browserTitle a string to be displayed in the top browser bar
-	 * @param  $format the output format - xml, ajax, content, full - relays to setRenderFormat
-	 * @access public
+	 * @param string $pMid the name of the template for the page content
+	 * @param string $pBrowserTitle a string to be displayed in the top browser bar
+	 * @param array $pOptionsHash
 	 */
-	function display( $pMid, $pBrowserTitle = NULL, $pOptionsHash = array() ) {
+	public function display( $pMid, $pBrowserTitle = null, $pOptionsHash = [] ) {
 		global $gBitSmarty, $gBitThemes, $gContent;
 		$gBitSmarty->verifyCompileDir();
-
+		
 		$this->outputHeader();
 		if( $this->mHttpStatus != 200 ) {
 //			error_log( "HTTP/1.0 ".HttpStatusCodes::getMessageForCode( $this->mHttpStatus )." http://".$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'] );
 		}
 
+		$gBitThemes->preLoadStyle();
+		if( file_exists(THEMES_STYLE_PATH."theme_head_inc.tpl") ) {
+			$gBitSmarty->assign( 'theme_head', THEMES_STYLE_PATH."theme_head_inc.tpl" );
+		}
 		// set the correct headers if it hasn't been done yet
 		if( empty( $gBitThemes->mFormatHeader )) {
 			// display is the last thing we call and therefore we need to set a default
@@ -482,7 +507,7 @@ class BitSystem extends BitSingleton {
 		}
 
 		if( $pMid == 'error.tpl' ) {
-			$this->setBrowserTitle( !empty( $pBrowserTitle ) ? $pBrowserTitle : tra( 'Error' ) );
+			$this->setBrowserTitle( !empty( $pBrowserTitle ) ? $pBrowserTitle : KernelTools::tra( 'Error' ) );
 			$pMid = 'bitpackage:kernel/error.tpl';
 		}
 
@@ -493,7 +518,7 @@ class BitSystem extends BitSingleton {
 		}
 
 		if( !empty( $pBrowserTitle )) {
-			$this->setBrowserTitle( $pBrowserTitle );
+			$this->setBrowserTitle( $pBrowserTitle ); 
 		}
 
 		// populate meta description with something useful so you are not penalized/ignored by web crawlers
@@ -507,8 +532,17 @@ class BitSystem extends BitSingleton {
 		$this->preDisplay( $pMid );
 		$gBitSmarty->assign( 'mid', $pMid );
 		if( defined( 'ROLE_MODEL' ) ) {
-			$gBitSmarty->assign( 'role_model', TRUE );
+			$gBitSmarty->assign( 'role_model', true );
 		}
+
+		// Create key for CSP nonce value ... TODO ? this could be the tk ticket value
+		// tk only exists when logged in ;)
+		global $gBitUser;
+		if (empty($_SESSION['csp_nonce'])) {
+			$_SESSION['csp_nonce'] = $gBitUser->mTicket ?? bin2hex(random_bytes(16));
+		}
+		$gBitSmarty->assign( 'cspNonce', $_SESSION['csp_nonce'] );
+
 		// Make sure that the gBitSystem symbol available to templates is correct and up-to-date.
 		print $gBitSmarty->fetch( 'bitpackage:kernel/html.tpl' );
 		$this->postDisplay( $pMid );
@@ -519,10 +553,10 @@ class BitSystem extends BitSingleton {
 	/**
 	 * Take care of any processing that needs to happen just before the template is displayed
 	 *
-	 * @param none $
+	 * @param string
 	 * @access private
 	 */
-	function preDisplay( $pMid ) {
+	public function preDisplay( $pMid ) {
 		global $gCenterPieces, $gBitSmarty, $gBitThemes, $gDefaultCenter;
 		if( !defined( 'JSCALENDAR_PKG_URL' ) ) {
 			define( 'JSCALENDAR_PKG_URL', UTIL_PKG_URL.'javascript/libs/dynarch/jscalendar/' );
@@ -532,7 +566,7 @@ class BitSystem extends BitSingleton {
 
 		// check to see if we are working with a dynamic center area
 		if( $pMid == 'bitpackage:kernel/dynamic.tpl' ) {
-			$gBitSmarty->assignByRef( 'gCenterPieces', $gCenterPieces );
+			$gBitSmarty->assign( 'gCenterPieces', $gCenterPieces );
 		}
 
 		$gBitThemes->preLoadStyle();
@@ -586,38 +620,36 @@ class BitSystem extends BitSingleton {
 	/**
 	 * Take care of any processing that needs to happen just after the template is displayed
 	 *
-	 * @param none $
+	 * @param string
 	 * @access private
 	 */
-	function postDisplay( $pMid ) {
+	public function postDisplay( $pMid ) {
 	}
 
 	// === setHelpInfo
 	/**
 	 * Set the smarty variables needed to display the help link for a page.
 	 *
-	 * @param  $package Package Name
-	 * @param  $context Context of the help within the package
-	 * @param  $desc Description of the help link (not the help itself)
-	 * @access private
+	 * @param string $package Package Name
+	 * @param string $context Context of the help within the package
+	 * @param string $desc Description of the help link (not the help itself)
 	 */
-	function setHelpInfo( $package, $context, $desc ) {
+	public function setHelpInfo( $package, $context, $desc ) {
 		global $gBitSmarty;
-		$gBitSmarty->assign( 'TikiHelpInfo', array( 'URL' => 'http://doc.bitweaver.org/wiki/index.php?page=' . $package . $context , 'Desc' => $desc ) );
+		$gBitSmarty->assign( 'BitweaverHelpInfo', [ 'URL' => "http://doc.bitweaver.org/wiki/index.php?page=$package$context", 'Desc' => $desc ] );
 	}
 
 	// === getPackageStatus
 	/**
 	 * find out a packages installation status
-	 * @param $pPackageName the name of the package to test
+	 * @param string $pPackageName the name of the package to test
 	 *        where the package name is in the form used to index $mPackages
-	 * @return char where
+	 * @return string where
 	 *              'i' is installed but not active
 	 *              'y' is installed and active
 	 *              'n' is not installed
-	 * @access public
 	 */
-	function getPackageStatus( $pPackageName ) {
+	public function getPackageStatus( $pPackageName ) {
 
 		// A package is installed if
 		//    $this->getConfig('package_'.$name) == 'i'
@@ -629,18 +661,13 @@ class BitSystem extends BitSingleton {
 
 		$ret = 'n';
 		if( defined( strtoupper( $pPackageName ).'_PKG_NAME' ) ) {
-			if( $name = strtolower( @constant(( strtoupper( $pPackageName ).'_PKG_NAME' )))) {
+			if( $name = strtolower( @constant( strtoupper( $pPackageName ).'_PKG_NAME' ))) {
 				// kernel always active
-				if( $name == 'kernel' ) {
-					$ret = 'y';
-				} else {
-					// we have migrated the old tikiwiki feature_<pac
-					$ret = $this->getConfig( 'package_'.$name, 'n' );
-				}
+				$ret = $name == 'kernel' ? $ret = 'y' : $this->getConfig( 'package_'.$name, 'n' );
 			}
 		}
 
-		return( $ret );
+		return $ret;
 	}
 
 	// === isPackageActive
@@ -649,12 +676,12 @@ class BitSystem extends BitSingleton {
 	 * @param $pPackageName the name of the package to test
 	 *        where the package name is in the form used to index $mPackages
 	 *        See comments in scanPackages for more information
-	 * @return boolean
+	 * @return bool
 	 * @access public
 	 */
-	function isPackageActive( $pPackageName ) {
+	public function isPackageActive( $pPackageName ) {
 
-		return( $this->getPackageStatus( $pPackageName ) == 'y' );
+		return $this->getPackageStatus( $pPackageName ) == 'y';
 	}
 
 	// === isPackageActiveEarly
@@ -665,21 +692,21 @@ class BitSystem extends BitSingleton {
 	 * @param $pPackageName the name of the package to test
 	 *        where the package name is in the form used to index $mPackages
 	 *        See comments in scanPackages for more information
-	 * @return boolean
+	 * @return bool
 	 * @access public
 	 */
-	function isPackageActiveEarly( $pPackageName ) {
+	public function isPackageActiveEarly( $pPackageName ) {
 
-		$ret = FALSE;
+		$ret = false;
 		$pkgname_l = strtolower( $pPackageName );
 		if( is_file(BIT_ROOT_PATH.$pkgname_l.'/includes/bit_setup_inc.php') ) {
-			require_once(BIT_ROOT_PATH.$pkgname_l.'/includes/bit_setup_inc.php');
+			require_once BIT_ROOT_PATH.$pkgname_l.'/includes/bit_setup_inc.php';
 			$ret = $this->isPackageActive( $pPackageName );
 		} elseif( $pkgname_l == 'kernel' ) {
-			$ret = TRUE;
+			$ret = true;
 		}
 
-		return( $ret );
+		return $ret;
 	}
 
 	// === isPackageInstalled
@@ -688,14 +715,14 @@ class BitSystem extends BitSingleton {
 	 * @param $pPackageName the name of the package to test
 	 *        where the package name is in the form used to index $mPackages
 	 *        See comments in scanPackages for more information
-	 * @return boolean
+	 * @return bool
 	 * @access public
 	 */
-	function isPackageInstalled( $pPackageName ) {
+	public function isPackageInstalled( $pPackageName ) {
 
 		$pkgstatus = $this->getPackageStatus( $pPackageName );
 
-		return( ( $pkgstatus == 'y' ) || ( $pkgstatus == 'i' ) );
+		return ( $pkgstatus == 'y' ) || ( $pkgstatus == 'i' );
 	}
 
 	// === verifyPackage
@@ -704,27 +731,27 @@ class BitSystem extends BitSingleton {
 	 * @param $pPackageName the name of the package to test
 	 *        where the package name is in the form used to index $mPackages
 	 *        See comments in scanPackages for more information
-	 * @return boolean
+	 * @return bool
 	 * @access public
 	 */
-	function verifyPackage( $pPackageName ) {
+	public function verifyPackage( $pPackageName ) {
 		if( !$this->isPackageActive( $pPackageName ) ) {
-			$this->fatalError( tra("This package is disabled").": $pPackageName", NULL, NULL, HttpStatusCodes::HTTP_NOT_FOUND );
+			$this->fatalError( KernelTools::tra("This package is disabled").": $pPackageName", null, null, HttpStatusCodes::HTTP_NOT_FOUND );
 		}
 
-		return( TRUE );
+		return true;
 	}
 
 	// === getPermissionInfo
 	/**
 	 * It will get information about a permissions
-	 * @param $pPermission value of a given permission
-	 * @return none
-	 * @access public
+	 * @param string $pPermission value of a given permission
+	 * @param string $pPackageName value of a given package
+	 * @return array
 	 */
-	function getPermissionInfo( $pPermission = NULL, $pPackageName = NULL ) {
-		$ret = NULL;
-		$bindVars = array();
+	public function getPermissionInfo( $pPermission = '', $pPackageName = '' ) {
+		$ret = null;
+		$bindVars = [];
 		$sql = 'SELECT * FROM `'.BIT_DB_PREFIX.'users_permissions` ';
 		if( !empty( $pPermission ) ) {
 			$sql .= ' WHERE `perm_name`=? ';
@@ -741,7 +768,7 @@ class BitSystem extends BitSingleton {
 	/**
 	 * DEPRECATED - this function has been moved into BitPermUser, use that
 	 */
-	function verifyPermission( $pPermission, $pMsg = NULL ) {
+	public function verifyPermission( $pPermission, $pMsg = null ) {
 		global $gBitUser;
 		return $gBitUser->verifyPermission( $pPermission, $pMsg );
 	}
@@ -754,37 +781,32 @@ class BitSystem extends BitSingleton {
 	 * unlikely as logic permission checks should prevent access to non-permed page REQUEST in the first place
 	 * @param $pPermission value of a given permission
 	 * @param $pMsg optional additional information to present to user
-	 * @return none
+	 * @return void
 	 * @access public
 	 */
-	function fatalPermission( $pPermission, $pMsg=NULL ) {
+	public function fatalPermission( $pPermission, $pMsg=null ) {
 		global $gBitUser, $gBitSmarty, $gBitThemes;
 		if( !$gBitUser->isRegistered() ) {
-			require_once( USERS_PKG_CLASS_PATH.'BitHybridAuthManager.php' );
+			require_once USERS_PKG_CLASS_PATH.'BitHybridAuthManager.php';
 			BitHybridAuthManager::loadSingleton();
 			global $gBitHybridAuthManager;
 			$gBitSmarty->assign( 'hybridProviders', $gBitHybridAuthManager->getEnabledProviders() );
-			$gBitSmarty->assign( 'template', 'bitpackage:users/signin.tpl' );
+			$gBitSmarty->assign( 'template', 'bitpackage:users/login_inc.tpl' );
 		} else {
 			$title = 'Oops!';
 			if( empty( $pMsg ) ) {
 				$pMsg = $this->getPermissionDeniedMessage( $pPermission );
 			}
-			$gBitSmarty->assign( 'fatalTitle', tra( "Permission denied." ) );
+			$gBitSmarty->assign( 'fatalTitle', KernelTools::tra( "Permission denied." ) );
 		}
 // bit_error_log( "PERMISSION DENIED: $pPermission $pMsg" );
-		$gBitSmarty->assign( 'msg', tra( $pMsg ) );
+		$gBitSmarty->assign( 'msg', KernelTools::tra( $pMsg ) );
 		$this->setHttpStatus( HttpStatusCodes::HTTP_NOT_FOUND );
-		if( $gBitThemes->isAjaxRequest() ) {
-			print json_encode( array( 'error' => $pMsg ) );
-		} else {
-			$gBitSmarty->assign( 'metaNoIndex', 1 );
-			$this->display( "error.tpl" );
-		}
+		$this->display( "error.tpl" );
 		die;
 	}
 
-	function getPermissionDeniedMessage( $pPermission ) {
+	public function getPermissionDeniedMessage( $pPermission ) {
 		$permDesc = $this->getPermissionInfo( $pPermission );
 		$ret = "You do not have the required permissions";
 		if( !empty( $permDesc[$pPermission]['perm_desc'] ) ) {
@@ -801,10 +823,10 @@ class BitSystem extends BitSingleton {
 	 * This code was duplicated _EVERYWHERE_ so here is an easy template to cut that down.
 	 * @param $pFormHash documentation needed
 	 * @param $pMsg documentation needed
-	 * @return none
+	 * @return void
 	 * @access public
 	 */
-	function confirmDialog( $pFormHash, $pMsg ) {
+	public function confirmDialog( $pFormHash, $pMsg ) {
 		global $gBitSmarty;
 		if( !empty( $pMsg ) ) {
 			$pageTitle = self::getParameter( $pMsg, 'label', 'Please Confirm' );
@@ -816,8 +838,8 @@ class BitSystem extends BitSingleton {
 				unset( $pFormHash['input'] );
 			}
 			$gBitSmarty->assign( 'msgFields', $pMsg );
-			$gBitSmarty->assignByRef( 'hiddenFields', $pFormHash );
-			$this->display( 'bitpackage:kernel/confirm.tpl', $pageTitle, array( 'display_mode' => 'edit' ));
+			$gBitSmarty->assign( 'hiddenFields', $pFormHash );
+			$this->display( 'bitpackage:kernel/confirm.tpl', $pageTitle, [ 'display_mode' => 'edit' ]);
 			die;
 		}
 	}
@@ -826,35 +848,32 @@ class BitSystem extends BitSingleton {
 	/**
 	 * check's if the specfied feature is active
 	 *
-	 * @param  $pKey hash key
-	 * @return none
-	 * @access public
+	 * @param string $pFeatureName
+	 * @return bool
 	 */
-	function isFeatureActive( $pFeatureName ) {
-		$ret = FALSE;
+	public function isFeatureActive( $pFeatureName ) {
+		$ret = false;
 		if( $pFeatureName ) {
 			$featureValue = $this->getConfig($pFeatureName);
 			$ret = !empty( $featureValue ) && ( $featureValue != 'n' );
 		}
-
-		return( $ret );
+		return $ret;
 	}
 
 	// === verifyFeature
 	/**
 	 * It will verify that the given feature is active or it will display the error template and die()
 	 * @param $pFeatureName the name of the package to test
-	 * @return none
-	 * @access public
+	 * @return bool
 	 *
 	 * @param  $pKey hash key
 	 */
-	function verifyFeature( $pFeatureName ) {
+	public function verifyFeature( $pFeatureName ) {
 		if( !$this->isFeatureActive( $pFeatureName ) ) {
-			$this->fatalError( tra("This feature is disabled").": $pFeatureName" );
+			$this->fatalError( KernelTools::tra("This feature is disabled").": $pFeatureName" );
 		}
 
-		return( TRUE );
+		return true;
 	}
 
 	// === registerPackage
@@ -862,25 +881,25 @@ class BitSystem extends BitSingleton {
 	 * Define name, location and url DEFINE's
 	 *
 	 * @param  $pKey hash key
-	 * @return none
+	 * @return void
 	 * @access public
 	 */
-	function registerPackage( $pRegisterHash ) {
+	public function registerPackage( $pRegisterHash ) {
 		if( !isset( $pRegisterHash['package_name'] )) {
-			$this->fatalError( tra("Package name not set in ")."registerPackage: $this->mPackageFileName" );;
+			$this->fatalError( KernelTools::tra("Package name not set in ")."registerPackage: $this->mPackageFileName" );;
 		} else {
 			$name = $pRegisterHash['package_name'];
 		}
 
 		if( !isset( $pRegisterHash['package_path'] )) {
-			$this->fatalError( tra("Package path not set in ")."registerPackage: $this->mPackageFileName" );;
+			$this->fatalError( KernelTools::tra("Package path not set in ")."registerPackage: $this->mPackageFileName" );;
 		} else {
 			$path = $pRegisterHash['package_path'];
 		}
 
-		$this->mRegisterCalled = TRUE;
+		$this->mRegisterCalled = true;
 		if( empty( $this->mPackages )) {
-			$this->mPackages = array();
+			$this->mPackages = [];
 		}
 		$pkgName = str_replace( ' ', '_', strtoupper( $name ));
 		$pkgNameKey = strtolower( $pkgName );
@@ -888,7 +907,7 @@ class BitSystem extends BitSingleton {
 		// Some package settings
 		$this->mPackages[$pkgNameKey]['homeable'] = !empty( $pRegisterHash['homeable'] );
 		$this->mPackages[$pkgNameKey]['required'] = !empty( $pRegisterHash['required_package'] );
-		$this->mPackages[$pkgNameKey]['service']  = !empty( $pRegisterHash['service'] ) ? $pRegisterHash['service'] : FALSE;
+		$this->mPackages[$pkgNameKey]['service']  = !empty( $pRegisterHash['service'] ) ? $pRegisterHash['service'] : false;
 		$this->mPackages[$pkgNameKey]['status']   = $this->getConfig( 'package_'.$pkgNameKey, 'n');
 
 		# y = Active
@@ -896,29 +915,21 @@ class BitSystem extends BitSingleton {
 		# n (or empty/null) = Not Active and Not Installed
 
 		// set package installed and active flag
-		if( $this->mPackages[$pkgNameKey]['status'] == 'a' || $this->mPackages[$pkgNameKey]['status'] == 'y' ) {
-			$this->mPackages[$pkgNameKey]['active_switch'] = TRUE;
-		} else {
-			$this->mPackages[$pkgNameKey]['active_switch'] = FALSE;
-		}
+		$this->mPackages[$pkgNameKey]['active_switch'] = $this->mPackages[$pkgNameKey]['status'] == 'a' || $this->mPackages[$pkgNameKey]['status'] == 'y' ? true : false;
 
 		// set package installed flag (can be installed but not active)
-		if( $this->mPackages[$pkgNameKey]['active_switch'] || $this->mPackages[$pkgNameKey]['status'] == 'i' ) {
-			$this->mPackages[$pkgNameKey]['installed'] = TRUE;
-		} else {
-			$this->mPackages[$pkgNameKey]['installed'] = FALSE;
-		}
+		$this->mPackages[$pkgNameKey]['installed'] = $this->mPackages[$pkgNameKey]['status'] == 'i' || $this->mPackages[$pkgNameKey]['status'] == 'y' ? true : false;
 
 		// Define <PACKAGE>_PKG_PATH
 		$pkgDefine = $pkgName.'_PKG_PATH';
 		if( !defined( $pkgDefine )) {
 			$pkgPath = BIT_ROOT_PATH . basename( $path ) . '/';
 			define( $pkgDefine, $pkgPath );
-			$arrayHash = array( 
+			$arrayHash = [ 
 				$pkgName.'_PKG_INCLUDE_PATH' => BIT_ROOT_PATH . basename( $path ) . '/includes/', 
 				$pkgName.'_PKG_CLASS_PATH' => BIT_ROOT_PATH . basename( $path ) . '/includes/classes/',
 				$pkgName.'_PKG_ADMIN_PATH' => BIT_ROOT_PATH . basename( $path ) . '/admin/' 
-			);
+			];
 			foreach( $arrayHash as $defName => $defPath ) {
 				define( $defName, is_dir( $defPath ) ? $defPath : $pkgPath );
 			}
@@ -927,7 +938,7 @@ class BitSystem extends BitSingleton {
 		$this->mPackages[$pkgNameKey]['path']  = BIT_ROOT_PATH . basename( $path ) . '/';
 
 		// Define <PACKAGE>_PKG_URL
-		$pkgDefine = $pkgName.'_PKG_URL';
+		$pkgDefine = (string) $pkgName.'_PKG_URL';
 		if( !defined( $pkgDefine )) {
 			// Force full URI's for offline or exported content (newsletters, etc.)
 			$root = !empty( $_REQUEST['uri_mode'] ) ? BIT_BASE_URI . BIT_ROOT_URL : BIT_ROOT_URL;
@@ -944,7 +955,7 @@ class BitSystem extends BitSingleton {
 		$pkgDefine = $pkgName.'_PKG_NAME';
 		if( !defined( $pkgDefine )) {
 			define( $pkgDefine, $name );
-			$this->mPackages[$pkgNameKey]['activatable']  = isset( $pRegisterHash['activatable'] ) ? $pRegisterHash['activatable'] : TRUE;
+			$this->mPackages[$pkgNameKey]['activatable']  = isset( $pRegisterHash['activatable'] ) ? $pRegisterHash['activatable'] : true;
 		}
 		$this->mPackages[$pkgNameKey]['name'] = $name;
 
@@ -969,19 +980,18 @@ class BitSystem extends BitSingleton {
 			//remove double-backslashes and return
 			$_SERVER['SCRIPT_FILENAME'] =  str_replace('\\\\', '\\', $_SERVER['PATH_TRANSLATED'] );
 		}
-
 	}
 
-	function setActivePackage( $pPkgName ) {
+	public function setActivePackage( $pPkgName ) {
 		$this->mActivePackage = $pPkgName;
 	}
 
-	function getActivePackage() {
+	public function getActivePackage() {
 		if( empty( $this->mActivePackage ) ) {
 			$this->mActivePackage = 'kernel'; // default to kernel, which has the default layout
 			// Define the package we are currently in
 			// I tried strpos instead of preg_match here, but it didn't like strings that begin with slash?! - spiderr
-			$scriptDir = ( basename( dirname( $_SERVER['SCRIPT_FILENAME'] ) ) );
+			$scriptDir =  basename( dirname( $_SERVER['SCRIPT_FILENAME'] ) );
 			foreach( array_keys( $this->mPackages ) as $pkgNameKey ) {
 				if( $scriptDir == $this->mPackages[$pkgNameKey]['dir'] ) {
 					$this->mActivePackage = $pkgNameKey;
@@ -1000,42 +1010,38 @@ class BitSystem extends BitSingleton {
 	 * Register global system menu. Due to the startup nature of this method, it need to belong in BitSystem instead of BitThemes, where it would more naturally fit.
 	 *
 	 * @param  $pKey hash key
-	 * @return none
+	 * @return void
 	 * @access public
 	 */
-	function registerAppMenu( $pMenuHash, $pMenuTitle = NULL, $pTitleUrl = NULL, $pMenuTemplate = NULL, $pAdminPanel = FALSE ) {
-		$menuType = (!empty( $pMenuHash['menu_type'] ) ? $pMenuHash['menu_type'] : 'bar');
+	public function registerAppMenu( $pMenuHash, $pMenuTitle = null, $pTitleUrl = null, $pMenuTemplate = null, $pAdminPanel = false ) {
+		$menuType = !empty( $pMenuHash['menu_type'] ) ? $pMenuHash['menu_type'] : 'bar';
 		if( is_array( $pMenuHash ) ) {
 			// shorthand
 			$pkg = $pMenuHash['package_name'];
 
 			// prepare hash
 			$pMenuHash['style']       = 'display:'.( ( isset( $_COOKIE[$pkg.'menu'] ) && ( $_COOKIE[$pkg.'menu'] == 'o' ) ) ? 'block;' : 'none;' );
-			$pMenuHash['is_disabled'] = ( $this->getConfig( 'menu_'.$pkg ) == 'n' );
+			$pMenuHash['is_disabled'] = $this->getConfig( 'menu_'.$pkg ) == 'n';
 			$pMenuHash['menu_title']  = $this->getConfig( $pkg.'_menu_text',
-				( !empty( $pMenuHash['menu_title'] )
+				!empty( $pMenuHash['menu_title'] )
 				? $pMenuHash['menu_title']
-				: ucfirst( constant( strtoupper( $pkg ).'_PKG_DIR' )))
-			);
-			$pMenuHash['menu_position'] = $this->getConfig( $pkg.'_menu_position',
-				( !empty( $pMenuHash['menu_position'] )
-				? $pMenuHash['menu_position']
-				: NULL )
-			);
+				: ucfirst( constant( strtoupper( $pkg ).'_PKG_DIR' )));
+			$pMenuHash['menu_position'] = $this->getConfig( $pkg.'_menu_position', 
+				$pMenuHash['menu_position'] ?? '');
 
 			$this->mAppMenu[$menuType][$pkg] = $pMenuHash;
 		} else {
-			deprecated( 'Please use a menu registration hash instead of individual parameters: $gBitSystem->registerAppMenu( $menuHash )' );
-			$this->mAppMenu[$menuType][strtolower( $pMenuHash )] = array(
+			KernelTools::deprecated( 'Please use a menu registration hash instead of individual parameters: $gBitSystem->registerAppMenu( $menuHash )' );
+			$this->mAppMenu[$menuType][strtolower( $pMenuHash )] = [
 				'menu_title'    => $pMenuTitle,
-				'is_disabled'   => ( $this->getConfig( 'menu_'.$pMenuHash ) == 'n' ),
+				'is_disabled'   => ( $this->getConfig( 'menu_' . $pMenuHash ) == 'n' ),
 				'index_url'     => $pTitleUrl,
 				'menu_template' => $pMenuTemplate,
 				'admin_panel'   => $pAdminPanel,
-				'style'         => 'display:'.( empty( $pMenuTitle ) || ( isset( $_COOKIE[$pMenuHash.'menu'] ) && ( $_COOKIE[$pMenuHash.'menu'] == 'o' ) ) ? 'block;' : 'none;' )
-			);
+				'style'         => 'display:' . ( empty( $pMenuTitle ) || ( isset( $_COOKIE[$pMenuHash . 'menu'] ) && ( $_COOKIE[$pMenuHash . 'menu'] == 'o' ) ) ? 'block;' : 'none;' )
+			];
 		}
-		uasort( $this->mAppMenu[$menuType], 'bit_system_menu_sort' );
+		uasort( $this->mAppMenu[$menuType], 'Bitweaver\bit_system_menu_sort' );
 	}
 
 	/**
@@ -1043,9 +1049,9 @@ class BitSystem extends BitSingleton {
 	 *
 	 * @param array $pEventHash
 	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return void
 	 */
-	function registerNotifyEvent( $pEventHash ) {
+	public function registerNotifyEvent( $pEventHash ) {
 		$this->mNotifyEvents = array_merge( $this->mNotifyEvents, $pEventHash );
 	}
 
@@ -1056,10 +1062,10 @@ class BitSystem extends BitSingleton {
 	 * @param string $ pMsg error message to be displayed
 	 * @param string template file used to display error
 	 * @param string error dialog title. default gets site_error_title config, passing '' will result in no title
-	 * @return none this function will DIE DIE DIE!!!
+	 * @return void this function will DIE DIE DIE!!!
 	 * @access public
 	 */
-	function fatalError( $pMsg, $pTemplate=NULL, $pErrorTitle=NULL, $pHttpStatus = 200  ) {
+	public function fatalError( $pMsg, $pTemplate=null, $pErrorTitle=null, $pHttpStatus = 200  ) {
 		global $gBitSmarty, $gBitThemes;
 		if( is_null( $pErrorTitle ) ) {
 			$pErrorTitle = $this->getConfig( 'site_error_title', '' );
@@ -1069,7 +1075,7 @@ class BitSystem extends BitSingleton {
 			$pTemplate = 'error.tpl';
 		}
 
-		$gBitSmarty->assign( 'fatalTitle', tra( $pErrorTitle ) );
+		$gBitSmarty->assign( 'fatalTitle', KernelTools::tra( $pErrorTitle ) );
 		$gBitSmarty->assign( 'msg', $pMsg );
 		// if mHttpStatus is set, we can assume this was an expected fatal, such as a 404 or 403
 		if( !isset( $this->mHttpStatus ) ) {
@@ -1092,20 +1098,20 @@ class BitSystem extends BitSingleton {
 	 *
 	 * @param string $ pkgDir = Directory Name of package to load
 	 * @param string $ pScanFile file to be looked for
-	 * @param string $ autoRegister - TRUE = autoregister any packages that don't register on their own, FALSE = don't
-	 * @param string $ pOnce - TRUE = do include_once to load file FALSE = do include to load the file
-	 * @return none
+	 * @param string $ autoRegister - true = autoregister any packages that don't register on their own, false = don't
+	 * @param string $ pOnce - true = do include_once to load file false = do include to load the file
+	 * @return void
 	 * @access public
 	 */
-	function loadPackage( $pPkgDir, $pScanFile, $pAutoRegister=TRUE, $pOnce=TRUE ) {
+	public function loadPackage( $pPkgDir, $pScanFile, $pAutoRegister=true, $pOnce=true ) {
 		#check if already loaded, loading again won't work with 'include_once' since
 		#no register call will be done, so don't auto register.
 		if( $pAutoRegister && !empty( $this->mPackagesDirNameXref[$pPkgDir] ) ) {
-			$pAutoRegister = FALSE;
+			$pAutoRegister = false;
 		}
 
-		$this->mRegisterCalled = FALSE;
-		$scanFile = BIT_ROOT_PATH.$pPkgDir.'/'.$pScanFile;
+		$this->mRegisterCalled = false;
+		$scanFile = $pScanFile == 'admin/schema_inc.php' ? BIT_ROOT_PATH.$pPkgDir.'/'.$pScanFile : BIT_ROOT_PATH.$pPkgDir.'/includes/'.$pScanFile;
 		$file_exists = 0;
 
 		if( file_exists( $scanFile ) ) {
@@ -1113,23 +1119,23 @@ class BitSystem extends BitSingleton {
 			global $gBitSystem, $gLibertySystem, $gBitSmarty, $gBitUser, $gBitLanguage;
 			$this->mPackageFileName = $scanFile;
 			if( $pOnce ) {
-				include_once( $scanFile );
+				include_once $scanFile;
 			} else {
-				include( $scanFile );
+				include $scanFile;
 			}
 		}
 
 		if( ( $file_exists || $pPkgDir == 'kernel' ) && ( $pAutoRegister && !$this->mRegisterCalled ) ) {
-			$registerHash = array(
+			$pRegisterHash = [
 				#for auto registered packages Registration Package Name = Package Directory Name
 				'package_name' => $pPkgDir,
-				'package_path' => BIT_ROOT_PATH.$pPkgDir.'/',
-				'activatable' => FALSE,
-			);
+				'package_path' => BIT_ROOT_PATH . $pPkgDir . '/',
+				'activatable'  => false,
+			];
 			if( $pPkgDir == 'kernel' ) {
-				$registerHash = array_merge( $registerHash, array( 'required_package'=>TRUE ) );
+				$pRegisterHash = array_merge( $pRegisterHash, [ 'required_package' => true ] );
 			}
-			$this->registerPackage( $registerHash );
+			$this->registerPackage( $pRegisterHash );
 		}
 	}
 
@@ -1139,11 +1145,11 @@ class BitSystem extends BitSingleton {
 	 * scan all available packages. This is an *expensive* function. DO NOT call this functionally regularly , or arbitrarily. Failure to comply is punishable by death by jello suffication!
 	 *
 	 * @param string $ pScanFile file to be looked for
-	 * @param string $ pOnce - TRUE = do include_once to load file FALSE = do include to load the file
+	 * @param string $ pOnce - true = do include_once to load file false = do include to load the file
 	 * @param string $ pSelect - empty or 'all' = load all packages, 'installed' = load installed, 'active' = load active, 'x' = load packages with status x
-	 * @param string $ autoRegister - TRUE = autoregister any packages that don't register on their own, FALSE = don't
-	 * @param string $ fileSystemScan - TRUE = scan file system for packages to load, False = don't
-	 * @return none
+	 * @param string $ autoRegister - true = autoregister any packages that don't register on their own, false = don't
+	 * @param string $ fileSystemScan - true = scan file system for packages to load, False = don't
+	 * @return void
 	 *
 	 * Packages have three different names:
 	 *    The directory name where they reside on disk
@@ -1166,18 +1172,17 @@ class BitSystem extends BitSingleton {
 	 *
 	 * @access public
 	 */
-	function scanPackages( $pScanFile = 'includes/bit_setup_inc.php', $pOnce=TRUE, $pSelect='', $pAutoRegister=TRUE ) {
+	public function scanPackages( $pScanFile = 'bit_setup_inc.php', $pOnce=true, $pSelect='', $pAutoRegister=true ) {
 		global $gPreScan;
 		if( !empty( $gPreScan ) && is_array( $gPreScan )) {
 			// gPreScan may hold a list of packages that must be loaded first
 			foreach( $gPreScan as $pkgDir ) {
-				$loadPkgs[] = $pkgDir;
+			    $loadPkgs[] = $pkgDir;
 			}
 		}
-
 		// load lib configs
 		if( $pkgDir = opendir( BIT_ROOT_PATH )) {
-			while( FALSE !== ( $dirName = readdir( $pkgDir ))) {
+			while( false !== ( $dirName = readdir( $pkgDir ))) {
 				if( $dirName != '..'  && $dirName != '.' && is_dir( BIT_ROOT_PATH . '/' . $dirName ) && $dirName != 'CVS' && preg_match( '/^\w/', $dirName )) {
 					$loadPkgs[] = $dirName;
 				}
@@ -1187,8 +1192,10 @@ class BitSystem extends BitSingleton {
 
 		// load the list of pkgs in the right order
 		foreach( $loadPkgs as $loadPkg ) {
-			$this->loadPackage( $loadPkg, $pScanFile, $pAutoRegister, $pOnce );
+// print_r('<br>Load Plugins - ' . $loadPkg . '<br>');
+            $this->loadPackage( $loadPkg, $pScanFile, $pAutoRegister, $pOnce );
 		}
+
 
 		if( !defined( 'BIT_STYLES_PATH' ) && defined( 'THEMES_PKG_PATH' )) {
 			define( 'BIT_STYLES_PATH', THEMES_PKG_PATH.'styles/' );
@@ -1203,9 +1210,9 @@ class BitSystem extends BitSingleton {
 	 * getSiteTitle
 	 *
 	 * @access public
-	 * @return name of website
+	 * @return string name of website
 	 */
-	function getSiteTitle() {
+	public function getSiteTitle() {
 		return $this->getConfig( 'site_title' );
 	}
 
@@ -1213,9 +1220,9 @@ class BitSystem extends BitSingleton {
 	 * getDefaultPage
 	 *
 	 * @access public
-	 * @return URL of site homepage
+	 * @return string URL of site homepage
 	 */
-	function getDefaultPage() {
+	public function getDefaultPage() {
 		return $this->getIndexPage( $this->getConfig( "bit_index" ) );
 	}
 
@@ -1226,26 +1233,26 @@ class BitSystem extends BitSingleton {
 	 * defaults to the site homepage
 	 *
 	 * @access public
-	 * @return URL of page by index type
+	 * @return string URL of page by index type
 	 */
-	function getIndexPage( $pIndexType = NULL ){
+	public function getIndexPage( $pIndexType = null ){
 		global $userlib, $gBitUser, $gBitSystem;
 		$pIndexType = !is_null( $pIndexType )? $pIndexType : $this->getConfig( "bit_index" );
 		$url = '';
 		if( $pIndexType == 'role_home') {
 			// See if we have first a user assigned default group id, and second a group default system preference
-			if( !$gBitUser->isRegistered() && ( $role_home = $gBitUser->getHomeRole( ANONYMOUS_TEAM_ID ))) {
-			} elseif( @$this->verifyId( $gBitUser->mInfo['default_role_id'] ) && ( $role_home = $gBitUser->getHomeRole( $gBitUser->mInfo['default_role_id'] ))) {
-			} elseif( $this->getConfig( 'default_home_role' ) && ( $role_home = $gBitUser->getHomeRole( $this->getConfig( 'default_home_role' )))) {
+			if( !$gBitUser->isRegistered() && ( $role_home = $gBitUser->getRoleHome( ANONYMOUS_TEAM_ID ))) {
+			} elseif( @$this->verifyId( $gBitUser->mInfo['default_role_id'] ) && ( $role_home = $gBitUser->getRoleHome( $gBitUser->mInfo['default_role_id'] ))) {
+			} elseif( $this->getConfig( 'default_home_role' ) && ( $role_home = $gBitUser->getRoleHome( $this->getConfig( 'default_home_role' )))) {
 			}
 
 			if( !empty( $role_home )) {
 				if( $this->verifyId( $role_home ) ) {
 					$url = BIT_ROOT_URL."index.php".( !empty( $role_home ) ? "?content_id=".$role_home : "" );
 				// wiki dependence - NO bad idea
-				// } elseif( strpos( $group_home, '/' ) === FALSE ) {
+				// } elseif( strpos( $group_home, '/' ) === false ) {
 				// 	$url = BitPage::getDisplayUrl( $group_home );
-				} elseif(  strpos( $role_home, 'http://' ) === FALSE ){
+				} elseif(  strpos( $role_home, 'http://' ) === false ){
 					$url = BIT_ROOT_URL.$role_home;
 				} else {
 					$url = $role_home;
@@ -1262,9 +1269,9 @@ class BitSystem extends BitSingleton {
 				if( $this->verifyId( $group_home ) ) {
 					$url = BIT_ROOT_URL."index.php".( !empty( $group_home ) ? "?content_id=".$group_home : "" );
 				// wiki dependence - NO bad idea
-				// } elseif( strpos( $group_home, '/' ) === FALSE ) {
+				// } elseif( strpos( $group_home, '/' ) === false ) {
 				// 	$url = BitPage::getDisplayUrl( $group_home );
-				} elseif(  strpos( $group_home, 'http://' ) === FALSE ){
+				} elseif(  strpos( $group_home, 'http://' ) === false ){
 					$url = BIT_ROOT_URL.$group_home;
 				} else {
 					$url = $group_home;
@@ -1278,7 +1285,7 @@ class BitSystem extends BitSingleton {
 				} else {
 					if( $pIndexType == 'my_page' ) {
 						$url = $gBitSystem->getConfig( 'users_login_homepage', USERS_PKG_URL.'my.php' );
-						if( $url != USERS_PKG_URL.'my.php' && strpos( $url, 'http://' ) === FALSE ){
+						if( $url != USERS_PKG_URL.'my.php' && strpos( $url, 'http://' ) === false ){
 							// the safe assumption is that a custom path is a subpath of the site
 							// append the root url unless we have a fully qualified uri
 							$url = BIT_ROOT_URL.$url;
@@ -1288,11 +1295,10 @@ class BitSystem extends BitSingleton {
 					} else {
 						$users_homepage = $gBitUser->getPreference( 'users_homepage' );
 						if( isset( $users_homepage ) && !empty( $users_homepage )) {
-							if( strpos($users_homepage, '/') === FALSE ) {
-								$url = BitPage::getDisplayUrlFromHash( array( 'title' => $users_homepage ) );
-							} else {
-								$url = $users_homepage;
-							}
+							$home = [ 'title' => $users_homepage];
+							$url = strpos($users_homepage, '/') === false 
+								? BitPage::getDisplayUrlFromHash( $home ) 
+								: $users_homepage;
 						}
 					}
 				}
@@ -1326,10 +1332,10 @@ class BitSystem extends BitSingleton {
 			}
 		}
 
-		if( strpos( $url, 'http://' ) === FALSE ) {
+		if( strpos( $url, 'http://' ) === false ) {
 			$url = preg_replace( "#//#", "/", $url );
 		}
-
+		
 		return $url;
 	}
 	// === setOnloadScript
@@ -1337,10 +1343,10 @@ class BitSystem extends BitSingleton {
 	 * add javascript to the <body onload> attribute
 	 *
 	 * @param string $pJavascript javascript to be added
-	 * @return none
+	 * @return void
 	 * @access public
 	 */
-	function setOnloadScript( $pJavscript ) {
+	public function setOnloadScript( $pJavscript ) {
 		array_push( $this->mOnload, $pJavscript );
 	}
 	// === setOnunloadScript
@@ -1348,22 +1354,22 @@ class BitSystem extends BitSingleton {
 	 * add javascript to the <body onunload> attribute
 	 *
 	 * @param string $pJavascript javascript to be added
-	 * @return none
+	 * @return void
 	 * @access public
 	 */
-	function setOnunloadScript( $pJavscript ) {
+	public function setOnunloadScript( $pJavscript ) {
 		array_push( $this->mOnunload, $pJavscript );
 	}
 	// === getBrowserTitle
 	/**
 	 * get the title of the browser
 	 *
-	 * @return title string
+	 * @return string title string
 	 * @access public
 	 */
-	function getBrowserTitle() {
+	public function getBrowserTitle() {
 		global $gPageTitle;
-		return( $gPageTitle );
+		return $gPageTitle;
 	}
 
 	// === setBrowserTitle
@@ -1371,10 +1377,10 @@ class BitSystem extends BitSingleton {
 	 * set the title of the browser
 	 *
 	 * @param string $ pTitle title to be used
-	 * @return none
+	 * @return void
 	 * @access public
 	 */
-	function setBrowserTitle( $pTitle ) {
+	public function setBrowserTitle( $pTitle ) {
 		global $gBitSmarty, $gPageTitle;
 		$gPageTitle = $pTitle;
 		$gBitSmarty->assign( 'browserTitle', $pTitle );
@@ -1385,25 +1391,20 @@ class BitSystem extends BitSingleton {
 	/**
 	 * set the canonical page title
 	 *
-	 * @param string $ pTitle title to be used
-	 * @return none
-	 * @access public
+	 * @param array $pListInfo
+	 * @return void
 	 */
-	function setPagination( $pListInfo ) {
+	public function setPagination( $pListInfo ): void {
 		global $gBitSmarty;
 		if( !empty( $pListInfo['total_pages'] ) && !empty( $pListInfo['page_records'] ) ) {
 			$relTags = "";
-			if ( isset( $pListInfo['url'] ) ) {
-				$baseUrl = $pListInfo['url'];
-			} else {
-				$baseUrl = $_SERVER['SCRIPT_URL'];
-			}
+			$baseUrl = isset( $pListInfo['url'] ) ? $pListInfo['url'] : $_SERVER['SCRIPT_URL'];
 
 			if( !empty( $pListInfo['query_string'] ) ) {
 				$pageUrl = $baseUrl.'?'.$pListInfo['query_string'];
 			} else {
 				$queryString = '';
-				foreach( array( 'parameters', 'ihash' ) as $paramKey ) {
+				foreach( [ 'parameters', 'ihash' ] as $paramKey ) {
 					if( !empty( $pListInfo[$paramKey] ) ) {
 						foreach( $pListInfo['parameters'] as $param=>$value ) {
 							if( is_array( $value ) ) {
@@ -1418,19 +1419,11 @@ class BitSystem extends BitSingleton {
 						}
 					}
 				}
-	/*
-				{foreach from=$pgnHidden key=param item=value}
-					{if $value|is_array}
-						{foreach from=$value item=v}{if $value ne ''}&amp;{$param}[]={$v}{/if}{/foreach}
-					{else}
-						{if $value ne ''}&amp;{$param}={$value}{/if}
-					{/if}
-				{/foreach}
-	*/
-				foreach( array( 'max_records', 'sort_mode', 'find' ) as $paramKey ) {
+
+				foreach( [ 'max_records', 'sort_mode', 'find' ] as $paramKey ) {
 					if( !empty( $pListInfo[$paramKey] ) ) {
 						if( is_array( $pListInfo[$paramKey] ) ) {
-							foreach( $pListInfop[$paramKey] as $v ) {
+							foreach( $pListInfo[$paramKey] as $v ) {
 								$queryString = $paramKey.'[]='.$v.'&amp;';
 							}
 						} else {
@@ -1457,17 +1450,17 @@ class BitSystem extends BitSingleton {
 	 * set the canonical page title
 	 *
 	 * @param string $ pTitle title to be used
-	 * @return none
+	 * @return void
 	 * @access public
 	 */
-	function setCanonicalLink( $pRelativeUrl ) {
+	public function setCanonicalLink( $pRelativeUrl ) {
 		global $gBitSmarty;
 		$baseUri = defined( 'CANONICAL_BASE_URI' ) ? CANONICAL_BASE_URI : BIT_BASE_URI; 
 		$gBitSmarty->assign( 'canonicalLink', $baseUri.$pRelativeUrl );
 	}
 
 	/*static*/
-	static function genPass() {
+	public static function genPass() {
 		$vocales = "aeiou";
 		$consonantes = "bcdfghjklmnpqrstvwxyz123456789";
 		$r = '';
@@ -1486,19 +1479,19 @@ class BitSystem extends BitSingleton {
 	 * given an extension, return the mime type
 	 *
 	 * @param string $pExtension is the extension of the file or the complete file name
-	 * @return mime type of entry and populates $this->mMimeTypes with existing mime types
+	 * @return string mime type of entry and populates $this->mMimeTypes with existing mime types
 	 * @access public
 	 */
-	function lookupMimeType( $pExtension ) {
+	public function lookupMimeType( $pExtension ) {
 
 		$this->loadMimeTypes();
 		if( preg_match( "#\.[0-9a-z]+$#i", $pExtension )) {
-			$pExtension = substr( $pExtension, ( strrpos( $pExtension, '.' ) + 1 ));
+			$pExtension = substr( $pExtension, strrpos( $pExtension, '.' ) + 1 );
 		}
 		// rfc1341 - mime types are case insensitive.
 		$pExtension = strtolower( $pExtension );
 
-		return( !empty( $this->mMimeTypes[$pExtension] ) ? $this->mMimeTypes[$pExtension] : 'application/binary' );
+		return !empty( $this->mMimeTypes[$pExtension] ) ? $this->mMimeTypes[$pExtension] : 'application/binary';
 	}
 
 	// === loadMimeTypes
@@ -1506,21 +1499,17 @@ class BitSystem extends BitSingleton {
 	 * given an extension, return the mime type
 	 *
 	 * @param string $pExtension is the extension of the file or the complete file name
-	 * @return mime type of entry and populates $this->mMimeTypes with existing mime types
+	 * @return void mime type of entry and populates $this->mMimeTypes with existing mime types
 	 * @access public
 	 */
-	function loadMimeTypes() {
+	public function loadMimeTypes() {
 		if( empty( $this->mMimeTypes )) {
 			// use bitweavers mime.types file to ensure everyone has our set unless user forces his own.
-			if( defined( 'MIME_TYPES' ) && is_file( MIME_TYPES )) {
-				$mimeFile = MIME_TYPES;
-			} else {
-				$mimeFile = KERNEL_PKG_ADMIN_PATH.'mime.types';
-			}
+			$mimeFile = defined( 'MIME_TYPES' ) ? MIME_TYPES : KERNEL_PKG_ADMIN_PATH.'mime.types';
 
-			$this->mMimeTypes = array();
+			$this->mMimeTypes = [];
 			if( $fp = fopen( $mimeFile,"r" ) ) {
-				while( FALSE != ( $line = fgets( $fp, 4096 ) ) ) {
+				while( false != ( $line = fgets( $fp, 4096 ) ) ) {
 					if( !preg_match( "/^\s*(?!#)\s*(\S+)\s+(?=\S)(.+)/", $line, $match ) ) {
 						continue;
 					}
@@ -1540,10 +1529,10 @@ class BitSystem extends BitSingleton {
 	 *
 	 * @param string $pFile is the actual file to inspect for magic numbers to determine type
 	 * @param string $pFileName is the desired name the file. This is optional in the even the pFile is non-extensioned, as is the case with file uploads
-	 * @return corrected file name and mime type
+	 * @return array corrected file name and mime type
 	 * @access public
 	 */
-	function verifyFileExtension( $pFile, $pFileName=NULL ) {
+	public function verifyFileExtension( $pFile, $pFileName=null ) {
 		$this->loadMimeTypes();
 		if( empty( $pFileName ) ) {
 			$pFileName = basename( $pFile );
@@ -1576,7 +1565,7 @@ class BitSystem extends BitSingleton {
 			$pFileName .= "bin";
 		}
 
-		return array( $ret, $verifyMime );
+		return [ $ret, $verifyMime ];
 	}
 
 
@@ -1585,22 +1574,20 @@ class BitSystem extends BitSingleton {
 	 * given a file, return the mime type
 	 *
 	 * @param string $pExtension is the extension of the file or the complete file name
-	 * @return mime type of entry and populates $this->mMimeTypes with existing mime types
+	 * @return string mime type of entry and populates $this->mMimeTypes with existing mime types
 	 * @access public
 	 */
-	function verifyMimeType( $pFile ) {
-		$mime = NULL;
+	public function verifyMimeType( $pFile ) {
+		$mime = null;
 		if( file_exists( $pFile ) && filesize( $pFile ) ) {
 			if( function_exists( 'finfo_open' ) ) {
-				if( is_windows() && defined( 'PHP_MAGIC_PATH' ) && is_readable( PHP_MAGIC_PATH )) {
-					$finfo = finfo_open( FILEINFO_MIME, PHP_MAGIC_PATH );
-				} else {
-					$finfo = finfo_open( FILEINFO_MIME );
-				}
+				$finfo = KernelTools::is_windows() && defined( 'PHP_MAGIC_PATH' ) && is_readable( PHP_MAGIC_PATH ) 
+					? finfo_open( FILEINFO_MIME, PHP_MAGIC_PATH ) 
+					: finfo_open( FILEINFO_MIME );
 				$mime = finfo_file( $finfo, $pFile );
 				finfo_close( $finfo );
 			} else {
-				if( function_enabled( "escapeshellarg" ) && function_enabled( "exec" )) {
+				if( KernelTools::function_enabled( "escapeshellarg" ) && KernelTools::function_enabled( "exec" )) {
 					$mime = exec( trim( 'file -bi ' . escapeshellarg( $pFile )));
 				}
 			}
@@ -1615,7 +1602,7 @@ class BitSystem extends BitSingleton {
 		return $mime;
 	}
 
-	function getMimeExtension( $pMimeType ) {
+	public function getMimeExtension( $pMimeType ) {
 		$ret = '';
 
 		if( $pMimeType == 'image/jpeg' ) {
@@ -1637,9 +1624,6 @@ class BitSystem extends BitSingleton {
 						$ret = 'jps'; break;
 					case 'image/x-freehand':
 						$ret = 'fh'; break;
-					default:
-						list( $class, $type ) = explode( '/', $pMimeType );
-						$ret = $type; break;
 				}
 			}
 		}
@@ -1652,11 +1636,7 @@ class BitSystem extends BitSingleton {
 	 */
 	public static function prependIncludePath( $pPath ) {
 		$include_path = get_include_path();
-		if( $include_path ) {
-			$include_path = $pPath . PATH_SEPARATOR . $include_path;
-		} else {
-			$include_path = $pPath;
-		}
+		$include_path = !empty($include_path) ? $pPath . PATH_SEPARATOR . $include_path : $pPath;
 		return set_include_path( $include_path );
 	}
 
@@ -1664,7 +1644,7 @@ class BitSystem extends BitSingleton {
 	 * * Append $pPath to the include path
 	 * \static
 	 */
-	function appendIncludePath( $pPath ) {
+	public function appendIncludePath( $pPath ) {
 		$include_path = get_include_path();
 		if( $include_path ) {
 			$include_path .= PATH_SEPARATOR . $pPath;
@@ -1685,7 +1665,7 @@ class BitSystem extends BitSingleton {
 			define( 'TEMP_PKG_PATH', $tempDir );
 			define( 'TEMP_PKG_URL', BIT_ROOT_URL.'temp/' );
 			if( !file_exists( $tempDir ) ) {
-				mkdir( $tempDir, 0777, TRUE );
+				mkdir( $tempDir, 0777, true );
 			}
 		}
 	}
@@ -1697,7 +1677,7 @@ class BitSystem extends BitSingleton {
 	/* Check that everything is set up properly
 	 * \static
 	 */
-	function checkEnvironment() {
+	public function checkEnvironment() {
 		static $checked, $gTempDirs;
 
 		if( $checked ) {
@@ -1720,7 +1700,7 @@ class BitSystem extends BitSingleton {
 			if( empty( $save_path ) ) {
 				$errors .= "The session.save_path variable is not setup correctly (its empty).\n";
 			} else {
-				if( strpos( $save_path, ";" ) !== FALSE ) {
+				if( strpos( $save_path, ";" ) !== false ) {
 					$save_path = substr( $save_path, strpos( $save_path, ";" )+1 );
 				}
 				$open = ini_get( 'open_basedir' );
@@ -1746,7 +1726,7 @@ class BitSystem extends BitSingleton {
 		$wwwuser = '';
 		$wwwgroup = '';
 
-		if( is_windows() ) {
+		if( KernelTools::is_windows() ) {
 			if( strpos( $_SERVER["SERVER_SOFTWARE"],"IIS" ) && isset( $_SERVER['COMPUTERNAME'] ) ) {
 				$wwwuser = 'IUSR_'.$_SERVER['COMPUTERNAME'];
 				$wwwgroup = 'IUSR_'.$_SERVER['COMPUTERNAME'];
@@ -1759,8 +1739,8 @@ class BitSystem extends BitSingleton {
 		if( function_exists( 'posix_getuid' ) ) {
 			$userhash = @posix_getpwuid( @posix_getuid() );
 			$group = @posix_getpwuid( @posix_getgid() );
-			$wwwuser = $userhash ? $userhash['name'] : FALSE;
-			$wwwgroup = $group ? $group['name'] : FALSE;
+			$wwwuser = $userhash ? $userhash['name'] : false;
+			$wwwgroup = $group ? $group['name'] : false;
 		}
 
 		if( !$wwwuser ) {
@@ -1780,17 +1760,17 @@ class BitSystem extends BitSingleton {
 		$permFiles[] = STORAGE_PKG_PATH;
 
 		foreach( $permFiles as $file ) {
-			$present = FALSE;
+			$present = false;
 			// Create directories as needed
 			$target = $file;
 			if( preg_match( '/.*\/$/', $target ) ) {
 				// we have a directory
 				if( !is_dir( $target ) ) {
-					mkdir( $target, 02775, TRUE );
+					mkdir( $target, 02775, true );
 				}
 				// Check again and report problems
 				if( !is_dir( $target ) ) {
-					if( !is_windows() ) {
+					if( !KernelTools::is_windows() ) {
 						$errors .= "
 							<p>The directory <strong style='color:red;'>$target</strong> does not exist. To create the directory, execute a command such as:</p>
 							<pre>\$ mkdir -m 777 $target</pre>
@@ -1799,10 +1779,10 @@ class BitSystem extends BitSingleton {
 						$errors .= "<p>The directory <strong style='color:red;'>$target</strong> does not exist. Create the directory $target before proceeding</p>";
 					}
 				} else {
-					$present = TRUE;
+					$present = true;
 				}
 			} elseif( !file_exists( $target ) ) {
-				if( !is_windows() ) {
+				if( !KernelTools::is_windows() ) {
 					$errors .= "<p>The file <b style='color:red;'>$target</b> does not exist. To create the file, execute a command such as:</p>
 						<pre>
 						\$ touch $target
@@ -1813,12 +1793,12 @@ class BitSystem extends BitSingleton {
 					$errors .= "<p>The file <b style='color:red;'>$target</b> does not exist. Create a blank file $target before proceeding</p>";
 				}
 			} else {
-				$present = TRUE;
+				$present = true;
 			}
 
 			// chmod( $target, 02775 );
-			if( $present && ( !bw_is_writeable( $target ))) {
-				if( !is_windows() ) {
+			if( $present && ( !KernelTools::bw_is_writeable( $target ))) {
+				if( !KernelTools::is_windows() ) {
 					$errors .= "<p><strong style='color:red;'>$target</strong> is not writeable by $wwwuser. To give $wwwuser write permission, execute a command such as:</p>
 					<pre>\$ chmod 777 $target</pre>";
 				} else {
@@ -1858,7 +1838,7 @@ class BitSystem extends BitSingleton {
 			$errors
 		</blockquote>";
 			if( !$this->isLive() ) {
-				if( !is_windows() ) {
+				if( !KernelTools::is_windows() ) {
 					print "<p>Proceed to the installer <strong>at <a href=\"".BIT_ROOT_URL."install/install.php\">".BIT_ROOT_URL."install/install.php</a></strong> after you run the command.";
 				} else {
 					print "<p>Proceed to the installer <strong>at <a href=\"".BIT_ROOT_URL."install/install.php\">".BIT_ROOT_URL."install/install.php</a></strong> after you have corrected the identified problems.";
@@ -1869,26 +1849,26 @@ class BitSystem extends BitSingleton {
 			exit;
 		}
 
-		$checked = TRUE;
+		$checked = true;
 	}
 
 	/**
 	 * isLive returns status of the IS_LIVE constant from config/kernel/config_inc.php
 	 *
 	 * @access public
-	 * @return TRUE if IS_LIVE is defined and set to a non empty value, else FALSE
+	 * @return bool true if IS_LIVE is defined and set to a non empty value, else false
 	 */
-	function isLive() {
-		return( (defined( 'IS_LIVE' ) && IS_LIVE) && !$this->isFeatureActive( 'site_hidden' ) );
+	public function isLive() {
+		return (defined( 'IS_LIVE' ) && IS_LIVE) && !$this->isFeatureActive( 'site_hidden' );
 	}
 
 	/**
 	 * isIndexed returns if that page should be indexed by search engines
 	 *
 	 * @access public
-	 * @return TRUE if page should be indexed by search engines
+	 * @return bool true if page should be indexed by search engines
 	 */
-	function isIndexed() {
+	public function isIndexed() {
 		return (!defined('SITE_NOINDEX') || !constant('SITE_NOINDEX')) && $this->isLive();
 	}
 
@@ -1896,9 +1876,9 @@ class BitSystem extends BitSingleton {
 	 * isTracking returns status of the IS_LIVE constant from config/kernel/config_inc.php
 	 *
 	 * @access public
-	 * @return TRUE if IS_LIVE is defined and set to a non empty value, else FALSE
+	 * @return bool true if IS_LIVE is defined and set to a non empty value, else false
 	 */
-	function isTracking() {
+	public function isTracking() {
 		global $gBitUser;
 		return $this->getConfig( 'tracking_debug' ) || ($this->isLive() && !$gBitUser->hasPermission( 'p_users_admin' ));
 	}
@@ -1909,15 +1889,14 @@ class BitSystem extends BitSingleton {
 	/**
 	 * registerSchemaTable
 	 *
-	 * @param array $pPackage
-	 * @param array $pTableName
-	 * @param array $pDataDict
-	 * @param array $pRequired
+	 * @param string $pPackage
+	 * @param string $pTableName
+	 * @param string $pDataDict
+	 * @param bool $pRequired
 	 * @param array $pTableOptions
-	 * @access public
 	 * @return void
 	 */
-	function registerSchemaTable( $pPackage, $pTableName, $pDataDict, $pRequired=FALSE, $pTableOptions=NULL ) {
+	public function registerSchemaTable( string $pPackage, string $pTableName, string $pDataDict, bool $pRequired = false, ?array $pTableOptions = null ): void {
 		$pPackage = strtolower( $pPackage ); // lower case for uniformity
 		if( !empty( $pTableName ) ) {
 			$this->mPackages[$pPackage]['tables'][$pTableName] = $pDataDict;
@@ -1930,13 +1909,13 @@ class BitSystem extends BitSingleton {
 	/**
 	 * registerSchemaConstraints
 	 *
-	 * @param array $pPackage
-	 * @param array $pTableName
+	 * @param string $pPackage
+	 * @param string $pTableName
 	 * @param array $pConstraints
 	 * @access public
 	 * @return void
 	 */
-	function registerSchemaConstraints( $pPackage, $pTableName, $pConstraints ) {
+	public function registerSchemaConstraints( string $pPackage, string $pTableName, array $pConstraints ): void {
 		$pPackage = strtolower( $pPackage);
 		if( !empty( $pTableName ) ) {
 			$this->mPackages[$pPackage]['constraints'][$pTableName] = $pConstraints;
@@ -1946,12 +1925,11 @@ class BitSystem extends BitSingleton {
 	/**
 	 * registerUserPermissions
 	 *
-	 * @param array $pPackagedir
+	 * @param string $pPackagedir
 	 * @param array $pUserpermissions
-	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return void
 	 */
-	function registerUserPermissions( $pPackagedir, $pUserpermissions ) {
+	public function registerUserPermissions( string $pPackagedir, array $pUserpermissions ): void {
 		foreach( $pUserpermissions as $perm ) {
 			$this->mPermHash[$perm[0]] = $perm;
 			$this->mPermHash[$perm[0]]['sql'] = "INSERT INTO `".BIT_DB_PREFIX."users_permissions` (`perm_name`, `perm_desc`, `perm_level`, `package`) VALUES ('$perm[0]', '$perm[1]', '$perm[2]', '$perm[3]')";
@@ -1963,12 +1941,12 @@ class BitSystem extends BitSingleton {
 	/**
 	 * registerConfig
 	 *
-	 * @param array $pPackagedir
-	 * @param array $pPreferences
+	 * @param string $pPackagedir
+	 * @param array|string $pPreferences
 	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return void
 	 */
-	function registerConfig( $pPackagedir, $pPreferences ) {
+	public function registerConfig( $pPackagedir, $pPreferences ) {
 		foreach( $pPreferences as $pref ) {
 			$this->registerSchemaDefault( $pPackagedir,
 				"INSERT INTO `".BIT_DB_PREFIX."kernel_config`(`package`,`config_name`,`config_value`) VALUES ('$pref[0]', '$pref[1]','$pref[2]')");
@@ -1978,14 +1956,14 @@ class BitSystem extends BitSingleton {
 	/**
 	 * registerPreferences
 	 *
-	 * @param array $pPackagedir
+	 * @param string $pPackagedir
 	 * @param array $pPreferences
 	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return void
 	 */
-	function registerPreferences( $pPackagedir, $pPreferences ) {
+	public function registerPreferences( $pPackagedir, $pPreferences ) {
 		foreach( $pPreferences as $prefHash ) {
-			$this->mPackages[$pPackagedir]['default_prefs'][] = array( 'package' => $prefHash[0], 'name' => $prefHash[1], 'value' => $prefHash[2] );
+			$this->mPackages[$pPackagedir]['default_prefs'][] = [ 'package' => $prefHash[0], 'name' => $prefHash[1], 'value' => $prefHash[2] ];
 		}
 	}
 
@@ -1994,9 +1972,9 @@ class BitSystem extends BitSingleton {
 	 *
 	 * @param array $pModuleHash
 	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return void
 	 */
-	function registerModules( $pModuleHash ) {
+	public function registerModules( $pModuleHash ) {
 		$this->mInstallModules = array_merge( $this->mInstallModules, $pModuleHash );
 	}
 
@@ -2004,28 +1982,26 @@ class BitSystem extends BitSingleton {
 	 * registerContentObjects
 	 *
 	 * @param string $pPackageName the package name
-	 * @param hash $pClassesHash [$className => $pathToClassFile]
+	 * @param array $pClassesHash [$className => $pathToClassFile]
 	 * @access public
 	 */
-	function registerContentObjects( $pPackageName, $pClassesHash ) {
+	public function registerContentObjects( $pPackageName, $pClassesHash ) {
 		$this->mContentClasses[$pPackageName] = $pClassesHash;
 	}
 
 	/**
 	 * registerPackageInfo
 	 *
-	 * @param array $pPackage
+	 * @param string $pPackage
 	 * @param array $pInfoHash
 	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return void
 	 */
-	function registerPackageInfo( $pPackage, $pInfoHash ) {
+	public function registerPackageInfo( $pPackage, $pInfoHash ) {
 		$pPackage = strtolower( $pPackage ); // lower case for uniformity
-		if( !empty( $this->mPackages[$pPackage]['info'] )) {
-			$this->mPackages[$pPackage]['info'] = array_merge( $this->mPackages[$pPackage]['info'], $pInfoHash );
-		} else {
-			$this->mPackages[$pPackage]['info'] = $pInfoHash;
-		}
+		$this->mPackages[$pPackage]['info'] = !empty( $this->mPackages[$pPackage]['info'] )
+			? array_merge( $this->mPackages[$pPackage]['info'], $pInfoHash ) : $pInfoHash;
+
 		$this->mPackages[$pPackage]['info']['version'] = $this->getVersion( $pPackage );
 		$upgrade = $this->getLatestUpgradeVersion( $pPackage );
 		if( !empty( $upgrade ) && version_compare( $upgrade, $this->getVersion( $pPackage ), '>' )) {
@@ -2040,12 +2016,12 @@ class BitSystem extends BitSingleton {
 	/**
 	 * registerSchemaSequences
 	 *
-	 * @param array $pPackage
+	 * @param string $pPackage
 	 * @param array $pSeqHash
 	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return void
 	 */
-	function registerSchemaSequences( $pPackage, $pSeqHash ) {
+	public function registerSchemaSequences( $pPackage, $pSeqHash ) {
 		$pPackage = strtolower( $pPackage ); // lower case for uniformity
 		$this->mPackages[$pPackage]['sequences'] = $pSeqHash;
 	}
@@ -2053,12 +2029,12 @@ class BitSystem extends BitSingleton {
 	/**
 	 * registerSchemaIndexes
 	 *
-	 * @param array $pPackage
+	 * @param string $pPackage
 	 * @param array $pIndexHash
 	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return void
 	 */
-	function registerSchemaIndexes( $pPackage, $pIndexHash ) {
+	public function registerSchemaIndexes( $pPackage, $pIndexHash ) {
 		$pPackage = strtolower( $pPackage ); // lower case for uniformity
 		$this->mPackages[$pPackage]['indexes'] = $pIndexHash;
 	}
@@ -2066,15 +2042,14 @@ class BitSystem extends BitSingleton {
 	/**
 	 * registerSchemaDefault
 	 *
-	 * @param array $pPackage
-	 * @param array $pMixedDefaultSql
-	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @param string $pPackage
+	 * @param string|array $pMixedDefaultSql
+	 * @return void
 	 */
-	function registerSchemaDefault( $pPackage, $pMixedDefaultSql ) {
+	public function registerSchemaDefault( string $pPackage, string|array $pMixedDefaultSql ): void {
 		$pPackage = strtolower( $pPackage ); // lower case for uniformity
 		if( empty( $this->mPackages[$pPackage]['defaults'] ) ) {
-			$this->mPackages[$pPackage]['defaults'] = array();
+			$this->mPackages[$pPackage]['defaults'] = [];
 		}
 		if( is_array( $pMixedDefaultSql ) ) {
 			foreach( $pMixedDefaultSql as $def ) {
@@ -2088,21 +2063,20 @@ class BitSystem extends BitSingleton {
 	/**
 	 * storeVersion will store the version number of a given package
 	 *
-	 * @param array $pPackage Name of package - if not given, bitweaver_version will be stored
-	 * @param array $pVersion Version number
-	 * @access public
-	 * @return TRUE on success, FALSE on failure
+	 * @param string $pPackage Name of package - if not given, bitweaver_version will be stored
+	 * @param string $pVersion Version number
+	 * @return bool true on success, false on failure
 	 */
-	function storeVersion( $pPackage = NULL, $pVersion ) {
+	public function storeVersion( $pPackage = null, $pVersion = null ): bool {
 		global $gBitSystem;
-		$ret = FALSE;
+		$ret = false;
 		if( !empty( $pVersion ) && $this->validateVersion( $pVersion )) {
 			if( empty( $pPackage )) {
 				$gBitSystem->storeConfig( "bitweaver_version", $pVersion, 'kernel' );
-				$ret = TRUE;
+				$ret = true;
 			} elseif( !empty( $gBitSystem->mPackages[$pPackage] )) {
 				$gBitSystem->storeConfig( "package_".$pPackage."_version", $pVersion, $pPackage );
-				$ret = TRUE;
+				$ret = true;
 			}
 		}
 		return $ret;
@@ -2111,18 +2085,13 @@ class BitSystem extends BitSingleton {
 	/**
 	 * getVersion will fetch the version number of a given package
 	 *
-	 * @param array $pPackage Name of package - if not given, bitweaver_version will be stored
-	 * @param array $pVersion Version number
-	 * @access public
-	 * @return version number on success
+	 * @param string $pPackage Name of package - if not given, bitweaver_version will be stored
+	 * @param string $pVersion Version number
+	 * @return string version number on success
 	 */
-	function getVersion( $pPackage = NULL, $pDefault = '0.0.0' ) {
+	public function getVersion( ?string $pPackage = null, $pDefault = '0.0.0' ) {
 		global $gBitSystem;
-		if( empty( $pPackage )) {
-			$config = 'bitweaver_version';
-		} else {
-			$config = "package_".$pPackage."_version";
-		}
+		$config = empty( $pPackage ) ? 'bitweaver_version' : "package_".$pPackage."_version";
 
 		return $gBitSystem->getConfig( $config, $pDefault );
 	}
@@ -2130,16 +2099,15 @@ class BitSystem extends BitSingleton {
 	/**
 	 * getLatestUpgradeVersion will fetch the greatest upgrade number for a given package
 	 *
-	 * @param array $pPackage package we want to fetch the latest version number for
-	 * @access public
+	 * @param string $pPackage package we want to fetch the latest version number for
 	 * @return string greatest upgrade number for a given package
 	 */
-	function getLatestUpgradeVersion( $pPackage ) {
+	public function getLatestUpgradeVersion( string $pPackage ) {
 		$ret = '0.0.0';
 		if( !empty( $pPackage )) {
 			$dir = constant( strtoupper( $pPackage )."_PKG_PATH" )."admin/upgrades/";
 			if( is_dir( $dir ) && $upDir = opendir( $dir )) {
-				while( FALSE !== ( $file = readdir( $upDir ))) {
+				while( false !== ( $file = readdir( $upDir ))) {
 					if( is_file( $dir.$file )) {
 						$upVersion = str_replace( ".php", "", $file );
 						// we only want to update $ret if the version of the file is greater than the previous one
@@ -2150,18 +2118,17 @@ class BitSystem extends BitSingleton {
 				}
 			}
 		}
-		return(( $ret == '0.0.0' ) ? FALSE : $ret );
+		return $ret == '0.0.0' ? false : $ret;
 	}
 
 	/**
 	 * registerPackageVersion Holds the package version
 	 *
-	 * @param array $pPackage
-	 * @param array $pVersion
-	 * @access public
+	 * @param string $pPackage
+	 * @param string $pVersion
 	 * @return void
 	 */
-	function registerPackageVersion( $pPackage, $pVersion ) {
+	public function registerPackageVersion( string $pPackage, string $pVersion ): void {
 		if( !empty( $pPackage ) && $this->validateVersion( $pVersion )) {
 			$pPackage = strtolower( $pPackage );
 			$this->mPackages[$pPackage]['version'] = $pVersion;
@@ -2171,23 +2138,21 @@ class BitSystem extends BitSingleton {
 	/**
 	 * validateVersion
 	 *
-	 * @param array $pVersion
-	 * @access public
-	 * @return TRUE on success, FALSE on failure
+	 * @param string $pVersion
+	 * @return bool|int returns 1 if the pattern matches given subject, 0 if it does not, or false on failure
 	 */
-	function validateVersion( $pVersion ) {
-		return( preg_match( "/^(\d+\.\d+\.\d+)(-dev|-alpha|-beta|-pl|-RC\d+)?$/", $pVersion ));
+	public function validateVersion( string $pVersion ): bool|int {
+		return preg_match( "/^(\d+\.\d+\.\d+)(-dev|-alpha|-beta|-pl|-RC\d+)?$/", $pVersion );
 	}
 
 	/**
 	 * registerRequirements
 	 *
-	 * @param array $pParams
+	 * @param string $pParams
 	 * @param array $pReqHash
-	 * @access public
 	 * @return void
 	 */
-	function registerRequirements( $pPackage, $pReqHash ) {
+	public function registerRequirements( string $pPackage, array $pReqHash ): void {
 		if( !empty( $pPackage ) && $this->verifyRequirements( $pReqHash )) {
 			$pPackage = strtolower( $pPackage );
 			$this->mRequirements[$pPackage] = $pReqHash;
@@ -2195,10 +2160,10 @@ class BitSystem extends BitSingleton {
 			// and we display the info
 			$this->mPackages[$pPackage]['info']['requirements'] = '';
 			foreach( $pReqHash as $req => $version ) {
-				//$this->mPackages[$req]['is_requirement'] = TRUE;
+				//$this->mPackages[$req]['is_requirement'] = true;
 
 				$this->mPackages[$pPackage]['info']['requirements'] .= '<a class="external" href="http://www.bitweaver.org/wiki/'.ucfirst( $req ).'Package">'.ucfirst( $req ).'</a>';
-				$max = ( !empty( $version['max'] ) ? " - ".$version['max'] : '' );
+				$max = !empty( $version['max'] ) ? " - ".$version['max'] : '';
 				if( $version['min'] != '0.0.0' ) {
 					$this->mPackages[$pPackage]['info']['requirements'] .= " (".$version['min'].$max.")";
 				}
@@ -2214,9 +2179,9 @@ class BitSystem extends BitSingleton {
 	 *
 	 * @param array $pReqHash
 	 * @access public
-	 * @return TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return bool true on success, false on failure
 	 */
-	function verifyRequirements( &$pReqHash ) {
+	public function verifyRequirements( &$pReqHash ) {
 		if( !empty( $pReqHash ) && is_array( $pReqHash )) {
 			foreach( $pReqHash as $pkg => $versions ) {
 				if( empty( $versions['min'] )) {
@@ -2237,22 +2202,21 @@ class BitSystem extends BitSingleton {
 
 		// since this should only show up when devs are working, we'll simply display the output:
 		if( !empty( $this->mErrors )) {
-			vd( $this->mErrors );
 			bt();
 		}
 
-		return( count( $this->mErrors ) == 0 );
+		return count( $this->mErrors ) == 0;
 	}
 
 	/**
 	 * getRequirements
 	 *
-	 * @param array $pPackage
+	 * @param string $pPackage
 	 * @access public
 	 * @return array of package requirements
 	 */
-	function getRequirements( $pPackage ) {
-		$ret = array();
+	public function getRequirements( $pPackage ) {
+		$ret = [];
 		if( !empty( $pPackage )) {
 			$pPackage = strtolower( $pPackage );
 			if( !empty( $this->mRequirements[$pPackage] )) {
@@ -2267,10 +2231,10 @@ class BitSystem extends BitSingleton {
 	 *
 	 * @param boolean $pInstallVersion Use the actual installed version instead of the version that will be in bitweaver after the upgrade
 	 * @access public
-	 * @return boolean TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return array
 	 */
-	function calculateRequirements( $pInstallVersion = FALSE ) {
-		$ret = array();
+	public function calculateRequirements( $pInstallVersion = false ) {
+		$ret = [];
 		// first we gather all version information.
 		foreach( array_keys( $this->mPackages ) as $package ) {
 			if( $this->isPackageInstalled( $package )) {
@@ -2285,9 +2249,9 @@ class BitSystem extends BitSingleton {
 					if( $deps = $this->getRequirements( $package )) {
 						$requirements[$package] = $deps;
 					}
-					$inactive[$package] = FALSE;
+					$inactive[$package] = false;
 				} else {
-					$inactive[$package] = TRUE;
+					$inactive[$package] = true;
 				}
 			}
 		}
@@ -2295,12 +2259,12 @@ class BitSystem extends BitSingleton {
 		if( !empty( $requirements )) {
 			foreach( $requirements as $package => $deps ) {
 				foreach( $deps as $depPackage => $depVersion ) {
-					$hash = array(
+					$hash = [
 						'package'          => $package,
 						'package_version'  => $installed[$package],
 						'requires'         => $depPackage,
 						'required_version' => $depVersion,
-					);
+					];
 
 					if( !empty( $installed[$depPackage] )) {
 						$hash['version']['available'] = $installed[$depPackage];
@@ -2333,16 +2297,16 @@ class BitSystem extends BitSingleton {
 	 * @param string $pFormat dot output format
 	 * @param string $pCommand dot or neato
 	 * @access public
-	 * @return boolean TRUE on success, FALSE on failure - mErrors will contain reason for failure
+	 * @return string|bool true on success, false on failure
 	 */
-	function drawRequirementsGraph( $pInstallVersion = FALSE, $pFormat = 'png', $pCommand = 'dot' ) {
+	public function drawRequirementsGraph( $pInstallVersion = false, $pFormat = 'png', $pCommand = 'dot' ) {
 		global $gBitSmarty, $gBitThemes;
 
 		// only do this if we can load PEAR GraphViz interface
-		if( @include_once( 'Image/GraphViz.php' )) {
+		if( @include_once UTIL_PKG_INCLUDE_PATH.'pear/Image/GraphViz.php' ) {
 			ksort( $this->mPackages );
 			$deps = $this->calculateRequirements( $pInstallVersion );
-			$delKeys = $matches = array();
+			$delKeys = $matches = [];
 
 			// crazy manipulation of hash to remove duplicate version matches.
 			// we do this that we can use double headed arrows in the graph below.
@@ -2367,7 +2331,7 @@ class BitSystem extends BitSingleton {
 			}
 
 			// start drawing stuff
-			$graph = new Image_GraphViz( TRUE, $gBitThemes->getGraphvizGraphAttributes(), 'Requirements', TRUE );
+			$graph = new \Image_GraphViz( true, $gBitThemes->getGraphvizGraphAttributes(), 'Requirements', true );
 
 			$fromattributes = $toattributes = $gBitThemes->getGraphvizNodeAttributes();
 
@@ -2417,13 +2381,13 @@ class BitSystem extends BitSingleton {
 				$graph->addNode( $toNode, $toattributes );
 
 				$graph->addEdge(
-					array( $fromNode => $toNode ),
-					$gBitThemes->getGraphvizEdgeAttributes( array(
+					[ $fromNode => $toNode ],
+					$gBitThemes->getGraphvizEdgeAttributes( [
 						'dir'       => ( !empty( $node['dir'] ) ? $node['dir'] : '' ),
 						'color'     => $edgecolor,
 						'fontcolor' => $edgecolor,
 						'label'     => $label,
-					))
+					])
 				);
 			}
 
@@ -2432,28 +2396,27 @@ class BitSystem extends BitSingleton {
 			} else {
 				return $graph->fetch( $pFormat, $pCommand );
 			}
-		} else {
-			return FALSE;
-		}
+		} 
+		return false;
 	}
 
 	/**
 	 * verifyInstalledPackages scan all available packages
 	 *
 	 * @param string $ pScanFile file to be looked for
-	 * @return none
+	 * @return array 
 	 * @access public
 	 */
-	function verifyInstalledPackages( $pSelect='installed' ) {
+	public function verifyInstalledPackages( $pSelect='installed' ) {
 		global $gBitDbType;
 		#load in any admin/schema_inc.php files that exist for each package
-		$this->scanPackages( 'admin/schema_inc.php', TRUE, $pSelect, FALSE, TRUE );
-		$ret = array();
+		$this->scanPackages( 'admin/schema_inc.php', true, $pSelect, false );
+		$ret = [];
 
 		if( $this->isDatabaseValid() ) {
 			if( strlen( BIT_DB_PREFIX ) > 0 ) {
 				$lastQuote = strrpos( BIT_DB_PREFIX, '`' );
-				if( $lastQuote != FALSE ) {
+				if( $lastQuote != false ) {
 					$lastQuote++;
 				}
 				$prefix = substr( BIT_DB_PREFIX, $lastQuote );
@@ -2461,23 +2424,19 @@ class BitSystem extends BitSingleton {
 				$prefix = '';
 			}
 
-			$showTables = ( $prefix ? $prefix.'%' : NULL );
-			$unusedTables = array();
-			if( $dbTables = $this->mDb->MetaTables( 'TABLES', FALSE, $showTables ) ) {
+			$showTables = $prefix ? $prefix.'%' : false;
+			$unusedTables = [];
+			if( $dbTables = $this->mDb->MetaTables( 'TABLES', false, $showTables ) ) {
 				// make a copy that we can keep track of what tables have been used
 				$unusedTables = $dbTables;
 				foreach( array_keys( $this->mPackages ) as $package ) {
-					// Default to TRUE, &= will FALSE out
-					$this->mPackages[$package]['installed'] = TRUE;
+					// Default to true, &= will false out
+					$this->mPackages[$package]['installed'] = true;
 					if( !empty( $this->mPackages[$package]['tables'] ) ) {
-						$this->mPackages[$package]['db_tables_found'] = TRUE;
+						$this->mPackages[$package]['db_tables_found'] = true;
 						foreach( array_keys( $this->mPackages[$package]['tables'] ) as $table ) {
 							// painful hardcoded exception for bitcommerce
-							if( $package == 'bitcommerce' ) {
-								$fullTable = $table;
-							} else {
-								$fullTable = $prefix.$table;
-							}
+							$fullTable = $package == 'bitcommerce' ? $table : $prefix.$table;
 							$tablePresent = in_array( $fullTable, $dbTables );
 							if( $tablePresent ) {
 								$ret['present'][$package][] = $table;
@@ -2492,7 +2451,7 @@ class BitSystem extends BitSingleton {
 
 							// lets also return the tables that are not in use by bitweaver
 							// this is useful when we want to remove old tables or upgrade tables
-							if(( $key = array_search( $fullTable, $dbTables )) !== FALSE ) {
+							if(( $key = array_search( $fullTable, $dbTables )) !== false ) {
 								unset( $unusedTables[$key] );
 							}
 
@@ -2500,9 +2459,9 @@ class BitSystem extends BitSingleton {
 							$this->mPackages[$package]['db_tables_found'] &= $tablePresent;
 						}
 					} else {
-						$this->mPackages[$package]['db_tables_found'] = FALSE;
+						$this->mPackages[$package]['db_tables_found'] = false;
 						if( !$this->getConfig( 'package_'.strtolower( $package ) ) ){
-							$this->mPackages[$package]['installed'] = FALSE;
+							$this->mPackages[$package]['installed'] = false;
 						}
 					}
 
@@ -2536,7 +2495,7 @@ class BitSystem extends BitSingleton {
 	 * Retrieve a current UTC timestamp
 	 * Simple map to BitDate object allowing tidy display elsewhere
 	 */
-	function getUTCTime() {
+	public function getUTCTime() {
 		return	$this->mServerTimestamp->getUTCTime();
 	}
 
@@ -2544,22 +2503,22 @@ class BitSystem extends BitSingleton {
 	 * Retrieve a current UTC ISO timestamp
 	 * Simple map to BitDate object allowing tidy display elsewhere
 	 */
-	function getUTCTimestamp() {
+	public function getUTCTimestamp() {
 		return	$this->mServerTimestamp->getUTCTimestamp();
 	}
 
 	/**
 	 * Retrieves the user's preferred offset for displaying dates.
 	 */
-	function get_display_offset( $pUser = FALSE ) {
+	public function get_display_offset( $pUser = false ) {
 		return $this->mServerTimestamp->get_display_offset( $pUser );
 	}
 
 	/**
 	 * Retrieves the user's preferred long date format for displaying dates.
 	 */
-	function get_long_date_format() {
-		static $site_long_date_format = FALSE;
+	public function get_long_date_format() {
+		static $site_long_date_format = false;
 
 		if( !$site_long_date_format ) {
 			$site_long_date_format = $this->getConfig( 'site_long_date_format', '%A, %B %d, %Y' );
@@ -2571,8 +2530,8 @@ class BitSystem extends BitSingleton {
 	/**
 	 * Retrieves the user's preferred short date format for displaying dates.
 	 */
-	function get_short_date_format() {
-		static $site_short_date_format = FALSE;
+	public function get_short_date_format() {
+		static $site_short_date_format = false;
 
 		if( !$site_short_date_format ) {
 			$site_short_date_format = $this->getConfig( 'site_short_date_format', '%d %b %Y' );
@@ -2584,8 +2543,8 @@ class BitSystem extends BitSingleton {
 	/**
 	 * Retrieves the user's preferred long time format for displaying dates.
 	 */
-	function get_long_time_format() {
-		static $site_long_time_format = FALSE;
+	public function get_long_time_format() {
+		static $site_long_time_format = false;
 
 		if( !$site_long_time_format ) {
 			$site_long_time_format = $this->getConfig( 'site_long_time_format', '%H:%M:%S %Z' );
@@ -2597,8 +2556,8 @@ class BitSystem extends BitSingleton {
 	/**
 	 * Retrieves the user's preferred short time format for displaying dates.
 	 */
-	function get_short_time_format() {
-		static $site_short_time_format = FALSE;
+	public function get_short_time_format() {
+		static $site_short_time_format = false;
 
 		if( !$site_short_time_format ) {
 			$site_short_time_format = $this->getConfig( 'site_short_time_format', '%H:%M %Z' );
@@ -2610,8 +2569,8 @@ class BitSystem extends BitSingleton {
 	/**
 	 * Retrieves the user's preferred long date/time format for displaying dates.
 	 */
-	function get_long_datetime_format() {
-		static $long_datetime_format = FALSE;
+	public function get_long_datetime_format() {
+		static $long_datetime_format = false;
 
 		if( !$long_datetime_format ) {
 			$long_datetime_format = $this->getConfig( 'site_long_datetime_format', '%A %d of %B, %Y (%H:%M:%S %Z)' );
@@ -2623,8 +2582,8 @@ class BitSystem extends BitSingleton {
 	/**
 	 * Retrieves the user's preferred short date/time format for displaying dates.
 	 */
-	function get_short_datetime_format() {
-		static $short_datetime_format = FALSE;
+	public function get_short_datetime_format() {
+		static $short_datetime_format = false;
 
 		if( !$short_datetime_format ) {
 			$short_datetime_format = $this->getConfig( 'site_short_datetime_format', '%d %b %Y (%H:%M %Z)' );
@@ -2636,7 +2595,7 @@ class BitSystem extends BitSingleton {
 	/*
 	 * Only used in rang_lib.php which needs tidying up to use smarty templates
 	 */
-	function get_long_datetime( $pTimestamp, $pUser = FALSE ) {
+	public function get_long_datetime( $pTimestamp, $pUser = false ) {
 		return $this->mServerTimestamp->strftime( $this->get_long_datetime_format(), $pTimestamp, $pUser );
 	}
 	// }}}
@@ -2644,10 +2603,9 @@ class BitSystem extends BitSingleton {
 	 * getBitVersion will fetch the version of bitweaver as set in kernel/config_defaults_inc.php
 	 *
 	 * @param boolean $pIncludeLevel Return bitweaver version including BIT_LEVEL
-	 * @access public
 	 * @return string bitweaver version set in kernel/config_defaults_inc.php
 	 */
-	function getBitVersion( $pIncludeLevel = TRUE ) {
+	public function getBitVersion( $pIncludeLevel = true ) {
 		$ret = BIT_MAJOR_VERSION.".".BIT_MINOR_VERSION.".".BIT_SUB_VERSION;
 		if( $pIncludeLevel && defined( BIT_LEVEL ) && BIT_LEVEL != '' ) {
 			$ret .= '-'.BIT_LEVEL;
@@ -2658,11 +2616,10 @@ class BitSystem extends BitSingleton {
 	/**
 	 * checkBitVersion Check for new version of bitweaver
 	 *
-	 * @access public
-	 * @return returns an array with information on bitweaver version
+	 * @return array an array with information on bitweaver version
 	 */
-	function checkBitVersion() {
-		$local = $this->getBitVersion( FALSE );
+	public function checkBitVersion() {
+		$local = $this->getBitVersion( false );
 		$ret['local'] = $local;
 
 		$error['number'] = 0;
@@ -2672,7 +2629,7 @@ class BitSystem extends BitSingleton {
 		// if you don't have a connection to bitweaver.org, you can set a cronjob to 'touch' this file once a day to avoid waiting for a timeout.
 		if( !is_file( TEMP_PKG_PATH.'bitversion.txt' ) || ( time() - filemtime( TEMP_PKG_PATH.'bitversion.txt' )) > 86400 ) {
 			if( $h = fopen( TEMP_PKG_PATH.'bitversion.txt', 'w' )) {
-				$data = bit_http_request( 'http://www.bitweaver.org/bitversion.txt' );
+				$data = KernelTools::bit_http_request( 'http://www.bitweaver.org/bitversion.txt' );
 				if( !preg_match( "/not found/i", $data )) {
 					fwrite( $h, $data );
 					fclose( $h );
@@ -2715,7 +2672,7 @@ class BitSystem extends BitSingleton {
 				}
 			} else {
 				$error['number'] = 1;
-				$error['string'] = tra( 'No version information available. Check your connection to bitweaver.org' );
+				$error['string'] = KernelTools::tra( 'No version information available. Check your connection to bitweaver.org' );
 			}
 		}
 		// append any release level
@@ -2726,15 +2683,15 @@ class BitSystem extends BitSingleton {
 
 	// should be moved somewhere else. unbreaking things for now - 25-JUN-2005 - spiderr
 	// \TODO remove html hardcoded in diff2
-	function diff2( $page1, $page2 ) {
-		$page1 = split( "\n", $page1 );
-		$page2 = split( "\n", $page2 );
-		$z = new WikiDiff( $page1, $page2 );
+	public function diff2( $page1, $page2 ) {
+		$page1 = mb_split( "\n", $page1 );
+		$page2 = mb_split( "\n", $page2 );
+		$z = new \WikiDiff( $page1, $page2 );
 		if( $z->isEmpty() ) {
-			$html = '<hr /><br />['.tra("Versions are identical").']<br /><br />';
+			$html = '<hr /><br />['.KernelTools::tra("Versions are identical").']<br /><br />';
 		} else {
 			//$fmt = new WikiDiffFormatter;
-			$fmt = new WikiUnifiedDiffFormatter;
+			$fmt = new \WikiUnifiedDiffFormatter;
 			$html = $fmt->format( $z, $page1 );
 		}
 		return $html;
@@ -2745,11 +2702,10 @@ class BitSystem extends BitSingleton {
 	 *
 	 * @param array $pPhpFile name of php file
 	 * @param array $pTplFile name of tpl file
-	 * @access public
 	 * @return array of includable files
 	 */
-	function getIncludeFiles( $pPhpFile = NULL, $pTplFile = NULL ) {
-		$ret = array();
+	public function getIncludeFiles( $pPhpFile = null, $pTplFile = null ) {
+		$ret = [];
 		global $gBitSystem;
 		foreach( $gBitSystem->mPackages as $package ) {
 			if( $gBitSystem->isPackageActive( $package['name'] )) {
@@ -2778,10 +2734,7 @@ function bit_system_menu_sort( $a, $b ) {
 	$pb = empty( $b['menu_position'] ) ? 0 : $b['menu_position'];
 
 	if( $pa == 0 && $pb == 0 ) {
-		return( strcmp( $b['menu_title'], $a['menu_title'] ));
+		return strcmp( $b['menu_title'], $a['menu_title'] );
 	}
 	return $pa - $pb;
 }
-
-/* vim: :set fdm=marker : */
-?>

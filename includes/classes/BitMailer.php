@@ -29,7 +29,8 @@
 /**
  * Initialization
  */
-require_once( LIBERTY_PKG_CLASS_PATH.'LibertyBase.php' );
+use Bitweaver\KernelTools;
+use Bitweaver\Liberty\LibertyBase;
 
 /**
  * BitMailer 
@@ -59,7 +60,7 @@ require_once( LIBERTY_PKG_CLASS_PATH.'LibertyBase.php' );
 		$mailer = $this->buildMailer($message);
 
 		if( is_string( $pRecipients ) ) {
-			$pRecipients = array( array( 'email' => $pRecipients ) );
+			$pRecipients = [ [ 'email' => $pRecipients ] ];
 		}
 
 		foreach ($pRecipients as $to) {
@@ -70,7 +71,7 @@ require_once( LIBERTY_PKG_CLASS_PATH.'LibertyBase.php' );
 					$mailer->AddAddress( $to['email'] );
 				}
 				if( !$mailer->Send() ) {
-					bit_error_log( $mailer->ErrorInfo );
+					\Bitweaver\bit_error_log( $mailer->ErrorInfo );
 				}
 				$mailer->ClearAddresses();
 			}
@@ -88,7 +89,7 @@ require_once( LIBERTY_PKG_CLASS_PATH.'LibertyBase.php' );
 	function buildMailer($pMessage) {
 		global $gBitSystem, $gBitLanguage;
 
-		require_once( UTIL_PKG_INCLUDE_PATH.'phpmailer/class.phpmailer.php' );
+		require_once UTIL_PKG_INCLUDE_PATH . 'phpmailer/class.phpmailer.php';
 
 		$mailer = new PHPMailer();
 		$mailer->From     = !empty( $pMessage['from'] ) ? $pMessage['from'] : $gBitSystem->getConfig( 'bitmailer_sender_email', $gBitSystem->getConfig( 'site_sender_email', $_SERVER['SERVER_ADMIN'] ) );
@@ -128,24 +129,16 @@ require_once( LIBERTY_PKG_CLASS_PATH.'LibertyBase.php' );
 
 		$mailer->ClearReplyTos();
 		$mailer->AddReplyTo( $gBitSystem->getConfig( 'bitmailer_from' ) );
-		if (empty($pMessage['subject'])) {
-			$mailer->Subject = $gBitSystem->getConfig('site_title', '').
-				(empty($pMessage['package']) ? '' : " : ".$pMessage['package']).
-				(empty($pMessage['type']) ? '' : " : ".$pMessage['type']);
-		}
-		else {
-			$mailer->Subject = $pMessage['subject'];
-		}
+		$mailer->Subject = ( empty( $pMessage['subject'] ) )
+			? $gBitSystem->getConfig( 'site_title', '' )
+				. ( empty( $pMessage['package'] ) ? '' : " : " . $pMessage['package'] )
+				. ( empty( $pMessage['type'] ) ? '' : " : " . $pMessage['type'] )
+			: $pMessage['subject'];
 
 		if (!empty($pMessage['message'])) {
 			$mailer->Body    = $pMessage['message'];
 			$mailer->IsHTML( TRUE );
-			if (!empty($pMessage['alt_message'])) {
-				$mailer->AltBody = $pMessage['alt_message'];
-			}
-			else {
-				$mailer->AltBody = '';
-			}
+			$mailer->AltBody = ( !empty( $pMessage['alt_message'] ) ) ? $pMessage['alt_message'] : '';
 		}
 		elseif (!empty($pMessage['alt_message'])) {
 			$mailer->Body = $pMessage['alt_message'];
@@ -157,5 +150,3 @@ require_once( LIBERTY_PKG_CLASS_PATH.'LibertyBase.php' );
 
 
 }
-
-?>

@@ -8,21 +8,25 @@
  * A basic library to handle caching of various data
  */
 
+namespace Bitweaver;
+use Bitweaver\KernelTools;
+
 class BitCache {
 	/**
 	 * Used to store the directory used to store the cache files.
 	 * @private
 	 */
 	public $mFolder;
+	public $mUrl;
+
 	/**
 	 * Will check the temp cache folder for existence and create it if necessary.
 	 *
 	 * @param string $pSubdir use a specifed subdirectory
 	 * @param boolean $pUseStorage use the storage directory instead of the temp dir. only makes sense if you need direct webaccess to stored cachefiles
-	 * @access public
 	 * @return void
 	 */
-	function __construct( $pSubdir = 'cache', $pUseStorage = FALSE ) {
+	public function __construct( $pSubdir = 'cache', $pUseStorage = false ) {
 		if( $pUseStorage and defined(STORAGE_PKG_PATH) ) {
 			$this->mFolder = STORAGE_PKG_PATH.$pSubdir;
 			$this->mUrl = STORAGE_PKG_URL.$pSubdir;
@@ -34,7 +38,7 @@ class BitCache {
 			$this->mFolder = "/tmp/".$pSubdir;
 		}
 
-		if( !is_dir( $this->mFolder ) && !mkdir_p( $this->mFolder )) {
+		if( !is_dir( $this->mFolder ) && !KernelTools::mkdir_p( $this->mFolder )) {
 			error_log( 'Can not create the cache directory: '.$this->mFolder );
 		}
 	}
@@ -43,14 +47,13 @@ class BitCache {
 	 * getCacheFile
 	 *
 	 * @param string $pFile
-	 * @access public
-	 * @return filepath on success, FALSE on failure
+	 * @return string filepath on success, false on failure
 	 */
-	function getCacheFile( $pFile ) {
+	public function getCacheFile( $pFile ) {
 		if( !empty( $pFile )) {
 			return $this->mFolder."/".$pFile;
 		} else {
-			return FALSE;
+			return false;
 		}
 	}
 
@@ -58,13 +61,13 @@ class BitCache {
 	 * getCacheUrl will get the URL to the cache file - only works when you're using BitCache with the UseStorage option
 	 *
 	 * @param string $pFile
-	 * @access public
-	 * @return fileurl on success, FALSE on failure
+	 * @return string fileurl on success, false on failure
 	 */
-	function getCacheUrl( $pFile ) {
+	public function getCacheUrl( $pFile ) {
 		if( !empty( $this->mUrl ) && !empty( $pFile )) {
 			return $this->mUrl.'/'.$pFile;
 		}
+		return false;
 	}
 
 	/**
@@ -72,26 +75,25 @@ class BitCache {
 	 *
 	 * @param string $pFile name of the file we want to check for
 	 * @param numeric $pModTime Pass in the modification time you wish to check against
-	 * @access public
-	 * @return true if cached object exists
+	 * @return bool true if cached object exists
 	 */
-	function isCached( $pFile, $pModTime = FALSE ) {
+	function isCached( $pFile, $pModTime = false ) {
 		if( !empty( $pFile ) && is_readable( $this->getCacheFile( $pFile ))) {
 			// compare the cache filemtime to the desired file
 			if( is_numeric( $pModTime )) {
-				$isModified = ( filemtime( $this->getCacheFile( $pFile )) < $pModTime );
+				$isModified = filemtime( $this->getCacheFile( $pFile )) < $pModTime;
 			}
-			return( empty( $isModified ));
+			return empty( $isModified );
 		} else {
-			return FALSE;
+			return false;
 		}
 	}
 
 	/**
 	 * Used to retrieve an object if cached.
 	 *
-	 * @param pKey the unique identifier used to retrieve the cached item
-	 * @return object if cached object exists
+	 * @param string $pFile the unique identifier used to retrieve the cached item
+	 * @return string if cached object exists
 	 */
 	function readCacheFile( $pFile ) {
 		if( $this->isCached( $pFile )) {
@@ -102,15 +104,15 @@ class BitCache {
 			}
 		}
 
-		return( !empty( $ret ) ? $ret : NULL );
+		return !empty( $ret ) ? $ret : null;
 	}
 
 	/**
 	 * Used to remove a cached object.
 	 *
-	 * @param pKey the unique identifier used to retrieve the cached item
+	 * @param string $pFilepKey the unique identifier used to retrieve the cached item
 	 */
-	function expungeCacheFile( $pFile ) {
+	public function expungeCacheFile( $pFile ) {
 		if( $this->isCached( $pFile )) {
 			unlink( $this->getCacheFile( $pFile ));
 		}
@@ -119,16 +121,15 @@ class BitCache {
 	/**
 	 * remove the entire cache in the cache folder
 	 *
-	 * @access public
-	 * @return TRUE on success, FALSE on failure
+	 * @return bool true on success, false on failure
 	 */
-	function expungeCache() {
+	public function expungeCache() {
 		// the only places we can write to in bitweaver are temp and storage
 		$subdir = str_replace( STORAGE_PKG_PATH, "", $this->mFolder );
 		if(( strpos( $this->mFolder, STORAGE_PKG_PATH ) === 0 && $subdir != "users" && $subdir != "common" ) || strpos( $this->mFolder, TEMP_PKG_PATH ) === 0 ) {
-			$ret = unlink_r( $this->mFolder );
+			$ret = KernelTools::unlink_r( $this->mFolder );
 			if( !is_dir( $this->mFolder )) {
-				mkdir_p( $this->mFolder );
+				KernelTools::mkdir_p( $this->mFolder );
 			}
 		}
 		return $ret;
@@ -139,10 +140,9 @@ class BitCache {
 	 *
 	 * @param string $pFile file to write to
 	 * @param string $pData string to write to file
-	 * @access public
 	 * @return void
 	 */
-	function writeCacheFile( $pFile, $pData ) {
+	public function writeCacheFile( $pFile, $pData ) {
 		if( !empty( $pData ) && !empty( $pFile )) {
 			if( $h = fopen( $this->getCacheFile( $pFile ), 'w' )) {
 				fwrite( $h, $pData );
@@ -151,4 +151,3 @@ class BitCache {
 		}
 	}
 }
-?>
