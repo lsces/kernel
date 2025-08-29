@@ -7,7 +7,6 @@
 // Licensed under the GNU LESSER GENERAL PUBLIC LICENSE. See http://www.gnu.org/copyleft/lesser.html for details.
 
 // Initialization
-require_once( '../../kernel/includes/setup_inc.php' );
+require_once '../../kernel/includes/setup_inc.php';
 $gBitSystem->verifyPermission( 'p_admin' );
 phpinfo();
-?>

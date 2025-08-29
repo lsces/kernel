@@ -7,8 +7,9 @@
 // Licensed under the GNU LESSER GENERAL PUBLIC LICENSE. See http://www.gnu.org/copyleft/lesser.html for details.
 
 // Initialization
-require_once( '../../kernel/includes/setup_inc.php' );
-require_once ( KERNEL_PKG_INCLUDE_PATH.'backups_lib.php' );
+namespace Bitweaver;
+require_once '../../kernel/includes/setup_inc.php';
+require_once KERNEL_PKG_INCLUDE_PATH.'backups_lib.php';
 
 // Check for admin permission
 $gBitSystem->verifyPermission( 'p_admin' );
@@ -16,7 +17,7 @@ $gBitSystem->verifyPermission( 'p_admin' );
 global $gBitDbType;
 
 $backupPath = STORAGE_PKG_PATH."backups/$bitdomain";
-mkdir_p( $backupPath );
+KernelTools::mkdir_p( $backupPath );
 
 if (isset($_REQUEST["generate"])) {
 	
@@ -63,9 +64,9 @@ if (isset($_REQUEST["upload"])) {
 		fclose ($fw);
 		unlink ($_FILES['userfile1']['tmp_name']);
 	} else {
-		$gBitSmarty->assign('msg', tra("Upload failed"));
+		$gBitSmarty->assign('msg', KernelTools::tra("Upload failed"));
 
-		$gBitSystem->display( 'error.tpl' , NULL, array( 'display_mode' => 'admin' ));
+		$gBitSystem->display( 'error.tpl' , null, [ 'display_mode' => 'admin' ] );
 		die;
 	}
 }
@@ -73,7 +74,7 @@ if (isset($_REQUEST["upload"])) {
 // Get all the files listed in the backups directory
 // And put them in an array with the filemtime of
 // each file activated
-$backups = array();
+$backups = [];
 $h = opendir( $backupPath.$bitdomain );
 
 while ($file = readdir($h)) {
@@ -87,10 +88,8 @@ while ($file = readdir($h)) {
 }
 
 closedir ($h);
-$gBitSmarty->assignByRef('backups', $backups);
+$gBitSmarty->assign('backups', $backups);
 $gBitSmarty->assign('bitdomain', $bitdomain);
 
 
-$gBitSystem->display( 'bitpackage:kernel/backup.tpl', tra( 'Backups') , array( 'display_mode' => 'admin' ));
-
-?>
+$gBitSystem->display( 'bitpackage:kernel/backup.tpl', KernelTools::tra( 'Backups') , array( 'display_mode' => 'admin' ));

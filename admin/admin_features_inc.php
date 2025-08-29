@@ -1,89 +1,93 @@
 <?php
 // $Header$
 
-$formBit = array(
-	'pretty_urls' => array(
+$formBit = [
+	'pretty_urls' => [
 		'label' => 'Use Pretty URLs',
 		'note' => 'In addition to making the URL easier to read and remember it enhances search engine results. Using this feature requires Apache <a href="http://httpd.apache.org/docs-2.0/mod/mod_rewrite.html">mod_rewrite</a> support in the web server (usually installed by default), Depending on the Web server configuration, it may be necessary to modify the default .htaccess files when using this feature.',
 		'page' => 'PrettyUrls',
-	),
-	'pretty_urls_extended' => array(
+	],
+	'pretty_urls_extended' => [
 		'label' => 'Use Extended Pretty URLs',
 		'note' => 'In addition to making the URL easier to read and remember it enhances search engine results. Using this feature requires Apache <a href="http://httpd.apache.org/docs-2.0/mod/mod_rewrite.html">mod_rewrite</a> support in the web server (usually installed by default), This extended version adds a /view tag to the URLs to make them unambigious for rewrites.  It will be necessary to modify the default .htaccess files when using this feature.',
 		'page' => 'FeaturePrettyUrlsExtended',
-	),
-);
+	],
+];
 $gBitSmarty->assign( 'formBit',$formBit );
 
-$formHelp = array(
-	'site_edit_help' => array(
+$formHelp = [
+	'site_edit_help' => [
 		'label' => 'Input Help',
 		'note' => 'Displays <strong>extensive</strong> (about 50kb) help regarding the syntax of available format plugins (e.g., Tikiwiki and HTML), and of available Data Plugins (e.g., attachment, include, table of contents). Explanations and examples are shown near any suitable entry form.',
-	),
-	'site_form_help' => array(
+		'page' => '',
+	],
+	'site_form_help' => [
 		'label' => 'Help Notes',
 		'note' => 'Show inline help notes in forms such as the one you are reading now.',
-	),
-	'site_help_popup' => array(
+		'page' => '',
+	],
+	'site_help_popup' => [
 		'label' => 'Popup for Help Notes',
 		'note' => 'This will place a clickable icon after form elements for the extended help information.',
-	),
-	'site_online_help' => array(
+		'page' => '',
+	],
+	'site_online_help' => [
 		'label' => 'Online Help Links',
 		'note' => 'Display links to relevant online help pages found on www.bitweaver.org.',
-	),
-);
+		'page' => '',
+	],
+];
 $gBitSmarty->assign( 'formHelp',$formHelp );
 
-$extendedHeader = array(
-	'site_header_extended_nav' => array(
+$extendedHeader = [
+	'site_header_extended_nav' => [
 		'label' => 'Enable Header Navigation',
 		'note' => 'This feature will add a number of useful links to the &lt;head&gt; section. These will help improve accessibility on this site.',
 		'type' => 'checkbox',
-	),
-	'site_header_help' => array(
+	],
+	'site_header_help' => [
 		'label' => 'Help Link',
 		'note' => 'Enter the URL of where you want the help link to point to.',
 		'type' => 'text',
-	),
-	'site_header_index' => array(
+	],
+	'site_header_index' => [
 		'label' => 'Site Index',
 		'note' => 'This URL should point to a site index of your website.',
 		'type' => 'text',
-	),
-	'site_header_contents' => array(
+	],
+	'site_header_contents' => [
 		'label' => 'Site Contents',
 		'note' => 'This URL should point to a site map of your website.',
 		'type' => 'text',
-	),
-	'site_header_copyright' => array(
+	],
+	'site_header_copyright' => [
 		'label' => 'Site Copyright',
 		'note' => 'This link should point to a page with copyright information.',
 		'type' => 'text',
-	),
-	'site_header_glossary' => array(
+	],
+	'site_header_glossary' => [
 		'label' => 'Site Glossary',
 		'note' => 'This link should point to a page with a glossary of terms.',
 		'type' => 'text',
-	),
-);
+	],
+];
 $gBitSmarty->assign( 'extendedHeader',$extendedHeader );
 
-$formMisc = array(
-	'site_direct_pagination' => array(
+$formMisc = [
+	'site_direct_pagination' => [
 		'label' => 'Use direct pagination links',
 		'note' => 'Use direct pagination links instead of the small pagination box. Links are cleverly generated depending on the number of pages available.',
-	),
-	'site_output_obzip' => array(
+	],
+	'site_output_obzip' => [
 		'label' => 'Use gzipped output',
 		'note' => 'Send gzip compressed data via PHP\'s output compression to browsers that support it. This feature will reduce download times and bandwidth consumption. Use it only if your server has no such mechanism enabled already (e.g., Apache\'s output compression).',
-	),
+	],
 	// want to remove this setting. we use addHit() which is clever
-	'users_count_admin_pageviews' => array(
+	'users_count_admin_pageviews' => [
 		'label' => 'Count admin pageviews',
 		'note' => '',
-	),
-);
+	],
+];
 $gBitSmarty->assign( 'formMisc',$formMisc );
 
 if( !empty( $_REQUEST['change_prefs'] ) ) {
@@ -96,10 +100,10 @@ if( !empty( $_REQUEST['change_prefs'] ) ) {
 		}
 	}
 
-	$simpleValues = array(
+	$simpleValues = [
 		"max_records",
 		"site_url_index",
-	);
+	];
 
 	foreach( $simpleValues as $svitem ) {
 		simple_set_value( $svitem, KERNEL_PKG_NAME );
@@ -112,7 +116,7 @@ if( !empty( $_REQUEST['change_prefs'] ) ) {
 		$_REQUEST["bit_index"] = $_REQUEST["site_url_index"];
 	}
 
-	$refValue = array(
+	$refValue = [
 		"site_long_date_format",
 		"site_long_time_format",
 		"site_short_date_format",
@@ -120,7 +124,7 @@ if( !empty( $_REQUEST['change_prefs'] ) ) {
 		"site_long_datetime_format",
 		"site_short_datetime_format",
 		"bit_index"
-	);
+	];
 
 	foreach( $refValue as $britem ) {
 		byref_set_value( $britem, "", KERNEL_PKG_NAME );
@@ -128,8 +132,7 @@ if( !empty( $_REQUEST['change_prefs'] ) ) {
 }
 
 if ( defined( 'ROLE_MODEL' ) ) {
-	$gBitSmarty->assign( "role_model", TRUE );
+	$gBitSmarty->assign( "role_model", true );
 }
 
 $gBitSystem->setHelpInfo('Features','Settings','Help with the features settings');
-?>

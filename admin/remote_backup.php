@@ -10,10 +10,10 @@
 // http://localhost/tiki/kernel/remote_backup.php?generate=1&my_word=ThisIsMySecretBackupWord"
 
 // PLEASE UNCOMMENT THIS LINE TO ACTIVATE REMOTE BACKUPS (DISABLED IN THE DISTRIBUTION)
-die;
+// die;
 
-require_once( '../../kernel/includes/setup_inc.php' );
-include_once('lib/backups/backupslib.php');
+require_once '../../kernel/includes/setup_inc.php';
+include_once 'lib/backups/backupslib.php';
 if(isset($_REQUEST["generate"])) {
     if(isset($_REQUEST["my_word"]) &&
        $_REQUEST["my_word"] == "YOUR PASSWORD FOR BACKUPS HERE" ) {
@@ -24,5 +24,3 @@ if(isset($_REQUEST["generate"])) {
 }
 
 die;
-
-?>

@@ -5,59 +5,62 @@
 // All Rights Reserved. See below for details and a complete list of authors.
 // Licensed under the GNU LESSER GENERAL PUBLIC LICENSE. See http://www.gnu.org/copyleft/lesser.html for details.
 
-require_once( '../../kernel/includes/setup_inc.php' );
+namespace Bitweaver\Liberty;
+require_once '../../kernel/includes/setup_inc.php';
+use Bitweaver\KernelTools;
+use Bitweaver\Nexus\Nexus;
 
 $gBitSystem->verifyPermission( 'p_admin' );
-$feedback = array();
+$feedback = [];
 
-$diskUsage = array(
-	'templates_c' => array(
+$diskUsage = [
+	'templates_c' => [
 		'path' => TEMP_PKG_PATH.'templates_c',
-		'title' => tra( 'Templates' ),
-	),
-	'lang' => array(
+		'title' => KernelTools::tra( 'Templates' ),
+	],
+	'lang' => [
 		'path' => TEMP_PKG_PATH.'lang',
-		'title' => tra( 'Language Files' ),
-	),
-	'shoutbox' => array(
+		'title' => KernelTools::tra( 'Language Files' ),
+	],
+	'shoutbox' => [
 		'path' => TEMP_PKG_PATH.'shoutbox',
-		'title' => tra( 'Shoutbox' ),
-	),
-	'modules' => array(
+		'title' => KernelTools::tra( 'Shoutbox' ),
+	],
+	'modules' => [
 		'path' => TEMP_PKG_PATH.'modules/cache',
-		'title' => tra( 'Modules' ),
+		'title' => KernelTools::tra( 'Modules' ),
 		'subdir' => $bitdomain,
-	),
-	'cache' => array(
+	],
+	'cache' => [
 		'path' => TEMP_PKG_PATH.'cache',
-		'title' => tra( 'System Cache' ),
+		'title' => KernelTools::tra( 'System Cache' ),
 		'subdir' => $bitdomain,
-	),
-	'icons' => array(
+	],
+	'icons' => [
 		'path' => TEMP_PKG_PATH.'themes/biticon',
-		'title' => tra( 'Icons' ),
-	),
-	'liberty_cache' => array(
+		'title' => KernelTools::tra( 'Icons' ),
+	],
+	'liberty_cache' => [
 		'path' => TEMP_PKG_PATH.'liberty/cache',
-		'title' => tra( 'Liberty Cache' ),
-	),
-	'format_help' => array(
+		'title' => KernelTools::tra( 'Liberty Cache' ),
+	],
+	'format_help' => [
 		'path' => TEMP_PKG_PATH.'liberty/help',
-		'title' => tra( 'Format Help' ),
-	),
-	'nexus' => array(
+		'title' => KernelTools::tra( 'Format Help' ),
+	],
+	'nexus' => [
 		'path' => TEMP_PKG_PATH.'nexus',
-		'title' => tra( 'Nexus Menus' ),
-	),
-	'rss' => array(
+		'title' => KernelTools::tra( 'Nexus Menus' ),
+	],
+	'rss' => [
 		'path' => TEMP_PKG_PATH.'rss',
-		'title' => tra( 'RSS Feed Cache' ),
-	),
-	'javascript' => array(
+		'title' => KernelTools::tra( 'RSS Feed Cache' ),
+	],
+	'javascript' => [
 		'path' => STORAGE_PKG_PATH.'themes',
-		'title' => tra( 'Javascript and CSS files' ),
-	),
-);
+		'title' => KernelTools::tra( 'Javascript and CSS files' ),
+	],
+];
 
 /* make sure we only display paths that exist
 foreach( $diskUsage as $key => $item ) {
@@ -67,7 +70,7 @@ foreach( $diskUsage as $key => $item ) {
 }*/
 
 if( !empty( $_GET['pruned'] )) {
-	$feedback['success'] = tra( 'The cache was successfully cleared.' );
+	$feedback['success'] = KernelTools::tra( 'The cache was successfully cleared.' );
 }
 
 if( !empty( $_GET['prune'] ) ) {
@@ -75,10 +78,10 @@ if( !empty( $_GET['prune'] ) ) {
 		if( $_GET['prune'] == $key || $_GET['prune'] == 'all' ) {
 			$dir = $item['path'].( !empty( $item['subdir'] ) ? '/'.$item['subdir'] : '' );
 			if( is_dir( $dir ) && strpos( $item['path'], BIT_ROOT_PATH ) === 0 ) {
-				if( unlink_r( $dir )) {
-					$reload = TRUE;
+				if( KernelTools::unlink_r( $dir )) {
+					$reload = true;
 				} else {
-					$feedback['error'] = tra( 'There was a problem clearing out the cache.' );
+					$feedback['error'] = KernelTools::tra( 'There was a problem clearing out the cache.' );
 				}
 			}
 		}
@@ -86,14 +89,13 @@ if( !empty( $_GET['prune'] ) ) {
 
 	// nexus needs to rewrite the cache right away to avoid errors
 	if( $gBitSystem->isPackageActive( 'nexus' ) && ( $_GET['prune'] == 'all' || $_GET['prune'] == 'nexus' )) {
-		require_once( NEXUS_PKG_CLASS_PATH.'Nexus.php' );
 		$nexus = new Nexus();
 		$nexus->rewriteMenuCache();
 	}
 
 	// depending on what we've just nuked, we need to reload the page
 	if( !empty( $reload )) {
-		bit_redirect( KERNEL_PKG_URL."admin/admin_system.php?pruned=1" );
+		KernelTools::bit_redirect( KERNEL_PKG_URL."admin/admin_system.php?pruned=1" );
 	}
 }
 
@@ -107,43 +109,41 @@ foreach( $diskUsage as $key => $item ) {
 
 $gBitSmarty->assign( 'diskUsage', $diskUsage );
 
-$languages = array();
+$languages = [];
 $languages = $gBitLanguage->listLanguages();
 ksort( $languages );
 
-$templates = array();
+$templates = [];
 $langdir = TEMP_PKG_PATH."templates_c/".$gBitSystem->getConfig('style')."/";
 foreach( array_keys( $languages ) as $clang ) {
-	if( is_dir( $langdir.$clang ) ) {
-		$templates[$clang] = array(
+	$templates[$clang] = is_dir( $langdir.$clang )
+		? [
 			'path'   => TEMP_PKG_PATH."templates_c/".$gBitSystem->getConfig( 'style' )."/",
 			'title' => $languages[$clang]['full_name'],
 			'du'    => du( $langdir.$clang ),
-		);
-	} else {
-		$templates[$clang] = array(
+		]
+		: [
 			'path'   => TEMP_PKG_PATH."templates_c/".$gBitSystem->getConfig( 'style' )."/",
 			'title' => $languages[$clang]['full_name'],
-			'du'    => array(
+			'du'    => [
 				"count" => 0,
 				"size" => 0,
-			),
-		);
-	}
+			],
+		];
 }
 $gBitSmarty->assign( 'templates', $templates );
 $gBitSmarty->assign( 'feedback', $feedback );
 
-$gBitSystem->display( 'bitpackage:kernel/admin_system.tpl', tra( "System Cache" ) , array( 'display_mode' => 'admin' ));
+$gBitSystem->display( 'bitpackage:kernel/admin_system.tpl', KernelTools::tra( "System Cache" ) , [ 'display_mode' => 'admin' ] );
 
 
 // {{{ Functions
 /**
  * du 
  * 
- * @param array $pPath 
+ * @param string $pPath 
  * @access public
- * @return boolean TRUE on success, FALSE on failure - $this->mErrors will contain reason for failure
+ * @return array
  */
 function du( $pPath ) {
 	$size = $count = 0;
@@ -155,7 +155,7 @@ function du( $pPath ) {
 	}
 
 	$all = opendir( $pPath );
-	while( FALSE !== ( $file = readdir( $all ) ) ) {
+	while( false !== ( $file = readdir( $all ) ) ) {
 		if( $file <> ".." and $file <> "." and $file <> "CVS" ) {
 			if( is_file( $pPath.'/'.$file ) ) {
 				$size += filesize( $pPath.'/'.$file );
@@ -180,21 +180,21 @@ function du( $pPath ) {
 /**
  * cache_templates 
  * 
- * @param array $pPath 
- * @param array $pOldLang 
- * @param array $pNewLang 
+ * @param string $pPath 
+ * @param string $pOldLang 
+ * @param string $pNewLang 
  * @access public
- * @return boolean TRUE on success, FALSE on failure - $this->mErrors will contain reason for failure
+ * @return bool true on success, false on failure - $this->mErrors will contain reason for failure
  */
 function cache_templates( $pPath, $pOldLang, $pNewLang ) {
 	global $gBitLanguage, $gBitSmarty;
 
 	if( !$pPath or !is_dir( $pPath ) ) {
-		return 0;
+		return false;
 	}
 
 	if( $dir = opendir( $pPath ) ) {
-		while( FALSE !== ( $file = readdir( $dir ) ) ) {
+		while( false !== ( $file = readdir( $dir ) ) ) {
 			$a = explode( ".", $file );
 			$ext = strtolower( end( $a ) );
 			if( substr( $file, 0, 1 ) == "." or $file == 'CVS' ) {
@@ -203,7 +203,7 @@ function cache_templates( $pPath, $pOldLang, $pNewLang ) {
 
 			if( is_dir( $pPath."/".$file ) ) {
 				cache_templates( $pPath."/".$file, $pOldLang, $pNewLang );
-			} else {
+/*			} else {
 				if( $ext == "tpl" ) {
 					$file = str_replace( '//', '/', $pPath."/".$file );
 					$gBitLanguage->setLanguage( $pNewLang );
@@ -215,11 +215,10 @@ function cache_templates( $pPath, $pOldLang, $pNewLang ) {
 						$gBitSmarty->_compile_resource( $file, $comppath );
 					}
 				}
+*/
 			}
 		}
 		closedir( $dir );
 	}
+	return true;
 }
-// }}}
-// vim: set fdm=marker :
-?>

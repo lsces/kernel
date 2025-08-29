@@ -56,9 +56,9 @@ if( $processForm ) {
 		$keywords = str_split( $_REQUEST['site_keywords'], 250 );
 
 		// we need to make sure we remove all settings for site_keywords first in case the new value is considerably shorter than the previous one
-		$gBitSystem->storeConfig( 'site_keywords_1', NULL );
-		$gBitSystem->storeConfig( 'site_keywords_2', NULL );
-		$gBitSystem->storeConfig( 'site_keywords_3', NULL );
+		$gBitSystem->storeConfig( 'site_keywords_1', null );
+		$gBitSystem->storeConfig( 'site_keywords_2', null );
+		$gBitSystem->storeConfig( 'site_keywords_3', null );
 
 		foreach( $keywords as $key => $chunk ) {
 			$gBitSystem->storeConfig( "site_keywords".( !empty( $key ) ? '_'.$key : '' ), $chunk, KERNEL_PKG_NAME );
@@ -76,12 +76,11 @@ if( $processForm ) {
 	// Special handling for site_temp_dir, which has a default value
 	if( isset( $_REQUEST["site_temp_dir"] ) && $_REQUEST["site_temp_dir"] != TEMP_PKG_PATH ) {
 		$gBitSystem->storeConfig( "site_temp_dir", $_REQUEST["site_temp_dir"], KERNEL_PKG_NAME );
-		$gBitSmarty->assignByRef( "site_temp_dir", $_REQUEST["site_temp_dir"] );
+		$gBitSmarty->assign( "site_temp_dir", $_REQUEST["site_temp_dir"] );
 	}
 
 	// Special handling for centralissed_upload_dir, which has a default value
-	$centralDir = ( !empty( $_REQUEST["site_upload_dir"] ) ? $_REQUEST["site_upload_dir"] : NULL );
+	$centralDir = !empty( $_REQUEST["site_upload_dir"] ) ? $_REQUEST["site_upload_dir"] : null;
 	$gBitSystem->storeConfig( "site_upload_dir", $centralDir , KERNEL_PKG_NAME );
-	$gBitSmarty->assignByRef( "site_upload_dir", $centralDir );
+	$gBitSmarty->assign( "site_upload_dir", $centralDir );
 }
-?>

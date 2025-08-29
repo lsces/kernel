@@ -11,14 +11,14 @@ $fPackage = &$_REQUEST['fPackage'];   // emulate register_globals
 
 # rescan to include all packages, installed and not installed
 $gBitSystem->scanPackages(
-	'bit_setup_inc.php', TRUE, 'all', TRUE, TRUE
+	'bit_setup_inc.php', true, 'all', true, true
 );
 
 // make a copy of mPackages - expensive, but this is low use code
 
 if( !empty( $_REQUEST['features'] ) ) {
 	$pkgArray = $gBitSystem->mPackages;
-	foreach( array_keys( $pkgArray ) as $pkgKey ) {
+    foreach( array_keys( $pkgArray ) as $pkgKey ) {
 		$pkg = $pkgArray[$pkgKey];
 		if( !empty( $pkg['name'] )) {
 			$pkgName = strtolower( $pkg['name'] );
@@ -41,10 +41,10 @@ if( !empty( $_REQUEST['features'] ) ) {
 global $gBitInstaller;
 $gBitInstaller = &$gBitSystem;
 $gBitInstaller->verifyInstalledPackages();
-$gBitSmarty->assign( 'requirements', $gBitInstaller->calculateRequirements( TRUE ) );
-$gBitSmarty->assign( 'requirementsMap', $gBitInstaller->drawRequirementsGraph( TRUE, 'cmapx' ));
+$gBitSmarty->assign( 'requirements', $gBitInstaller->calculateRequirements( true ) );
+$gBitSmarty->assign( 'requirementsMap', $gBitInstaller->drawRequirementsGraph( true, 'cmapx' ));
 
-$upgradable = array();
+$upgradable = [];
 foreach( $gBitSystem->mPackages as $name => &$pkg ) {
 	if( $gBitSystem->isPackageInstalled( $name ) && !empty( $pkg['info']['upgrade'] )) {
 		// If no tables then just do a quiet 'auto-upgrade' of version number
@@ -60,8 +60,8 @@ foreach( $gBitSystem->mPackages as $name => &$pkg ) {
 		}
 	}
 }
+
 $gBitSmarty->assign( 'upgradable', $upgradable );
 
 // So packages will be listed in alphabetical order
 ksort( $gBitSystem->mPackages );
-?>

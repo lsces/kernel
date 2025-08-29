@@ -10,9 +10,9 @@
 
 
 // Initialization
-require_once( '../../kernel/includes/setup_inc.php' );
+require_once '../../kernel/includes/setup_inc.php';
 
-include_once( KERNEL_PKG_INCLUDE_PATH.'notification_lib.php' );
+include_once KERNEL_PKG_INCLUDE_PATH.'notification_lib.php';
 
 // Check for admin permission
 $gBitSystem->verifyPermission( 'p_admin' );
@@ -26,8 +26,7 @@ foreach( $gBitSystem->mPackages as $packageName => $package ) {
 	}
 }
 
-$gBitSmarty->assignByRef( 'gSiteMapHash', $gSiteMapHash );
+$gBitSmarty->assign( 'gSiteMapHash', $gSiteMapHash );
 
 // Display the template
-$gBitSystem->display( 'bitpackage:kernel/admin_sitemaps.tpl', NULL, array( 'display_mode' => 'admin' ));
-
+$gBitSystem->display( 'bitpackage:kernel/admin_sitemaps.tpl', null, [ 'display_mode' => 'admin' ] );

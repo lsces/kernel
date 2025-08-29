@@ -8,9 +8,9 @@
 
 // Initialization
 global $gForceAdodb;
-$gForceAdodb = TRUE;
-require_once( '../../kernel/includes/setup_inc.php' );
-require_once( KERNEL_PKG_INCLUDE_PATH.'simple_form_functions_lib.php' );
+$gForceAdodb = true;
+require_once '../../kernel/includes/setup_inc.php';
+require_once KERNEL_PKG_INCLUDE_PATH.'simple_form_functions_lib.php';
 
 //make an alias in case anyone decides to verifyInstalledPackages
 $gBitInstaller = &$gBitSystem;
@@ -20,7 +20,7 @@ if( !empty( $_REQUEST["page"] )) {
 
 	// only admins may use this page
 	$gBitSystem->verifyPermission( 'p_'.$page.'_admin' );
-
+	
 	if( preg_match( '/\.php/', $page )) {
 		$adminPage = $page;
 	} else {
@@ -61,17 +61,17 @@ if( !empty( $_REQUEST["page"] )) {
 	$gBitSmarty->assign( 'adminFile', $adminFile );
 	$gBitSmarty->assign( 'page', $page );
 	$gBitSystem->setBrowserTitle( preg_replace( '/_/', ' ', $page )." Settings" );
-
-	include_once ( $adminPage );
+	
+	include_once $adminPage;
 
 	// Spiderr - a bit hackish, but need to force preferences refresh
 	$gBitSystem->loadConfig();
 } else {
-	$adminTemplates = array();
+	$adminTemplates = [];
 	// deal with package sorting for a unified layout
 	$packages = array_keys( $gBitSystem->mPackages );
 	asort( $packages );
-	$packages = array_unique( array_merge( array( 'kernel', 'liberty', 'users', 'themes' ), $packages ));
+	$packages = array_unique( array_merge( [ 'kernel', 'liberty', 'users', 'themes' ], $packages ));
 	foreach( $packages as $package ) {
 		if( $gBitUser->hasPermission( 'p_'.$package.'_admin' ) ) {
 			$lowerPackage = strtolower( $package );
@@ -84,17 +84,15 @@ if( !empty( $_REQUEST["page"] )) {
 
 	if( !empty( $adminTemplates ) ) {
 		$gBitSystem->setBrowserTitle( 'Administration' );
-		$gBitSmarty->assignByRef( 'adminTemplates', $adminTemplates );
+		$gBitSmarty->assign( 'adminTemplates', $adminTemplates );
 	} else {
 		$gBitSystem->verifyPermission( 'p_admin' );
 	}
 }
-
 
 if( !empty( $_REQUEST['version_check'] ) && $gBitUser->isAdmin() ) {
 	$gBitSmarty->assign( 'version_info', $gBitSystem->checkBitVersion() );
 }
 
 // Display the template
-$gBitSystem->display( 'bitpackage:kernel/admin.tpl' , NULL, array( 'display_mode' => 'admin' ));
-?>
+$gBitSystem->display( 'bitpackage:kernel/admin.tpl' , null, [ 'display_mode' => 'admin' ]);

@@ -1,10 +1,10 @@
 <?php
-
-	require_once( '../../kernel/includes/setup_inc.php' );
+namespace Bitweaver;
+	require_once '../../kernel/includes/setup_inc.php';
 
 	if (!$gBitUser->isAdmin()) {
-		$gBitSmarty->assign('msg', tra("You dont have permission to use this feature"));
-		$gBitSystem->display( 'error.tpl' , NULL, array( 'display_mode' => 'admin' ));
+		$gBitSmarty->assign('msg', KernelTools::tra("You dont have permission to use this feature"));
+		$gBitSystem->display( 'error.tpl' , null, [ 'display_mode' => 'admin' ] );
 		die;
 	}
 
@@ -19,7 +19,7 @@
 ?>
 
 <p style="color:red;">To activate database performance, please add to you config/kernel/config_inc.php:<br>
-<code>define( 'DB_PERFORMANCE_STATS', TRUE ); </code>
+<code>define( 'DB_PERFORMANCE_STATS', true ); </code>
 
 <?php
 	}
@@ -28,6 +28,5 @@ For more information, see the <a href="http://phplens.com/lens/adodb/docs-perf.h
 </p>
 
 <?php
-	$perf = NewPerfMonitor( $gBitSystem->mDb->mDb );
+	$perf = \NewPerfMonitor( $gBitSystem->mDb->mDb );
 	$perf->UI($pollsecs=5);
-?>
