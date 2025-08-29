@@ -1,4 +1,6 @@
 <?php
+
+use Bitweaver\Liberty\LibertyStructure;
 /**
  * $Header$
  *
@@ -9,9 +11,8 @@
  * @package kernel
  * @subpackage modules
  */
-extract( $moduleParams );
-
 if( !empty( $module_params ) ) {
+	extract( $moduleParams );
 	$gBitSmarty->assign( 'modParams', $module_params );
 }
 
@@ -37,18 +38,15 @@ if( $gStructure and !empty($gStructure->mInfo['structure_path']) ) {
 	else $sidebox = 1;
 	if( $gStructure->mInfo['content_id'] != 4 ) {
 		$menu = $gStructure->buildTreeToc( $tree );
-		$gBitSmarty->assignByRef( 'menu', $menu[0]['sub'] );
+		$gBitSmarty->assign( 'menu', $menu[0]['sub'] );
 		$gBitSmarty->assign( 'sidebox', $sidebox );
 		if ($secondbox) {
 			$secondmenu = $gStructure->buildTreeToc( $secondbox );
-			$gBitSmarty->assignByRef( 'secondmenu', $secondmenu[0]['sub'] );
+			$gBitSmarty->assign( 'secondmenu', $secondmenu[0]['sub'] );
 		}
 	}	
 } else {
-	require_once( LIBERTY_PKG_CLASS_PATH.'LibertyStructure.php' );
 	$gStructure = new LibertyStructure( 1 );
 	$menu = $gStructure->buildTreeToc( 1 );
-	$gBitSmarty->assignByRef( 'menu', $menu[0]['sub'] );
+	$gBitSmarty->assign( 'menu', $menu[0]['sub'] );
 }
-
-?>

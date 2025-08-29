@@ -14,7 +14,7 @@
 
 <ul id="nav2" class="{if $gBitSystem->isFeatureActive( 'feature_usecss' )}ver {/if}menu {$key}menu">
 	{foreach key=key item=menu from=$gBitSystem->mAppMenu}
-		{if $menu.menu_template}
+		{if !empty($menu.menu_template)}
 			<li>
 				{if $gBitSystem->isFeatureActive( 'feature_cssmenus' )}
 					{if $menu.menu_title}
@@ -24,7 +24,7 @@
 				{else}
 					{if $menu.menu_title}
 						{if $gBitSystem->isFeatureActive( 'site_menu_flip_icon' )}
-							<a class="head" href="javascript:BitBase.flipIcon('{$key}menu');">{booticon iname="fa-circle-plus" id="`$key`menuimg" iexplain="folder"}&nbsp;
+							<a class="head" href="javascript:BitBase.flipIcon('{$key}menu');">{booticon iname="icon-plus-sign"  ipackage="icons"  id="`$key`menuimg" iexplain="folder"}&nbsp;
 						{else}
 							<a class="head" href="javascript:BitBase.flipWithSign('{$key}menu',1);"><span style="font-family:monospace;" id="flipper{$key}menu">&nbsp;</span>
 						{/if}
@@ -36,7 +36,7 @@
 					</div>
 
 					{if $menu.menu_title}
-						<script type="text/javascript">
+						<script>
 						{if $gBitSystem->isFeatureActive( 'site_menu_flip_icon' )}
 							BitBase.setFlipIcon('{$key}menu');
 						{else}
@@ -50,7 +50,7 @@
 	{/foreach}
 
 {* =========================== User menu =========================== *}
-	{if $gBitSystem->isFeatureActive( 'feature_usermenu' )and $usr_user_menus}
+	{if $gBitSystem->isFeatureActive( 'feature_usermenu' ) && $usr_user_menus}
 		<li>
 			{if $gBitSystem->isFeatureActive( 'feature_cssmenus' )}
 				{if $menu.title|escape}
@@ -65,7 +65,7 @@
 				{/if}
 			{else}
 				{if $gBitSystem->isFeatureActive( 'site_menu_flip_icon' )}
-					<a class="head" href="javascript:BitBase.flipIcon('usrmenu');">{booticon iname="fa-circle-plus" id="usrmenuimg" iexplain="folder"}&nbsp;
+					<a class="head" href="javascript:BitBase.flipIcon('usrmenu');">{booticon iname="icon-plus-sign"  ipackage="icons"  id="usrmenuimg" iexplain="folder"}&nbsp;
 				{else}
 					<a class="head" href="javascript:BitBase.flipWithSign('usrmenu',1);"><span style="font-family:monospace;" id="flipperusrmenu">&nbsp;</span>
 				{/if}
@@ -80,7 +80,7 @@
 						</ul>
 						</div>
 					{/if}
-				<script type="text/javascript">
+				<script>
 					{if $gBitSystem->isFeatureActive( 'site_menu_flip_icon' )}
 						BitBase.setFlipIcon('usrmenu');
 					{else}

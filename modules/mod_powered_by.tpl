@@ -24,9 +24,6 @@
 		{if $gLibertySystem->isPluginActive( 'filterhtmlpure' )}
 			<li><a href="http://htmlpurifier.org">{biticon ipackage="liberty" iname="htmlpurifier" ipath="bitweaver/" iexplain="HTMLPurifier"}</a></li>
 		{/if}
-		{if $gBrowserInfo.browser eq 'ie' and $gBitSystem->isFeatureActive( 'themes_use_msie_png_hack' )}
-			<li><a href="http://code.google.com/p/ie7-js/">{biticon ipackage="liberty" iname="ie7" ipath="bitweaver/" iexplain="IE7-js"}</a></li>
-		{/if}
 	</ul>
 {/bitmodule}
 {/strip}

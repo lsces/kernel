@@ -11,8 +11,8 @@
  */
 
 if( !empty( $module_params ) ) {
-	$_template->tpl_vars['modParams'] = new Smarty_variable( $module_params );
+	$gBitSmarty->assign( 'modParams', $module_params );
 }
 
-$_template->tpl_vars['adSenseActive'] = new Smarty_variable(  !empty($module_params['client']) && $gBitSystem->isFeatureActive( 'liberty_plugin_status_dataadsense' ) );
+$gBitSmarty->assign( 'adSenseActive',  !empty($module_params['client']) && $gBitSystem->isFeatureActive( 'liberty_plugin_status_dataadsense' ) );
 ?>

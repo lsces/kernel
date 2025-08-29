@@ -8,7 +8,7 @@
 		{/foreach}
 
 		{if $gBitUser->isAdmin()}
-			<li{if $gBitSystem->getActivePackage() eq 'kernel'} class="active"{/if}><a class="head" href="{$smarty.const.KERNEL_PKG_URL}admin/index.php">{tr}Administration{/tr}</a></li>
+			<li{if $gBitSystem->getActivePackage() eq 'kernel'} class="active"{/if}><a class="head" href="{$smarty.const.KERNEL_PKG_URL}admin/index.php">Administration</a></li>
 		{/if}
 	</ul>
 {/bitmodule}

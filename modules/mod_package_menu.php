@@ -6,16 +6,12 @@
 global $gBitSystem, $gBitUser, $moduleParams;
 
 // if we're on any page in an admin/ dir, we'll simply set this to kernel
-if( $gBitUser->isAdmin() ) {
-	$admin = preg_match( "!/admin/!", $_SERVER['SCRIPT_NAME'] );
-} else {
-	$admin =  false;
-}
+$admin = ( $gBitUser->isAdmin() ) ? preg_match( "!/admin/!", $_SERVER['SCRIPT_NAME'] ) : false;
 
-$package = !empty($moduleParams['module_params']['package'])?$moduleParams['module_params']['package']:$gBitSystem->getActivePackage();
+$package = !empty($moduleParams->values['package'])?$moduleParams->values['package']:$gBitSystem->getActivePackage();
 
 if( !empty( $gBitSystem->mAppMenu[$package]['menu_template'] ) && !$admin ) {
-	$_template->tpl_vars['packageMenu'] = new Smarty_variable(  $gBitSystem->mAppMenu[$package]  );
+	$gBitSmarty->assign( 'packageMenu',  $gBitSystem->mAppMenu[$package]  );
 }
 
 if( empty( $module_title )) {
@@ -24,7 +20,6 @@ if( empty( $module_title )) {
 	if( $pkgName == 'kernel' || $admin ) {
 		$pkgName = 'Administration';
 	}
-	$title = $gBitSystem->getConfig( $pkgName."_menu_text", ucfirst( $pkgName ));
-	$_template->tpl_vars['moduleTitle'] = new Smarty_variable(  $title  );
+	$title = $gBitSystem->getConfig( "{$pkgName}_menu_text", ucfirst( $pkgName ));
+	$gBitSmarty->assign( 'moduleTitle',  $title  );
 }
-?>

@@ -5,7 +5,7 @@
 		{elseif $modParams.src eq 'javascript'}
 			{literal}
 			<div id="js_clock" style="height:2.4em;font-family:monospace;">
-				<script type="text/javascript">
+				<script>
 					//<![CDATA[
 					function js_clock(){
 						var clock_time = new Date();
@@ -27,7 +27,7 @@
 		{elseif $modParams.src eq 'javascript12'}
 			{literal}
 			<div id="js_clock" style="font-family:monospace;">
-				<script type="text/javascript">
+				<script>
 					//<![CDATA[
 					function js_clock(){
 						var clock_time = new Date();
