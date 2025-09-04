@@ -247,7 +247,7 @@ class BitDbAdodb extends BitDb {
 		if( empty( $this->mDb )) {
 			return null;
 		}
-		$values = is_null($values) ? false : $values;
+		$values = $values === null ? false : $values;
 		$this->queryStart();
 
 		if( !is_numeric( $numrows )) {
