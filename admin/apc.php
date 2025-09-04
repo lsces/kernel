@@ -849,11 +849,11 @@ EOB;
 			: "",
 		'<tr>',
 		'<td class=td-0><span class="green box">&nbsp;</span>Free: ',bsize($mem_avail).sprintf(" (%.1f%%)",$mem_avail*100/$mem_size),"</td>\n",
-		'<td class=td-1><span class="green box">&nbsp;</span>Hits: ',$cache['num_hits'].@sprintf(" (%.1f%%)",$cache['num_hits']*100/($cache['num_hits']+$cache['num_misses'])),"</td>\n",
+		'<td class=td-1><span class="green box">&nbsp;</span>Hits: ',$cache['num_hits'].@sprintf(" (%.1f%%)",$cache['num_hits'] > 0 ? $cache['num_hits']*100/($cache['num_hits']+$cache['num_misses']) : 0),"</td>\n",
 		'</tr>',
 		'<tr>',
 		'<td class=td-0><span class="red box">&nbsp;</span>Used: ',bsize($mem_used).sprintf(" (%.1f%%)",$mem_used *100/$mem_size),"</td>\n",
-		'<td class=td-1><span class="red box">&nbsp;</span>Misses: ',$cache['num_misses'].@sprintf(" (%.1f%%)",$cache['num_misses']*100/($cache['num_hits']+$cache['num_misses'])),"</td>\n";
+		'<td class=td-1><span class="red box">&nbsp;</span>Misses: ',$cache['num_misses'].@sprintf(" (%.1f%%)",$cache['num_misses'] > 0 ? $cache['num_misses']*100/($cache['num_hits'] ?? 1 +$cache['num_misses']) : 0),"</td>\n";
 	echo <<< EOB
 		</tr>
 		</tbody></table>
