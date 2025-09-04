@@ -11,7 +11,7 @@
 			{foreach from=$gSiteMapHash item=mapHash key=package}
 				<dt>{$package}</dt>
 				<dd>{tr}URL{/tr}: <a href="{$mapHash.loc}">{$mapHash.loc}</a></dd>
-				<dd>{tr}Last Modified{/tr}: {$mapHash.lastMod}</dd>
+				<dd>{tr}Last Modified{/tr}: {$mapHash.lastMod|default:'Not Set'}</dd>
 			{foreachelse}
 				<dt>{tr}No sitemaps found.{/tr}</dt>
 			{/foreach}

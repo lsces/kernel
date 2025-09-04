@@ -6,7 +6,7 @@
 	{jstabs}
 		{jstab title="Server Settings"}
 			<div class="form-group">
-				{formfeedback warning="After changing the browser title, you might have to login again."}
+				{formfeedback warning="After changing the browser title, you might have to login again."}<br/>
 				{formlabel label="Site title" for="site_title"}
 				{forminput}
 					<input class="form-control" type="text" name="site_title" id="site_title" value="{$gBitSystem->getConfig('site_title')|escape}" />
@@ -61,7 +61,7 @@
 
 		{jstab title="Miscellaneous"}
 			<div class="form-group">
-				{formfeedback warning="Please make sure you know what you are doing as setting this wrongly could prevent you from logging in again."}
+				{formfeedback warning="Please make sure you know what you are doing as setting this wrongly could prevent you from logging in again."}<br/>
 				{formlabel label="Server name" for="kernel_server_name"}
 				{forminput}
 					<input class="form-control" type="text" name="kernel_server_name" id="kernel_server_name" value="{$gBitSystem->getConfig('kernel_server_name')|escape}" />
@@ -141,13 +141,13 @@
 			<div class="form-group">
 				{formlabel label="Message to display when site is closed" for="site_closed_msg"}
 				{forminput}
-					<input type="text" name="site_closed_msg" id="site_closed_msg" value="{$gBitSystem->getConfig('site_closed_msg')|escape}" class="form-control" />
+					<input type="text" name="site_closed_msg" id="site_closed_msg" value="{$gBitSystem->getConfig('site_closed_msg')|default:''|escape}" class="form-control" />
 				{/forminput}
 			</div>
 
 			<div class="form-group">
 				{forminput label="checkbox"}
-					{html_checkboxes name="site_load_threshold" values="y" checked=$BitSystemPrefs.site_load_threshold labels=false id="site_load_threshold"} {tr}Disallow access when load is above the threshold{/tr}
+					{html_checkboxes name="site_load_threshold" values="y" checked=$BitSystemPrefs.site_load_threshold|default:'' labels=false id="site_load_threshold"} {tr}Disallow access when load is above the threshold{/tr}
 					{formhelp note="Disallow access when load is above the threshold (except for those with permission)"}
 				{/forminput}
 			</div>
