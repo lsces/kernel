@@ -931,7 +931,9 @@ class BitSystem extends BitSingleton {
 				$pkgName.'_PKG_ADMIN_PATH' => BIT_ROOT_PATH . basename( $path ) . '/admin/' 
 			];
 			foreach( $arrayHash as $defName => $defPath ) {
-				define( $defName, is_dir( $defPath ) ? $defPath : $pkgPath );
+				if( !defined( $defName )) {
+					define( $defName, is_dir( $defPath ) ? $defPath : $pkgPath );
+				}
 			}
 		}
 		$this->mPackages[$pkgNameKey]['url']  = BIT_ROOT_URL . basename( $path ) . '/';
