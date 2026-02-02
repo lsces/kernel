@@ -403,7 +403,7 @@ abstract class BitBase {
 	 * @param string $pDefault Default value to return if not found. null if nothing is passed in.
 	 * @return array|string|null
 	 */
-	public static function getParameter( array &$pParamHash, string $pKey, ?string $pDefaultValue = null ): array|string|null {
+	public static function getParameter( array $pParamHash, string $pKey, ?string $pDefaultValue = null ): array|string|null {
 		return $pParamHash[$pKey] ?? $pDefaultValue;
 	}
 
@@ -503,7 +503,7 @@ abstract class BitBase {
 
 		if( !isset( $pListHash['offset'] ) || !is_numeric( $pListHash['offset'] ) ) {
 			$pListHash['offset'] = 0;
-			if( static::verifyId( $pListHash['page'] )) {
+			if( static::verifyId( $pListHash['page'] ) ) {
 				$pListHash['offset'] = ($pListHash['page'] - 1) * $pListHash['max_records'];
 			} else {
 				if( !empty( $_REQUEST["offset"] )) {
