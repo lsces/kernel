@@ -45,7 +45,7 @@
 							{/if}
 							<option value="users_custom_home"{if $gBitSystem->getConfig('bit_index') eq $gBitSystem->getConfig('site_url_index')} selected="selected"{/if}>{tr}Custom home{/tr}</option>
 							{foreach key=name item=package from=$gBitSystem->mPackages}
-								{if $package.homeable && $package.installed}
+								{if $package.homeable and $package.installed}
 									<option {if $gBitSystem->getConfig('bit_index') eq $package.dir}selected="selected"{/if} value="{$package.dir}">{$package.dir|capitalize}</option>
 								{/if}
 							{/foreach}

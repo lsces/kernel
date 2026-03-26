@@ -50,7 +50,7 @@
 	{/foreach}
 
 {* =========================== User menu =========================== *}
-	{if $gBitSystem->isFeatureActive( 'feature_usermenu' ) && $usr_user_menus}
+	{if $gBitSystem->isFeatureActive( 'feature_usermenu' ) and $usr_user_menus}
 		<li>
 			{if $gBitSystem->isFeatureActive( 'feature_cssmenus' )}
 				{if $menu.title|escape}

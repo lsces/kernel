@@ -9,7 +9,7 @@
 		{if $gBitSystem->mAppMenu.bar}
 		<ul class="nav navbar-nav">
 			{foreach key=key item=menu from=$gBitSystem->mAppMenu.bar}
-				{if $menu.menu_title && $menu.index_url && $menu.menu_template && !$menu.is_disabled}
+				{if $menu.menu_title and $menu.index_url and $menu.menu_template and !$menu.is_disabled}
 					{if $gBitSystem->isFeatureActive( 'site_top_bar_dropdown' )}
 					<li class="dropdown m-{$key}{if $gBitSystem->getActivePackage() eq $menu.package_name} active{/if}">
 						{include file="`$menu.menu_template`" packageMenuClass="dropdown-menu" packageMenuTitle=$menu.menu_title}
@@ -25,7 +25,7 @@
 		{/if}
 		{if !empty($gBitSystem->mAppMenu.form)}
 		{foreach key=key item=menu from=$gBitSystem->mAppMenu.form}
-			{if $menu.menu_title && $menu.index_url && $menu.menu_template && !$menu.is_disabled}
+			{if $menu.menu_title and $menu.index_url and $menu.menu_template and !$menu.is_disabled}
 				{include file="`$menu.menu_template`" packageMenuClass="dropdown-menu" packageMenuTitle=$menu.menu_title}
 			{/if}
 		{/foreach}
@@ -55,7 +55,7 @@
 	{/if}
 </nav>
 
-{if $gBitSystem->isFeatureActive('site_top_bar_js') && $gBitSystem->isFeatureActive('site_top_bar_dropdown')}
+{if $gBitSystem->isFeatureActive('site_top_bar_js') and $gBitSystem->isFeatureActive('site_top_bar_dropdown')}
 	<script> /*<![CDATA[*/
 		var listMenu = new FSMenu('listMenu', true, 'left', 'auto', '-999');
 		{if $gBitSystem->isFeatureActive( 'site_top_bar_js_fade' )}

@@ -10,7 +10,7 @@
 
 <table border="0" cellspacing="0" cellpadding="0" width="100%">
 <tr>
-{if $gBitSystem->isFeatureActive( 'site_left_column' ) && $l_modules}
+{if $gBitSystem->isFeatureActive( 'site_left_column' ) and $l_modules}
   <td id="bitleft">
     {section name=homeix loop=$l_modules}
       {$l_modules[homeix].data}
@@ -37,7 +37,7 @@
       </div>
     </div>
   </td>
-{if $gBitSystem->isFeatureActive( 'site_right_column' ) && $r_modules}
+{if $gBitSystem->isFeatureActive( 'site_right_column' ) and $r_modules}
   <td id="bitright">
     {section name=homeix loop=$r_modules}
       {$r_modules[homeix].data}

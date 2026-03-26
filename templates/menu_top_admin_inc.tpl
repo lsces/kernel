@@ -3,12 +3,12 @@
 </a>
 <ul class="dropdown-menu sub-menu pull-right">	
 {foreach key=key item=menu from=$adminMenu}
-	{if $key=='kernel' || $key=='liberty' || $key=='users' || $key=='themes'}
+	{if $key=='kernel' or $key=='liberty' or $key=='users' or $key=='themes'}
 	<li class="dropdown-submenu favorite">{include file=$menu.tpl packageMenuTitle=$key packageMenuClass="dropdown-menu sub-menu"}</li>
 	{/if}
 {/foreach}
 {foreach key=key item=menu from=$adminMenu}
-	{if $key!=='kernel' && $key!=='liberty' && $key!=='users' && $key!=='themes'}
+	{if $key!=='kernel' and $key!=='liberty' and $key!=='users' and $key!=='themes'}
 	<li class="dropdown-submenu">{include file=$menu.tpl packageMenuTitle=$key packageMenuClass="dropdown-menu sub-menu"}</li>
 	{/if}
 {/foreach}
