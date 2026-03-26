@@ -304,7 +304,7 @@ class BitSystem extends BitSingleton {
 	 *
 	 * @access public
 	 **/
-	public function storeConfig( $pName, $pValue, $pPackage = null ) {
+	public function storeConfig( $pName, $pValue, $pPackage = '' ) {
 		global $gMultisites;
 		//stop undefined offset error being thrown after packages are installed
 		if( !empty( $this->mConfig )) {
