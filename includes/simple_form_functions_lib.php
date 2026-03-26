@@ -73,11 +73,11 @@ function toggle_preference( $pName, $pValue = null, $pPackageName = null ) {
 
 /**
  * Store or update a value in the database - automatically collects data from $_REQUEST[$pFeature]
- * @param $pFeature name of the parameter to be set in the database
- * @param $pPackageName name of the package the feature belongs to
+ * @param string $pFeature name of the parameter to be set in the database
+ * @param string $pPackageName name of the package the feature belongs to
  * @return void
  */
-function simple_set_value( $pFeature, $pPackageName = null ) {
+function simple_set_value( $pFeature, $pPackageName = '' ) {
 	global $_REQUEST, $gBitSystem, $gBitSmarty;
 	if( isset( $_REQUEST[$pFeature] ) ) {
 		$gBitSystem->storeConfig( $pFeature, $_REQUEST[$pFeature], $pPackageName );
