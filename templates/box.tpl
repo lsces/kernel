@@ -1,6 +1,6 @@
 {strip}
 <div class="{$class|default:"box"}" {$atts}>
-	{if $ipackage and $iname}
+	{if $ipackage && $iname}
 		{biticon ipackage=$ipackage iname=$iname iexplain=$iexplain iclass=$iclass iforce=icon} 
 	{/if}
 

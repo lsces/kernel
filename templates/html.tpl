@@ -43,11 +43,11 @@
 	{if $gBitSystem->isFeatureActive( 'bidirectional_text' )}<div dir="rtl">{/if}
 
 	{if $gBitThemes->mDisplayMode != 'edit'}
-		{if $gBitSystem->isFeatureActive( 'site_left_column' ) and !$gHideModules and $gBitThemes->hasColumnModules('l')}
+		{if $gBitSystem->isFeatureActive( 'site_left_column' ) && !$gHideModules && $gBitThemes->hasColumnModules('l')}
 			{assign var=leftCol value=$gBitThemes->fetchLayoutColumn('l')}
 		{/if}
 
-		{if $gBitSystem->isFeatureActive( 'site_right_column' ) and !$gHideModules and $gBitThemes->hasColumnModules('r')}
+		{if $gBitSystem->isFeatureActive( 'site_right_column' ) && !$gHideModules && $gBitThemes->hasColumnModules('r')}
 			{assign var=rightCol value=$gBitThemes->fetchLayoutColumn('r')}
 		{/if}
 	{/if}
@@ -64,7 +64,7 @@
 		{assign var=extraColumns value=0}
 	{/if}
 
-	{if $gBitSystem->isFeatureActive( 'site_top_column' ) and !$gHideModules}
+	{if $gBitSystem->isFeatureActive( 'site_top_column' ) && !$gHideModules}
 	<header itemscope itemtype="http://schema.org/WPHeader" role="banner" class="container{$gBitSystem->getConfig('layout-header')}" id="bw-main-header">
 		{$gBitThemes->displayLayoutColumn('t')}
 		{if $gBitSystem->getConfig('site_notice')}
@@ -117,7 +117,7 @@
 
 	<footer id="bw-main-footer" class="container{$gBitSystem->getConfig('layout-footer')}">
 		{**** Theme Layout Modules : BOTTOM ****}
-		{if $gBitSystem->isFeatureActive( 'site_bottom_column' ) and !$gHideModules}
+		{if $gBitSystem->isFeatureActive( 'site_bottom_column' ) && !$gHideModules}
 			{$gBitThemes->displayLayoutColumn('b')}
 		{/if}
 		{* get custom footer files from individual packages *}

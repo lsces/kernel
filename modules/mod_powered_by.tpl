@@ -13,7 +13,7 @@
 		<li>
 			{if $gBitDbType eq 'firebird'}
 				<a href="http://www.firebirdsql.org/">{biticon ipackage="liberty" iname="firebird" ipath="bitweaver$size/" iexplain="Firebird"}</a>
-			{elseif $gBitDbType eq 'mysql' or $gBitDbType eq 'mysqli'}
+			{elseif $gBitDbType eq 'mysql' || $gBitDbType eq 'mysqli'}
 				<a href="http://www.mysql.com/">{biticon ipackage="liberty" iname="mysql" ipath="bitweaver$size/" iexplain="MySQL"}</a>
 			{elseif $gBitDbType eq 'postgres'}
 				<a href="http://www.postgresql.org/">{biticon ipackage="liberty" iname="postgresql" ipath="bitweaver$size/" iexplain="PostgreSQL"}</a>

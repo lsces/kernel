@@ -7,7 +7,7 @@
 <meta name="description" content="{$metaDescription|escape}" />
 {elseif $smarty.server.REQUEST_URI==$smarty.const.BIT_ROOT_URL}
 <meta name="description" content="{$gBitSystem->getConfig('site_description')|escape}"/>
-{elseif !empty($gContent) and $gContent->isValid()}
+{elseif !empty($gContent) && $gContent->isValid()}
 <meta name="description" content="{$gContent->generateDescription()|strip_tags|escape}"/>
 {/if}
 
@@ -15,7 +15,7 @@
 <meta name="keywords" content="{$metaKeywords|escape}" />
 {elseif $smarty.server.REQUEST_URI==BIT_ROOT_URI}
 <meta name="keywords" content="{$metaKeywords|default:$gBitSystem->getConfig('site_keywords')}" />
-{elseif !empty($gContent) and $gContent->isValid()}
+{elseif !empty($gContent) && $gContent->isValid()}
 <meta name="keywords" content="{','|implode:$gContent->generateKeywords()|strip_tags|escape}"/>
 {/if}
 
@@ -74,7 +74,7 @@
 	var bitTk = "{$gBitUser->mTicket}";
 /* ]]> */</script>
 
-{if $gBitSystem->isPackageActive('jscalendar') and $gBitSystem->isFeatureActive( 'site_use_jscalendar' )}
+{if $gBitSystem->isPackageActive('jscalendar') && $gBitSystem->isFeatureActive( 'site_use_jscalendar' )}
 	<link rel="stylesheet" title="{$style}" type="text/css" href="{$smarty.const.UTIL_PKG_URL}javascript/dynarch/jscalendar/calendar-system.css" media="all" nonce="{$cspNonce} />
 	<script nonce="{$cspNonce}" async src="{$smarty.const.UTIL_PKG_URL}javascript/dynarch/jscalendar/calendar.js"></script>
 	<script nonce="{$cspNonce}" async src="{$smarty.const.UTIL_PKG_URL}javascript/dynarch/jscalendar/lang/calendar-en.js"></script>

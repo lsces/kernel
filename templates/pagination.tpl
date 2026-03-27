@@ -28,7 +28,7 @@
 				{if $value ne ''}{$param}={$value}&amp;{/if}
 			{/if}
 		{/foreach}
-		{if isset($listInfo.sort_mode) and $listInfo.sort_mode ne ''}
+		{if isset($listInfo.sort_mode) && $listInfo.sort_mode ne ''}
 			{if is_array($listInfo.sort_mode)}
 				{foreach from=$listInfo.sort_mode item=sort}
 					sort_mode[]={$sort}&amp;
@@ -37,14 +37,14 @@
 				sort_mode={$listInfo.sort_mode}&amp;
 			{/if}
 		{/if}
-		{if isset($listInfo.find) and $listInfo.find ne ''}
+		{if isset($listInfo.find) && $listInfo.find ne ''}
 			find={$listInfo.find}&amp;
 		{/if}
 	{/capture}
 	{assign var=pageUrlVar value=$smarty.capture.string|regex_replace:'/"/':'%22'}
 	{assign var=pageUrl value="`$pgnUrl`?`$pageUrlVar`"}
 {/if}
-{if !empty($listInfo) and $listInfo.total_pages > 1 and $listInfo.page_records}
+{if !empty($listInfo) && $listInfo.total_pages > 1 && $listInfo.page_records}
 <div class="paginator overflow-hidden clear">
 	<ul class="pagination pull-left">
 		{if $listInfo.current_page > 1}

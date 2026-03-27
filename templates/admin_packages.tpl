@@ -2,7 +2,7 @@
 {* checks if installer path is available *}
 {assign var=installfile value="`$smarty.const.INSTALL_PKG_PATH`install.php"|is_file}
 {assign var=installread value="`$smarty.const.INSTALL_PKG_PATH`install.php"|is_readable}
-{if $installfile neq 1 and $installread neq 1}
+{if $installfile neq 1 && $installread neq 1}
 	{capture assign=install_unavailable}
 		<p>{tr}You might have to rename your <strong>install/install.done</strong> file back to <strong>install/install.php</strong>.{/tr}</p>
 	{/capture}
@@ -47,7 +47,7 @@
 
 				<div class="bit-columns">
 				{foreach key=name item=package from=$gBitSystem->mPackages}
-					{if $package.installed|default:false and !$package.service|default:false and !$package.required|default:true }
+					{if $package.installed|default:false && !$package.service|default:false && !$package.required|default:true }
 					<div class="bit-column-cell">
 					<div class="well">
 						<div class="form-group clear">
@@ -58,7 +58,7 @@
 								<label>
 									{assign var=is_requirement value=''}
 										{foreach from=$gBitSystem->mRequirements key=req item=reqs}
-											{if !empty($reqs.$name) and $gBitSystem->isPackageActive($req) and $package.active_switch eq 'y'}
+											{if !empty($reqs.$name) && $gBitSystem->isPackageActive($req) && $package.active_switch eq 'y'}
 												{assign var=is_requirement value='true'}
 											{/if}
 										{/foreach}
@@ -95,7 +95,7 @@
 				</p>
 				<div class="bit-columns">
 				{foreach key=name item=package from=$gBitSystem->mPackages}
-					{if $package.installed and !empty($package.service) and !$package.required|default:false}
+					{if $package.installed && !empty($package.service) && !$package.required|default:false}
 					<div class="bit-column-cell">
 					<div class="well">
 						<div class="form-group">
@@ -106,7 +106,7 @@
 								<label>
 									{assign var=is_requirement value=''}
 									{foreach from=$gBitSystem->mRequirements key=req item=reqs}
-										{if !empty($reqs.$name) and $gBitSystem->isPackageActive($req) and $package.active_switch eq 'y'}
+										{if !empty($reqs.$name) && $gBitSystem->isPackageActive($req) && $package.active_switch eq 'y'}
 											{assign var=is_requirement value='true'}
 										{/if}
 									{/foreach}
@@ -147,7 +147,7 @@
 			{legend legend="Required packages installed on your system"}
 				<div class="bit-columns">
 				{foreach key=name item=package from=$gBitSystem->mPackages}
-					{if $package.installed and !$package.service and $package.required|default:false }
+					{if $package.installed && !$package.service && $package.required|default:false }
 					<div class="bit-column-cell">
 					<div class="well">
 						<div class="form-group">
@@ -168,7 +168,7 @@
 			{legend legend="Required services installed on your system"}
 				<div class="bit-columns">
 				{foreach key=name item=package from=$gBitSystem->mPackages}
-					{if $package.installed and !empty($package.service) and $package.required|default:false}
+					{if $package.installed && !empty($package.service) && $package.required|default:false}
 					<div class="bit-column-cell">
 					<div class="well">
 						<div class="form-group">
@@ -191,7 +191,7 @@
 		{/jstab}
 
 
-		{if !empty($requirementsMap) or !empty($requirements)}
+		{if !empty($requirementsMap) || !empty($requirements)}
 			{jstab title="Dependencies"}
 				{legend legend="Requirements"}
 					{if !empty($requirementsMap)}
@@ -264,7 +264,7 @@
 							{formfeedback warning="At least one package recommend a version lower to the one you have installed. This might cause problems."}
 						{/if}
 
-						{if !$min_dep and !$max_dep and !$missing}
+						{if !$min_dep && !$max_dep && !$missing}
 							{formfeedback success="All package requirements have been met."}
 						{/if}
 					{/if}
@@ -289,7 +289,7 @@
 
 				<div class="bit-columns">
 				{foreach key=name item=package from=$gBitSystem->mPackages}
-					{if ((1 or $package.tables) and !$package.required|default:false and !$package.installed|default:false) }
+					{if ((1 || $package.tables) && !$package.required|default:false && !$package.installed|default:false) }
 					<div class="bit-column-cell">
 					<div class="well">
 						<div class="form-group clear">
