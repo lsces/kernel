@@ -381,7 +381,7 @@ abstract class BitBase {
 	 * @return bool true if the input was numeric, false if it wasn't
 	 */
 	public static function verifyId( mixed $pId ): bool {
-		if( empty( $pId ) || ( is_int( $pId ) && $pId == -2 ) ) {
+		if( empty( $pId ) || ( is_int( $pId ) && $pId < 0 ) ) {
 			return false;
 		}
 		if( is_array( $pId )) {
