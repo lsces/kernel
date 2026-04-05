@@ -5,13 +5,13 @@
  * @subpackage functions
  */
 namespace Bitweaver;
+define( 'EMAIL_ADDRESS_REGEX', '[-a-zA-Z0-9._%+]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}' );
 
 class KernelTools
 {
 
     public function __construct() {
         mb_internal_encoding( "UTF-8" );
-        define( 'EMAIL_ADDRESS_REGEX', '[-a-zA-Z0-9._%+]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}' );
 
     }
 
@@ -229,7 +229,7 @@ class KernelTools
             $out .= "\n\t".str_replace( "\n", "\n\t", $pReplace );
         }
 
-        if( !defined( 'IS_LIVE' ) && IS_LIVE == false ) {
+        if( !defined( 'IS_LIVE' ) || IS_LIVE == false ) {
             vd( $out, false, true );
         } else {
             error_log( $out );

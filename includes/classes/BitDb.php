@@ -162,7 +162,7 @@ class BitDb {
 	* @return true if DB connection is valid, false if not
 	*/
 	public function isValid() {
-		return !empty( $this->mDb );
+		return !empty( $this->mDb ) && count ($this->mDb->MetaTables() );
 	}
 	/**
 	* Determines if the database connection is valid

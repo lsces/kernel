@@ -206,7 +206,7 @@ class BitSystem extends BitSingleton {
 			$whereClause = ' WHERE `package`=? ';
 		}
 
-		if ( empty( $this->mConfig ) ) {
+		if ( empty( $this->mConfig ) && $this->mDb->tableExists('kernel_config') ) {
 			$this->mConfig = [];
 			$query = "SELECT `config_name` ,`config_value`, `package` FROM `" . BIT_DB_PREFIX . "kernel_config` " . $whereClause;
 			if( $rs = $this->mDb->query( $query, $queryVars, -1, -1 ) ) {
@@ -214,8 +214,9 @@ class BitSystem extends BitSingleton {
 					$this->mConfig[$row['config_name']] = $row['config_value'];
 				}
 			}
+			return count( $this->mConfig );
 		}
-		return count( $this->mConfig );
+		return 0;
 	}
 
 	// <<< getConfig
@@ -1135,7 +1136,7 @@ class BitSystem extends BitSingleton {
 				'activatable'  => false,
 			];
 			if( $pPkgDir == 'kernel' ) {
-				$pRegisterHash = array_merge( $pRegisterHash, [ 'required_package' => true ] );
+				$pRegisterHash = [ ...$pRegisterHash, 'required_package' => true ];
 			}
 			$this->registerPackage( $pRegisterHash );
 		}
@@ -1176,7 +1177,7 @@ class BitSystem extends BitSingleton {
 	 */
 	public function scanPackages( $pScanFile = 'bit_setup_inc.php', $pOnce=true, $pSelect='', $pAutoRegister=true ) {
 		global $gPreScan;
-		if( !empty( $gPreScan ) && is_array( $gPreScan )) {
+		if( !empty( $gPreScan ) && \is_array( $gPreScan )) {
 			// gPreScan may hold a list of packages that must be loaded first
 			foreach( $gPreScan as $pkgDir ) {
 			    $loadPkgs[] = $pkgDir;
@@ -1194,7 +1195,6 @@ class BitSystem extends BitSingleton {
 
 		// load the list of pkgs in the right order
 		foreach( $loadPkgs as $loadPkg ) {
-// print_r('<br>Load Plugins - ' . $loadPkg . '<br>');
             $this->loadPackage( $loadPkg, $pScanFile, $pAutoRegister, $pOnce );
 		}
 
