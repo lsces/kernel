@@ -41,7 +41,7 @@
 					{if $gBitSystem->isFeatureActive( 'users_preferences' )}
 						<li><a class="item" href="{$smarty.const.USERS_PKG_URL}preferences">{tr}Preferences{/tr}</a></li>
 					{/if}
-						<li><a href="{$smarty.const.USERS_PKG_URL}logout">{tr}Logout{/tr}</a></li>
+						<li><a href="{$smarty.const.USERS_PKG_URL}logout.php">{tr}Logout{/tr}</a></li>
 						{if $adminMenu}
 							<li class="dropdown-submenu menu-admin">{include file="bitpackage:kernel/menu_top_admin_inc.tpl"}</li>
 						{/if}
