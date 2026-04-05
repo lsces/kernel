@@ -74,14 +74,7 @@ class BitDbAdodb extends BitDb {
 			$this->mDb = ADONewConnection( $pConnectionHash['db_type'] );
 			$this->mDb->pdoParameters = [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION];
 
-			if( $pConnectionHash['db_type'] != 'pdo' ) {
-				$this->mDb->Connect( $pConnectionHash['db_host'], $pConnectionHash['db_user'], $pConnectionHash['db_password'], $pConnectionHash['db_name'] );
-				$split = explode( ':', $gBitDbHost );
-				$this->mType = 'pdo-' . $split[0];
-			} else {
-//			$dsnString = $pConnectionHash['db_type'] . ':host=localhost;dbname=' . $pConnectionHash['db_name'];
-				$this->mDb->Connect( $pConnectionHash['db_host'], $pConnectionHash['db_user'], $pConnectionHash['db_password'] );
-			}
+			$this->mDb->Connect( $pConnectionHash['db_host'], $pConnectionHash['db_user'], $pConnectionHash['db_password'], $pConnectionHash['db_type'] != 'pdo' ? $pConnectionHash['db_name'] : NULL );
 			if( !$this->mDb ) {
 				die( "Unable to login to the database $pConnectionHash[db_type] on $pConnectionHash[db_host] as `user` $pConnectionHash[db_user]<p>".$this->mDb->ErrorMsg() );
 			}
@@ -108,10 +101,10 @@ class BitDbAdodb extends BitDb {
 		// If server support InnoDB for MySql set the selected engine
 		if( isset( $_SESSION['use_innodb'] )) {
 			$pOptions = $_SESSION['use_innodb'] == true 
-				? array_merge( $pOptions, array( 'MYSQL' => 'ENGINE=INNODB' ))
-				: array_merge( $pOptions, array( 'MYSQL' => 'ENGINE=MYISAM' ));
+				? [ ...$pOptions, 'MYSQL' => 'ENGINE=INNODB']
+				: [ ...$pOptions, 'MYSQL' => 'ENGINE=MYISAM'];
 		}
-		$dict = NewDataDictionary( $this->mDb );
+		$dict = NewDataDictionary( $this->mDb, 'firebird' );
 		$this->mFailed = [];
 		$result = true;
 		foreach( array_keys( $pTables ) AS $tableName ) {
@@ -135,7 +128,7 @@ class BitDbAdodb extends BitDb {
 	 * @return bool true if table already exists
 	 */
 	public function tableExists( string $pTable ): bool {
-		$dict = NewDataDictionary( $this->mDb );
+		$dict = NewDataDictionary( $this->mDb, 'firebird' );
 		$pTable = preg_replace( "/`/", "", $pTable );
 		$tables = $dict->MetaTables( );
 		return array_search( $pTable, $tables ) !== false;
@@ -150,7 +143,7 @@ class BitDbAdodb extends BitDb {
 	 * false if errors are stored in $this->mFailed
 	 */
 	public function dropTables( array $pTables ): bool {
-		$dict = NewDataDictionary( $this->mDb );
+		$dict = NewDataDictionary( $this->mDb, 'firebird' );
 		$this->mFailed = [];
 		$return = true;
 		foreach( $pTables AS $tableName ) {
@@ -196,10 +189,10 @@ class BitDbAdodb extends BitDb {
 
 	/**
 	 * Returns RANDOM function appropiate for database.
-	 * Overrides BitDbBase::random()
+	 * Overrides BitDb::random()
 	 * @return string using AdoDB->random property
 	 */
-	function random() {
+	public function random() {
 		return $this->mDb->random;
 		
 	}
