@@ -77,7 +77,7 @@ class BitDbAdodb extends BitDb {
 			if( $pConnectionHash['db_type'] != 'pdo' ) {
 				$this->mDb->Connect( $pConnectionHash['db_host'], $pConnectionHash['db_user'], $pConnectionHash['db_password'], $pConnectionHash['db_name'] );
 				$split = explode( ':', $gBitDbHost );
-				$this->mType = 'pdo_' . $split[0];
+				$this->mType = 'pdo-' . $split[0];
 			} else {
 //			$dsnString = $pConnectionHash['db_type'] . ':host=localhost;dbname=' . $pConnectionHash['db_name'];
 				$this->mDb->Connect( $pConnectionHash['db_host'], $pConnectionHash['db_user'], $pConnectionHash['db_password'] );
