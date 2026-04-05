@@ -19,7 +19,7 @@
  */
 require_once 'DB.php';
 
-require_once( KERNEL_PKG_CLASS_PATH.'BitDb.php' );
+use Bitweaver\BitDb;
 
 /**
  * This class is used for database access and provides a number of functions to help
