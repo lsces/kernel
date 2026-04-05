@@ -2623,13 +2623,16 @@ class BitSystem extends BitSingleton {
 	public function checkBitVersion() {
 		$local = $this->getBitVersion( false );
 		$ret['local'] = $local;
+		$ret['compare'] = 0;
+		$ret['release'] = 0;
 
 		$error['number'] = 0;
 		$error['string'] = $data = '';
 
+// http://www.bitweaver.org/bitversion.txt is no longer available  
 		// cache the bitversion.txt file locally and update only once a day
 		// if you don't have a connection to bitweaver.org, you can set a cronjob to 'touch' this file once a day to avoid waiting for a timeout.
-		if( !is_file( TEMP_PKG_PATH.'bitversion.txt' ) || ( time() - filemtime( TEMP_PKG_PATH.'bitversion.txt' )) > 86400 ) {
+/*		if( !is_file( TEMP_PKG_PATH.'bitversion.txt' ) || ( time() - filemtime( TEMP_PKG_PATH.'bitversion.txt' )) > 86400 ) {
 			if( $h = fopen( TEMP_PKG_PATH.'bitversion.txt', 'w' )) {
 				$data = KernelTools::bit_http_request( 'http://www.bitweaver.org/bitversion.txt' );
 				if( !preg_match( "/not found/i", $data )) {
@@ -2638,7 +2641,7 @@ class BitSystem extends BitSingleton {
 				}
 			}
 		}
-
+*/
 		if( is_readable( TEMP_PKG_PATH.'bitversion.txt' ) ) {
 			$h = fopen( TEMP_PKG_PATH.'bitversion.txt', 'r' );
 			if( isset( $h ) ) {
