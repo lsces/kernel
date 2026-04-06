@@ -20,7 +20,7 @@
 					<h1>Upgrade Bitweaver</h1>
 					{legend legend=""}
 						<div class="center">
-							<a href="http://www.bitweaver.org/">
+							<a href="https://www.bitweaver.org/">
 								<img src="{$smarty.const.INSTALL_PKG_URL}style/images/bitweaver_logo-trans.png" width="121" height="121" alt="bitweaver logo" title="Click here to visit the upgrade instructions" />
 							</a>
 						</div>
@@ -28,7 +28,7 @@
 							<br /><br />
 							{tr}Please <strong><a href="{$smarty.const.INSTALL_PKG_URL}install.php?step=4">visit the Installer to finish updating your site</a></strong> and unlock it.{/tr}</p>
 						<ul class="help">
-							<li>If you wish to find out more about this upgrade, please visit our <a class="external" href="http://www.bitweaver.org/wiki/upgrade">Upgrade page</a></li>
+							<li>If you wish to find out more about this upgrade, please visit our <a class="external" href="https://www.bitweaver.org/wiki/upgrade">Upgrade page</a></li>
 						</ul>
 
 						<hr />

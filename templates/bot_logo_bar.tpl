@@ -1,5 +1,5 @@
 	<div class="floatleft">
-		<a href="http://www.bitweaver.org/">{biticon ipackage="liberty" iname="bitweaver" ipath="bitweaver/" iexplain="Powered by bitweaver" iforce=icon}</a>&nbsp;&nbsp;
+		<a href="https://www.bitweaver.org/">{biticon ipackage="liberty" iname="bitweaver" ipath="bitweaver/" iexplain="Powered by bitweaver" iforce=icon}</a>&nbsp;&nbsp;
 		<a href="http://php.net/">{biticon ipackage="liberty" iname="php" ipath="bitweaver/" iexplain="Powered by PHP" iforce=icon}</a>&nbsp;&nbsp;
 		<a href="http://smarty.php.net/">{biticon ipackage="liberty" iname="smarty" ipath="bitweaver/" iexplain="Powered by Smarty" iforce=icon}</a>&nbsp;&nbsp;
 		<a href="http://adodb.sourceforge.net/">{biticon ipackage="liberty" iname="adodb" ipath="bitweaver/" iexplain="Powered by Adodb" iforce=icon}</a>&nbsp;&nbsp;

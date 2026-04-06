@@ -1845,7 +1845,7 @@ class BitSystem extends BitSingleton {
 				} else {
 					print "<p>Proceed to the installer <strong>at <a href=\"".BIT_ROOT_URL."install/install.php\">".BIT_ROOT_URL."install/install.php</a></strong> after you have corrected the identified problems.";
 				}
-				print "<br />Consult the bitweaver <a href='http://www.bitweaver.org/wiki/index.php?page=Technical_Documentation'>Technical Documentation</a> if you need more help.</p></body></html>";
+				print "<br />Consult the bitweaver <a href='https://www.bitweaver.org/wiki/index.php?page=Technical_Documentation'>Technical Documentation</a> if you need more help.</p></body></html>";
 			}
 
 			exit;
@@ -2164,7 +2164,7 @@ class BitSystem extends BitSingleton {
 			foreach( $pReqHash as $req => $version ) {
 				//$this->mPackages[$req]['is_requirement'] = true;
 
-				$this->mPackages[$pPackage]['info']['requirements'] .= '<a class="external" href="http://www.bitweaver.org/wiki/'.ucfirst( $req ).'Package">'.ucfirst( $req ).'</a>';
+				$this->mPackages[$pPackage]['info']['requirements'] .= '<a class="external" href="https://www.bitweaver.org/wiki/'.ucfirst( $req ).'Package">'.ucfirst( $req ).'</a>';
 				$max = !empty( $version['max'] ) ? " - ".$version['max'] : '';
 				if( $version['min'] != '0.0.0' ) {
 					$this->mPackages[$pPackage]['info']['requirements'] .= " (".$version['min'].$max.")";
@@ -2376,10 +2376,10 @@ class BitSystem extends BitSingleton {
 					break;
 				}
 
-				$fromattributes['URL'] = "http://www.bitweaver.org/wiki/".ucfirst( $node['package'] )."Package";
+				$fromattributes['URL'] = "https://www.bitweaver.org/wiki/".ucfirst( $node['package'] )."Package";
 				$graph->addNode( $fromNode, $fromattributes );
 
-				$toattributes['URL'] = "http://www.bitweaver.org/wiki/".ucfirst( $node['requires'] )."Package";
+				$toattributes['URL'] = "https://www.bitweaver.org/wiki/".ucfirst( $node['requires'] )."Package";
 				$graph->addNode( $toNode, $toattributes );
 
 				$graph->addEdge(
@@ -2629,12 +2629,12 @@ class BitSystem extends BitSingleton {
 		$error['number'] = 0;
 		$error['string'] = $data = '';
 
-// http://www.bitweaver.org/bitversion.txt is no longer available  
+// https://www.bitweaver.org/bitversion.txt is no longer available  
 		// cache the bitversion.txt file locally and update only once a day
 		// if you don't have a connection to bitweaver.org, you can set a cronjob to 'touch' this file once a day to avoid waiting for a timeout.
 /*		if( !is_file( TEMP_PKG_PATH.'bitversion.txt' ) || ( time() - filemtime( TEMP_PKG_PATH.'bitversion.txt' )) > 86400 ) {
 			if( $h = fopen( TEMP_PKG_PATH.'bitversion.txt', 'w' )) {
-				$data = KernelTools::bit_http_request( 'http://www.bitweaver.org/bitversion.txt' );
+				$data = KernelTools::bit_http_request( 'https://www.bitweaver.org/bitversion.txt' );
 				if( !preg_match( "/not found/i", $data )) {
 					fwrite( $h, $data );
 					fclose( $h );
