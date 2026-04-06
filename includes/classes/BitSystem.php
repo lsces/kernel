@@ -637,7 +637,7 @@ class BitSystem extends BitSingleton {
 	 */
 	public function setHelpInfo( $package, $context, $desc ) {
 		global $gBitSmarty;
-		$gBitSmarty->assign( 'BitweaverHelpInfo', [ 'URL' => "http://doc.bitweaver.org/wiki/index.php?page=$package$context", 'Desc' => $desc ] );
+		$gBitSmarty->assign( 'BitweaverHelpInfo', [ 'URL' => "https://bitweaver.org/wiki/index.php?page=$package$context", 'Desc' => $desc ] );
 	}
 
 	// === getPackageStatus
