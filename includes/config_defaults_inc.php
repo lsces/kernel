@@ -89,10 +89,10 @@ if( !defined( 'DEFAULT_THEME' ) ) {
 if( !defined( 'DISPLAY_ERRORS' ) ) {
 	define( 'DISPLAY_ERRORS', 0 );
 }
-// name of session variable in browser cookie
-if( !defined( 'BIT_SESSION_NAME' ) ) {
-	define( 'BIT_SESSION_NAME', 'BWSESSION'); // '__Secure-BWSESSION' );
-}
+// name of session variable in browser cookie - deprecated, replaced by site specific name
+//if( !defined( 'BIT_SESSION_NAME' ) ) {//
+//	define( 'BIT_SESSION_NAME', 'BWSESSION'); // '__Secure-BWSESSION' );
+//}
 // define where errors are sent
 if( !defined( 'BIT_PHP_ERROR_REPORTING' ) ) {
 	define( 'BIT_PHP_ERROR_REPORTING', E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING );
