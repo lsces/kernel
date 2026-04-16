@@ -21,6 +21,7 @@ namespace Bitweaver;
 use Bitweaver\Users\BitHybridAuthManager;
 use Bitweaver\Wiki\BitPage;
 use Bitweaver\KernelTools;
+use Bitweaver\Users\RolePermUser;
 
 /**
  * required setup
@@ -206,7 +207,7 @@ class BitSystem extends BitSingleton {
 			$whereClause = ' WHERE `package`=? ';
 		}
 
-		if ( empty( $this->mConfig ) && $this->mDb->tableExists('kernel_config') ) {
+		if ( empty( $this->mConfig ) && $this->mDb->mDb && $this->mDb->tableExists('kernel_config') ) {
 			$this->mConfig = [];
 			$query = "SELECT `config_name` ,`config_value`, `package` FROM `" . BIT_DB_PREFIX . "kernel_config` " . $whereClause;
 			if( $rs = $this->mDb->query( $query, $queryVars, -1, -1 ) ) {
@@ -232,7 +233,7 @@ class BitSystem extends BitSingleton {
 		if( empty( $this->mConfig ) ) {
 			$this->loadConfig();
 		}
-		return empty( $this->mConfig[$pName] ) ? $pDefault : $this->mConfig[$pName] ?? '';
+		return empty( $this->mConfig[$pName] ) ? $pDefault : $this->mConfig[$pName];
 	}
 
 	// <<< getConfigMatch
@@ -852,11 +853,13 @@ class BitSystem extends BitSingleton {
 	 * @param string $pFeatureName
 	 * @return bool
 	 */
-	public function isFeatureActive( $pFeatureName ) {
+	public function isFeatureActive( $pFeatureName, $setting = '' ) {
 		$ret = false;
 		if( $pFeatureName ) {
 			$featureValue = $this->getConfig($pFeatureName);
-			$ret = !empty( $featureValue ) && ( $featureValue != 'n' );
+			$ret =  empty($setting)
+				? !empty( $featureValue ) && ( $featureValue != 'n' ) 
+				: !empty( $featureValue ) && ( $featureValue == $setting );
 		}
 		return $ret;
 	}
@@ -1348,8 +1351,8 @@ class BitSystem extends BitSingleton {
 	 * @return void
 	 * @access public
 	 */
-	public function setOnloadScript( $pJavscript ) {
-		array_push( $this->mOnload, $pJavscript );
+	public function setOnloadScript( $pJavascript ) {
+		array_push( $this->mOnload, $pJavascript );
 	}
 	// === setOnunloadScript
 	/**
@@ -1359,8 +1362,8 @@ class BitSystem extends BitSingleton {
 	 * @return void
 	 * @access public
 	 */
-	public function setOnunloadScript( $pJavscript ) {
-		array_push( $this->mOnunload, $pJavscript );
+	public function setOnunloadScript( $pJavascript ) {
+		array_push( $this->mOnunload, $pJavascript );
 	}
 	// === getBrowserTitle
 	/**
@@ -1500,7 +1503,6 @@ class BitSystem extends BitSingleton {
 	/**
 	 * given an extension, return the mime type
 	 *
-	 * @param string $pExtension is the extension of the file or the complete file name
 	 * @return void mime type of entry and populates $this->mMimeTypes with existing mime types
 	 * @access public
 	 */
@@ -1575,7 +1577,7 @@ class BitSystem extends BitSingleton {
 	/**
 	 * given a file, return the mime type
 	 *
-	 * @param string $pExtension is the extension of the file or the complete file name
+	 * @param string $pFile is the extension of the file or the complete file name
 	 * @return string mime type of entry and populates $this->mMimeTypes with existing mime types
 	 * @access public
 	 */
@@ -1690,40 +1692,31 @@ class BitSystem extends BitSingleton {
 
 		$docroot = BIT_ROOT_PATH;
 
-        /*	this seems to prevent bw from running on servers where sessions work perfectly,
-        	yet /var/lib/php/ is writeable only by php, not by bw (which is better)
-        	it seems to be enough to set temp in config/kernel/config_inc.php for a writable dir
-        	if session *actually* don't work - other problem
-        	the installer has similar code which is also not used anymore
-
-		if( ini_get( 'session.save_handler' ) == 'files' ) {
-			$save_path = ini_get( 'session.save_path' );
-
-			if( empty( $save_path ) ) {
-				$errors .= "The session.save_path variable is not setup correctly (its empty).\n";
+		$serverSoftware = $_SERVER['SERVER_SOFTWARE'] ?? '';
+		
+		if( stripos( $serverSoftware, 'nginx' ) !== false ) {
+			$this->setConfig( 'site_server_type', 'nginx' );
+		} elseif( stripos( $serverSoftware, 'apache' ) !== false ) {
+			// Check if mod_xsendfile is actually loaded
+			if( function_exists( 'apache_get_modules' ) && 
+				\in_array( 'mod_xsendfile', apache_get_modules() )) {
+				$this->setConfig( 'site_server_type', 'apache_xsendfile' );
 			} else {
-				if( strpos( $save_path, ";" ) !== false ) {
-					$save_path = substr( $save_path, strpos( $save_path, ";" )+1 );
-				}
-				$open = ini_get( 'open_basedir' );
-				if( !@is_dir( $save_path ) && empty( $open ) ) {
-					$errors .= "The directory '$save_path' does not exist or PHP is not allowed to access it (check open_basedir entry in php.ini).\n";
-				} elseif( !bw_is_writeable( $save_path ) ) {
-					$errors .= "The directory '$save_path' is not writeable.\n";
-				}
+				$this->setConfig( 'site_server_type', 'apache' );
 			}
-
-			if( $errors ) {
-				$save_path = get_temp_dir();
-
-				if( is_dir( $save_path ) && bw_is_writeable( $save_path ) ) {
-					ini_set( 'session.save_path', $save_path );
-
-					$errors = '';
-				}
-			}
+		} else {
+			$this->setConfig( 'site_server_type', 'other' );
 		}
-        */
+
+		$cookie_site = 'bit-user-'.strtolower( preg_replace( "/[^a-zA-Z0-9]/", "", $this->getConfig( 'site_title', 'bitweaver' )));
+
+		$authCheck = "<?php\n"
+			. "session_name( '" . $cookie_site . "' );\n"
+			. "session_start();\n"
+			. "\$gBitDbHost='firebird:dbname=localhost:bitweaver;charset=utf8';\n"
+			. "\$gBitDbUser='SYSDBA';\n"
+			. "\$gBitDbPassword='smallBRO';\n";
+		file_put_contents( CONFIG_PKG_PATH . 'kernel/auth_config.php', $authCheck );
 
 		$wwwuser = '';
 		$wwwgroup = '';
@@ -2088,7 +2081,7 @@ class BitSystem extends BitSingleton {
 	 * getVersion will fetch the version number of a given package
 	 *
 	 * @param string $pPackage Name of package - if not given, bitweaver_version will be stored
-	 * @param string $pVersion Version number
+	 * @param string $pDefault Version number
 	 * @return string version number on success
 	 */
 	public function getVersion( ?string $pPackage = null, $pDefault = '0.0.0' ) {
@@ -2150,7 +2143,7 @@ class BitSystem extends BitSingleton {
 	/**
 	 * registerRequirements
 	 *
-	 * @param string $pParams
+	 * @param string $pPackage
 	 * @param array $pReqHash
 	 * @return void
 	 */
