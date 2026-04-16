@@ -192,7 +192,7 @@ abstract class BitBase {
 	/**
 	 * storeInCache
 	 *
-	 * @param string $pCacheKey unique identifier for object in cache store
+	 * @param string // $pCacheKey unique identifier for object in cache store
 	 * @access public
 	 * @return bool true on success, false on failure
 	 */
@@ -364,7 +364,7 @@ abstract class BitBase {
 	/**
 	 * verifyIdParamter Determines if any given variable exists and is a number
 	 *
-	 * @param mixed $pId this can be a string, number or array. if it's an array, all values in the array will be checked to see if they are numeric
+	 * @param mixed $pKey this can be a string, number or array. if it's an array, all values in the array will be checked to see if they are numeric
 	 * @access public
 	 * @return bool true if the input was numeric, false if it wasn't
 	 */
@@ -399,8 +399,8 @@ abstract class BitBase {
 	 * getParameter Gets a hash value it exists, or returns an optional default
 	 *
 	 * @param array $pParamHash Hash of key=>value pairs
-	 * @param string $pHashKey Key used to search for value
-	 * @param string $pDefault Default value to return if not found. null if nothing is passed in.
+	 * @param string $pKey Key used to search for value
+	 * @param string $pDefaultValue Default value to return if not found. null if nothing is passed in.
 	 * @return array|string|null
 	 */
 	public static function getParameter( array $pParamHash, string $pKey, ?string $pDefaultValue = null ): array|string|null {
@@ -411,8 +411,8 @@ abstract class BitBase {
 	 * getIdParameter Gets an in-bounds, integer hash value it exists, or returns an optional default
 	 *
 	 * @param array $pParamHash Hash of key=>value pairs
-	 * @param string $pHashKey Key used to search for value
-	 * @param string $pDefault Default value to return if not found. null if nothing is passed in.
+	 * @param string $pKey Key used to search for value
+	 * @param string $pDefaultValue Default value to return if not found. null if nothing is passed in.
 	 * @return bool true if the input was numeric, false if it wasn't
 	 */
 	public static function getIdParameter( array &$pParamHash, string $pKey, ?string $pDefaultValue = null ) {
@@ -568,7 +568,7 @@ abstract class BitBase {
 	*/
 	public static function postGetList( array &$pListHash ): void {
 		global $gBitSystem;
-		$pListHash['listInfo']['page_records'] = /* !empty( $pListHash['page_records'] ? $pListHash['page_records'] : */ $pListHash['max_records'];
+		$pListHash['listInfo']['page_records'] = !empty( $pListHash['page_records']) ? $pListHash['page_records'] : $pListHash['max_records'];
 		if( !isset( $pListHash['cant'] ) ) {
 			$pListHash['cant'] = $pListHash['max_records'];
 		}
