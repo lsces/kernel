@@ -144,7 +144,7 @@ class BitSystem extends BitSingleton {
 		ini_set( "arg_separator.output", "&amp;" );
 		// Remove automatic quotes added to POST/COOKIE by PHP
 		foreach( $_REQUEST as $k => $v ) {
-			if( !is_array( $_REQUEST[$k] ) ) {
+			if( !\is_array( $_REQUEST[$k] ) ) {
 				$_REQUEST[$k] = stripslashes( $v );
 			}
 		}
@@ -448,7 +448,7 @@ class BitSystem extends BitSingleton {
 
 		$this->outputHeader();
 
-		if( is_array( $pOutput ) ) {
+		if( \is_array( $pOutput ) ) {
 			$gBitSmarty->assign( 'jsonHash', $pOutput );
 		}
 
@@ -465,7 +465,7 @@ class BitSystem extends BitSingleton {
 
 		$this->outputHeader();
 
-		if( is_array( $pOutput ) ) {
+		if( \is_array( $pOutput ) ) {
 			foreach( $pOutput as $out ) {
 				print "$out\n";
 			}
@@ -1021,7 +1021,7 @@ class BitSystem extends BitSingleton {
 	 */
 	public function registerAppMenu( $pMenuHash, $pMenuTitle = null, $pTitleUrl = null, $pMenuTemplate = null, $pAdminPanel = false ) {
 		$menuType = !empty( $pMenuHash['menu_type'] ) ? $pMenuHash['menu_type'] : 'bar';
-		if( is_array( $pMenuHash ) ) {
+		if( \is_array( $pMenuHash ) ) {
 			// shorthand
 			$pkg = $pMenuHash['package_name'];
 
@@ -1310,7 +1310,7 @@ class BitSystem extends BitSingleton {
 			} else {
 				$url = USERS_PKG_URL . 'signin.php';
 			}
-		} elseif( in_array( $pIndexType, array_keys( $gBitSystem->mPackages ) ) ) {
+		} elseif( \in_array( $pIndexType, array_keys( $gBitSystem->mPackages ) ) ) {
 			$work = strtoupper( $pIndexType ).'_PKG_URL';
 			if (defined("$work")) {
 				$url = constant( $work );
@@ -1412,7 +1412,7 @@ class BitSystem extends BitSingleton {
 				foreach( [ 'parameters', 'ihash' ] as $paramKey ) {
 					if( !empty( $pListInfo[$paramKey] ) ) {
 						foreach( $pListInfo['parameters'] as $param=>$value ) {
-							if( is_array( $value ) ) {
+							if( \is_array( $value ) ) {
 								foreach( $value as $v ) {
 									if( !empty( $v ) ) {
 										$queryString .= $param.'[]='.$v.'&amp;';
@@ -1427,7 +1427,7 @@ class BitSystem extends BitSingleton {
 
 				foreach( [ 'max_records', 'sort_mode', 'find' ] as $paramKey ) {
 					if( !empty( $pListInfo[$paramKey] ) ) {
-						if( is_array( $pListInfo[$paramKey] ) ) {
+						if( \is_array( $pListInfo[$paramKey] ) ) {
 							foreach( $pListInfo[$paramKey] as $v ) {
 								$queryString = $paramKey.'[]='.$v.'&amp;';
 							}
@@ -1709,13 +1709,13 @@ class BitSystem extends BitSingleton {
 		}
 
 		$cookie_site = 'bit-user-'.strtolower( preg_replace( "/[^a-zA-Z0-9]/", "", $this->getConfig( 'site_title', 'bitweaver' )));
-
+		global $gBitDbHost, $gBitDbUser, $gBitDbPassword;
 		$authCheck = "<?php\n"
 			. "session_name( '" . $cookie_site . "' );\n"
 			. "session_start();\n"
-			. "\$gBitDbHost='firebird:dbname=localhost:bitweaver;charset=utf8';\n"
-			. "\$gBitDbUser='SYSDBA';\n"
-			. "\$gBitDbPassword='smallBRO';\n";
+			. "\$gBitDbHost='$gBitDbHost';\n"
+			. "\$gBitDbUser='$gBitDbUser';\n"
+			. "\$gBitDbPassword='$gBitDbPassword';\n";
 		file_put_contents( CONFIG_PKG_PATH . 'kernel/auth_config.php', $authCheck );
 
 		$wwwuser = '';
@@ -2046,7 +2046,7 @@ class BitSystem extends BitSingleton {
 		if( empty( $this->mPackages[$pPackage]['defaults'] ) ) {
 			$this->mPackages[$pPackage]['defaults'] = [];
 		}
-		if( is_array( $pMixedDefaultSql ) ) {
+		if( \is_array( $pMixedDefaultSql ) ) {
 			foreach( $pMixedDefaultSql as $def ) {
 				$this->mPackages[$pPackage]['defaults'][] = $def;
 			}
@@ -2177,7 +2177,7 @@ class BitSystem extends BitSingleton {
 	 * @return bool true on success, false on failure
 	 */
 	public function verifyRequirements( &$pReqHash ) {
-		if( !empty( $pReqHash ) && is_array( $pReqHash )) {
+		if( !empty( $pReqHash ) && \is_array( $pReqHash )) {
 			foreach( $pReqHash as $pkg => $versions ) {
 				if( empty( $versions['min'] )) {
 					$this->mErrors['version_min'] = "You have to provide a minimum version number for the $pkg requirement. If you just want the required package to be present, please use 0.0.0 as minimum version.";
@@ -2432,7 +2432,7 @@ class BitSystem extends BitSingleton {
 						foreach( array_keys( $this->mPackages[$package]['tables'] ) as $table ) {
 							// painful hardcoded exception for bitcommerce
 							$fullTable = $package == 'bitcommerce' ? $table : $prefix.$table;
-							$tablePresent = in_array( $fullTable, $dbTables );
+							$tablePresent = \in_array( $fullTable, $dbTables );
 							if( $tablePresent ) {
 								$ret['present'][$package][] = $table;
 							} else {
