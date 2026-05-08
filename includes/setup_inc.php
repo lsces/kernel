@@ -57,7 +57,7 @@ if( !is_object( $gBitSmarty ) ) {
 	// Load Bitweaver Plugins
 	$gBitSmarty->addExtension(new Themes\BitweaverExtension() );
 	// set the default handler
-	$gBitSmarty->addDefaultModifiers( [ 'add_link_ticket', 'tr' ] );
+	$gBitSmarty->addDefaultModifiers( [ 'tr' ] );
 	$gBitSmarty->registerResource( 'bitpackage', new ResourceBitpackage() );
 
 	if( isset( $_REQUEST['highlight'] ) ) {
