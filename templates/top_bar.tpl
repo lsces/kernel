@@ -37,9 +37,9 @@
 					<a class="dropdown-toggle" id="dLabel" role="button" data-toggle="dropdown" data-target="#"><i class="icon-user"></i> {displayname hash=$gBitUser->mInfo nolink=1} <b class="caret"></b></a>
 					<ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">
 						<li><a href="{$gBitUser->getDisplayUrl()}">{tr}My Profile{/tr}</a></li>
-						<li><a href="{$smarty.const.USERS_PKG_URL}my">{tr}Dashboard{/tr}</a></li>
+						<li><a href="{$smarty.const.USERS_PKG_URL}my.php">{tr}Dashboard{/tr}</a></li>
 					{if $gBitSystem->isFeatureActive( 'users_preferences' )}
-						<li><a class="item" href="{$smarty.const.USERS_PKG_URL}preferences">{tr}Preferences{/tr}</a></li>
+						<li><a class="item" href="{$smarty.const.USERS_PKG_URL}preferences.php">{tr}Preferences{/tr}</a></li>
 					{/if}
 						<li><a href="{$smarty.const.USERS_PKG_URL}logout.php">{tr}Logout{/tr}</a></li>
 						{if $adminMenu}
