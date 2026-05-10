@@ -23,7 +23,7 @@ namespace Bitweaver;
 /**
  * set error handling
  */
-if( !defined( 'BIT_INSTALL' ) &&  !defined( 'ADODB_ERROR_HANDLER' )  ) {
+if( !\defined( 'BIT_INSTALL' ) &&  !defined( 'ADODB_ERROR_HANDLER' )  ) {
 	define( 'ADODB_ERROR_HANDLER', '\Bitweaver\bitdb_error_handler' );
 }
 
@@ -34,7 +34,7 @@ if( !defined( 'BIT_INSTALL' ) &&  !defined( 'ADODB_ERROR_HANDLER' )  ) {
 function bit_db_debug( $pLevel = 99 ) {
 	global $gDebug, $gBitDb;
 	$gDebug = $pLevel;
-	if( is_object( $gBitDb) ) {
+	if( \is_object( $gBitDb) ) {
 		$gBitDb->debug( $pLevel );
 	}
 }
@@ -59,7 +59,7 @@ function bit_print_log( $pLogParams, $pLogMessages ) {
 
 	for( $i = 1; $i < func_num_args(); $i++ ) { 
     	if( $pLogMessage = func_get_arg( $i ) ) {
-			$errlines = explode( "\n", is_array( $pLogMessage ) || is_object( $pLogMessage ) ? vc( $pLogMessage, false ) : $pLogMessage);
+			$errlines = explode( "\n", \is_array( $pLogMessage ) || \is_object( $pLogMessage ) ? vc( $pLogMessage, false ) : $pLogMessage);
 			foreach ($errlines as $txt) { 
 				print "$virtualHost $remoteAddr $ident $userName $logTimestamp \"$scriptFilename\" $statusCode $executionTime \"$userAgent\" $pLogMessage\n";
 			}
@@ -72,7 +72,7 @@ function bit_print_log( $pLogParams, $pLogMessages ) {
 function bit_error_log() {
 	for( $i = 0; $i < func_num_args(); $i++ ) { 
     	if( $pLogMessage = func_get_arg( $i ) ) {
-			$errlines = explode( "\n", is_array( $pLogMessage ) || is_object( $pLogMessage ) ? vc( $pLogMessage, false ) : $pLogMessage);
+			$errlines = explode( "\n", \is_array( $pLogMessage ) || \is_object( $pLogMessage ) ? vc( $pLogMessage, false ) : $pLogMessage);
 			foreach ($errlines as $txt) { 
 				error_log($txt); 
 			}
@@ -83,12 +83,12 @@ function bit_error_log() {
 
 function emergency_break(  ) {
 	global $gBitSystem;
-	if( is_object( $gBitSystem ) ) {
+	if( \is_object( $gBitSystem ) ) {
 		$gBitSystem->setHttpStatus( HttpStatusCodes::HTTP_BAD_REQUEST );
 	}
 
 	vd( 'EMERGENCY BREAK' );
-	foreach (func_get_args () as $arg){
+	foreach (\func_get_args () as $arg){
 		vd( $arg );
 	}
 	bt(); die;
@@ -96,13 +96,13 @@ function emergency_break(  ) {
 
 if( !function_exists( 'eb' ) ) {
 	function eb() {
-		emergency_break( func_get_args() );
+		emergency_break( \func_get_args() );
 	}
 }
 
 function bit_error_email ( $pSubject, $pMessage, $pGlobalVars=[] ) {
 	// You can prevent sending of error emails by adding define('ERROR_EMAIL', ''); in your config/kernel/config_inc.php
-	$errorEmail = defined( 'ERROR_EMAIL' ) ? ERROR_EMAIL : (!empty( $_SERVER['SERVER_ADMIN'] ) ? $_SERVER['SERVER_ADMIN'] : null);
+	$errorEmail = \defined( 'ERROR_EMAIL' ) ? ERROR_EMAIL : (!empty( $_SERVER['SERVER_ADMIN'] ) ? $_SERVER['SERVER_ADMIN'] : null);
 
 	$separator = "\n";
 	$indent = "  ";
@@ -117,7 +117,7 @@ function bit_error_email ( $pSubject, $pMessage, $pGlobalVars=[] ) {
 	}
 	foreach( $pGlobalVars as $global => $hash ) {
 		if( !empty( $hash )) {
-			$parameters .= $separator.$global.': '.$separator.var_export( $hash, true ).$separator;
+			$parameters .= "$separator$global: $separator".var_export( $hash, true ).$separator;
 		}
 	}
 	$parameters = preg_replace( "/\n/", $separator.$indent, $parameters );
@@ -151,13 +151,12 @@ function bit_error_handler ( $errno, $errstr, $errfile, $errline, $errcontext=nu
 
         }
 
-		$isReported = true;
 		if( $isReported ) {
 //eb( $isReported, $errType, $errno, $reportingLevel, $errfile );
 			$errorSubject = 'PHP '.$errType.' on '.php_uname( 'n' ).': '.$errstr;
 			$errorString = $errType." [#$errno]: $errstr \n in $errfile on line $errline\n\n".bit_error_string( array( 'errno'=>$errno, 'db_msg'=>$errType ) );
-			if( defined( 'IS_LIVE' ) && IS_LIVE ) {
-				if( defined( 'ERROR_EMAIL' ) ) {
+			if( \defined( 'IS_LIVE' ) && IS_LIVE ) {
+				if( \defined( 'ERROR_EMAIL' ) ) {
         			// Send an e-mail to the administrator
 					bit_error_email( $errorSubject, $errorString );
 				} else {
@@ -200,7 +199,7 @@ function bit_display_error( $pLogMessage, $pSubject, $pFatal = true ) {
 
 	error_log( $pLogMessage );
 
-	if( ( !defined( 'IS_LIVE' ) || !IS_LIVE ) ) {
+	if( ( !\defined( 'IS_LIVE' ) || !IS_LIVE ) ) {
 		print '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "DTD/xhtml1-strict.dtd">
 			<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 			<head>
@@ -244,10 +243,10 @@ function bit_error_string( $iDBParms = [] ) {
 
 	$acctStr = is_a( $gBitUser, 'BitUser' ) ? "ID: ".$gBitUser->mInfo['user_id']." - Login: ".$gBitUser->mInfo['login']." - e-mail: ".$gBitUser->mInfo['email'] : "User unknown";
 
-	$info  = $indent."[ - ".BIT_MAJOR_VERSION.".".BIT_MINOR_VERSION.".".BIT_SUB_VERSION." ".BIT_LEVEL." - ] [ $date ]".$separator;
-	$info .= $indent."-----------------------------------------------------------------------------------------------".$separator;
-	$info .= $indent."#### USER AGENT: ".$_SERVER['HTTP_USER_AGENT'].$separator;
-	$info .= $indent."#### ACCT: ".$acctStr.$separator;
+	$info  = "{$indent}[ - ".BIT_MAJOR_VERSION.".".BIT_MINOR_VERSION.".".BIT_SUB_VERSION." ".BIT_LEVEL." - ] [ $date ]".$separator;
+	$info .= "$indent-----------------------------------------------------------------------------------------------$separator";
+	$info .= "$indent#### USER AGENT: ".$_SERVER['HTTP_USER_AGENT'].$separator;
+	$info .= "$indent#### ACCT: $acctStr$separator";
 	$uri = '';
 	if( !empty( $_SERVER['SCRIPT_URI'] ) ) {
 		$uri = $_SERVER['SCRIPT_URI'].(!empty($_SERVER['QUERY_STRING'])?'?'.$_SERVER['QUERY_STRING']:'').$separator;
@@ -257,31 +256,31 @@ function bit_error_string( $iDBParms = [] ) {
 		$uri = \implode( ' ', $argv );
 	}
 
-	$info .= $indent."#### URL: ".$uri.$separator;
+	$info .= "$indent#### URL: $uri$separator";
 	if( isset($_SERVER['HTTP_REFERER'] ) ) {
 		$info .= $indent."#### REFERRER: $_SERVER[HTTP_REFERER]".$separator;
 	}
 	$info .= $indent."#### HOST: $_SERVER[HTTP_HOST]".$separator;
 	$info .= $indent."#### IP: $_SERVER[REMOTE_ADDR]".$separator;
 	if( !empty( $gBitDb ) ) {
-		$info .= $indent."#### DB: ".$gBitDb->mDb->databaseType.'://'.$gBitDb->mDb->user.'@'.$gBitDb->mDb->host.'/'.$gBitDb->mDb->database.$separator;
+		$info .= "$indent#### DB: ".$gBitDb->mDb->databaseType.'://'.$gBitDb->mDb->user.'@'.$gBitDb->mDb->host.'/'.$gBitDb->mDb->database.$separator;
 	}
 
 	if( $gBitDb && isset( $php_errormsg ) ) {
-		$info .= $indent."#### PHP: ".$php_errormsg.$separator;
+		$info .= "$indent#### PHP: $php_errormsg$separator";
 	}
 
 	if ( !empty( $iDBParms['sql'] ) ) {
-		$badSpace = array("\n", "\t");
-		$info .= $indent."#### SQL: ".str_replace($badSpace, ' ', $iDBParms['sql']).$separator;
+		$badSpace = [ "\n", "\t" ];
+		$info .= "$indent#### SQL: ".str_replace($badSpace, ' ', $iDBParms['sql']).$separator;
 		if( is_array( $iDBParms['p2'] ) ) {
-			$info .= $indent.'['.implode( ', ', $iDBParms['p2'] ).']'.$separator;
+			$info .= "{$indent}[".implode( ', ', $iDBParms['p2'] ).']'.$separator;
 		}
 	}
 
 	$errno = !empty( $iDBParms['errno'] ) ? 'Errno: '.$iDBParms['errno'] : '';
 	if( !empty( $iDBParms['db_msg'] ) ) {
-		$info .= $indent."#### ERROR CODE: ".$errno."  Message: ".$iDBParms['db_msg'];
+		$info .= "$indent#### ERROR CODE: $errno  Message: ".$iDBParms['db_msg'];
 	}
 
 	$stackTrace = bit_stack();
@@ -299,7 +298,7 @@ function bit_error_string( $iDBParms = [] ) {
 if (!function_exists('bt')) {	// Make sure another backtrace function does not exist
 function bt() {
 	vvd( func_get_args() );
-	print '<pre>'."\t".date( "Y-m-d H:i:s" )."\n".bit_stack()."</pre>\n";
+	print "<pre>\t".date( "Y-m-d H:i:s" )."\n".bit_stack()."</pre>\n";
 }
 }	// End if function_exists('bt')
 
@@ -312,7 +311,7 @@ function bit_stack( $pDepth = 999 ) {
 
 		$traceArr = debug_backtrace();
 		array_shift($traceArr);
-		$tabs = sizeof($traceArr)-1;
+		$tabs = \sizeof($traceArr)-1;
 		$indent = '';
 		$sClass = '';
 
@@ -333,15 +332,15 @@ function bit_stack( $pDepth = 999 ) {
 			}
 			if ( isset($arr['args']) ) {
 				foreach( $arr['args'] as $v ) {
-					if (is_null($v) ) {
+					if (\is_null($v) ) {
 						$args[] = 'null';
-					} elseif (is_array($v)) { $args[] = 'Array['.sizeof($v).']';
-					} elseif (is_object($v)) { $args[] = 'Object:'.get_class($v);
-					} elseif (is_bool($v)) { $args[] = $v ? 'true' : 'false';
+					} elseif (\is_array($v)) { $args[] = 'Array['.\sizeof($v).']';
+					} elseif (\is_object($v)) { $args[] = 'Object:'.\get_class($v);
+					} elseif (\is_bool($v)) { $args[] = $v ? 'true' : 'false';
 					} else {
 						$v = (string) @$v;
 						$str = htmlspecialchars(substr($v,0,$MAXSTRLEN));
-						if (strlen($v) > $MAXSTRLEN) $str .= '...';
+						if (\strlen($v) > $MAXSTRLEN) $str .= '...';
 						$args[] = $str;
 					}
 				}
@@ -350,8 +349,8 @@ function bit_stack( $pDepth = 999 ) {
 				$s .= "\n    ".$indent.'    -> ';
 				$s .= $sClass.$arr['function'].'('.implode(', ',$args).')';
 			}
-			$s .= "\n    ".$indent;
-			$s .= @sprintf(" LINE: %4d, %s", !empty($arr['line']) ? $arr['line'] : 'none', !empty($arr['file']) ? $arr['file'] : 'none');
+			$s .= "\n    $indent";
+			$s .= @\sprintf(" LINE: %4d, %s", !empty($arr['line']) ? $arr['line'] : 'none', !empty($arr['file']) ? $arr['file'] : 'none');
 			$indent = '';
 		}
 		$s .= "\n";
@@ -361,7 +360,7 @@ function bit_stack( $pDepth = 999 ) {
 
 // variable argument var dump
 function vvd() {
-	for( $i = 0; $i < func_num_args(); $i++ ) { 
+	for( $i = 0; $i < \func_num_args(); $i++ ) { 
     	vd( func_get_arg( $i ) );
 	} 
 }
@@ -413,7 +412,7 @@ function vvc() {
 // var capture variable in something nicely readable in web browser
 function vc( $iVar, $pHtml=true ) {
 	ob_start();
-	if( is_object( $iVar ) ) {
+	if( \is_object( $iVar ) ) {
 		if( isset( $iVar->mDb ) ) {
 			unset( $iVar->mDb );
 		}
@@ -431,7 +430,7 @@ function vc( $iVar, $pHtml=true ) {
 		new \dBug( $iVar, "", false );
 	} else {
 		print '<pre>';
-		if( is_object( $iVar ) ) {
+		if( \is_object( $iVar ) ) {
 			var_dump( $iVar );
 		} elseif( is_string( $iVar ) && !empty( $_SERVER['HTTP_USER_AGENT'] ) && $_SERVER['HTTP_USER_AGENT'] != 'cron' ) {
 			var_dump( htmlentities( $iVar ) );
@@ -442,13 +441,13 @@ function vc( $iVar, $pHtml=true ) {
 	}
 	$ret = ob_get_contents();
 	ob_end_clean();
-	return $ret."\n";
+	return "$ret\n";
 }
 
 
 function va( $iVar ) {
 	$dbg = var_export($iVar, 1);
-	$dbg = highlight_string("<?\n". $dbg."\n?>", 1);
+	$dbg = highlight_string( "<?\n$dbg\n?>", 1);
 	echo "<div><span style='background-color:black;color:white;padding:.5ex;font-weight:bold;'>Var Anatomy</div>";
 	echo "<div style='border:1px solid black;padding:2ex;background-color:#efe6d6;'>$dbg</div>";
 }
