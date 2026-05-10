@@ -207,7 +207,7 @@ class BitSystem extends BitSingleton {
 			$whereClause = ' WHERE `package`=? ';
 		}
 
-		if ( empty( $this->mConfig ) && $this->mDb->mDb && $this->mDb->tableExists('kernel_config') ) {
+		if ( empty( $this->mConfig ) && !defined( 'BIT_INSTALL' ) ) {
 			$this->mConfig = [];
 			$query = "SELECT `config_name` ,`config_value`, `package` FROM `" . BIT_DB_PREFIX . "kernel_config` " . $whereClause;
 			if( $rs = $this->mDb->query( $query, $queryVars, -1, -1 ) ) {
