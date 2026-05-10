@@ -28,7 +28,7 @@ require_once KERNEL_PKG_INCLUDE_PATH.'bit_error_inc.php';
 use Bitweaver\KernelTools;
 
 // set error reporting
-error_reporting( E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING ); // BIT_PHP_ERROR_REPORTING ); //
+error_reporting( BIT_PHP_ERROR_REPORTING );
 
 if( ini_get( 'safe_mode' ) && ini_get( 'safe_mode_gid' )) {
 	umask( 0007 );
@@ -122,8 +122,9 @@ if( $gBitSystem->isDatabaseValid() ) {
 	}
 	define( 'UTIL_PKG_URL', $root.'util/' );
 	define( 'LIBERTY_PKG_URL', $root.'liberty/' );
-	
+
 	// load only installed and active packages
+
 	$gBitSystem->scanPackages( 'bit_setup_inc.php', true, 'active', true, true );
 	$gBitSmarty->scanPackagePluginDirs();
 	
