@@ -425,7 +425,7 @@ function vc( $iVar, $pHtml=true ) {
 			var_dump( $iVar );
 		}
 	} elseif( $pHtml && !empty( $_SERVER['HTTP_USER_AGENT'] ) && $_SERVER['HTTP_USER_AGENT'] != 'cron' && ((is_object( $iVar ) && !empty( $iVar )) || is_array( $iVar )) ) {
-		include_once UTIL_PKG_INCLUDE_PATH.'dBug/dBug.php';
+		include_once KERNEL_PKG_INCLUDE_PATH.'dBug/dBug.php';
 		new \dBug( $iVar, "", false );
 	} else {
 		print '<pre>';
