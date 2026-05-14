@@ -88,7 +88,7 @@ use Bitweaver\Liberty\LibertyBase;
 	function buildMailer($pMessage) {
 		global $gBitSystem, $gBitLanguage;
 
-		require_once UTIL_PKG_INCLUDE_PATH . 'phpmailer/class.phpmailer.php';
+		require_once EXTERNAL_LIBS_PATH.'phpmailer/class.phpmailer.php';
 
 		$mailer = new PHPMailer();
 		$mailer->From     = !empty( $pMessage['from'] ) ? $pMessage['from'] : $gBitSystem->getConfig( 'bitmailer_sender_email', $gBitSystem->getConfig( 'site_sender_email', $_SERVER['SERVER_ADMIN'] ) );
@@ -107,7 +107,7 @@ use Bitweaver\Liberty\LibertyBase;
 			$mailer->Password = $gBitSystem->getConfig( 'bitmailer_smtp_password' );
 		}
 		$mailer->WordWrap = $gBitSystem->getConfig( 'bitmailer_word_wrap', 75 );
-		if( !$mailer->SetLanguage( $gBitLanguage->getLanguage(), UTIL_PKG_INCLUDE_PATH.'phpmailer/language/' ) ) {
+		if( !$mailer->SetLanguage( $gBitLanguage->getLanguage(), EXTERNAL_LIBS_PATH.'phpmailer/language/' ) ) {
 			$mailer->SetLanguage( 'en' );
 		}
 
