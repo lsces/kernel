@@ -74,8 +74,7 @@ if ($offset > 0) {
 $gBitSmarty->assign('listpages', $listpages["data"]);
 //print_r($listpages["data"]);
 
-
 // Display the template
-$gBitSystem->display( 'bitpackage:kernel/list_cache.tpl', null, array( 'display_mode' => 'list' ));
+$gBitSystem->display( 'bitpackage:kernel/list_cache.tpl', null, [ 'display_mode' => 'list' ]);
 
 ?>

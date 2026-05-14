@@ -29,7 +29,6 @@
 /**
  * Initialization
  */
-use Bitweaver\KernelTools;
 use Bitweaver\Liberty\LibertyBase;
 
 /**
@@ -48,15 +47,15 @@ use Bitweaver\Liberty\LibertyBase;
 	 * $pBody - The Body of the Email
 	 * $pRecipients - An associative array with keys for email and optionally login and real_name
 	 **/
-	function sendEmail($pSubject, $pBody, $pRecipients, $pHeaders=array() ){
+	function sendEmail($pSubject, $pBody, $pRecipients, $pHeaders=[] ){
 		global $gBitSystem;
 		$message = $pHeaders;
 		$message['subject'] = $pSubject;
-        if( is_string( $pBody ) ){
-            $message['message'] = $pBody;
-        }elseif( is_array( $pBody ) ){
-            $message = array_merge( $message, $pBody );
-        }
+		if( is_string( $pBody ) ){
+			$message['message'] = $pBody;
+		}elseif( is_array( $pBody ) ){
+			$message = array_merge( $message, $pBody );
+		}
 		$mailer = $this->buildMailer($message);
 
 		if( is_string( $pRecipients ) ) {
@@ -147,6 +146,5 @@ use Bitweaver\Liberty\LibertyBase;
 
 		return $mailer;
 	}
-
 
 }

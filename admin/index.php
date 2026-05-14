@@ -20,7 +20,7 @@ if( !empty( $_REQUEST["page"] )) {
 
 	// only admins may use this page
 	$gBitSystem->verifyPermission( 'p_'.$page.'_admin' );
-	
+
 	if( preg_match( '/\.php/', $page )) {
 		$adminPage = $page;
 	} else {
@@ -61,7 +61,7 @@ if( !empty( $_REQUEST["page"] )) {
 	$gBitSmarty->assign( 'adminFile', $adminFile );
 	$gBitSmarty->assign( 'page', $page );
 	$gBitSystem->setBrowserTitle( preg_replace( '/_/', ' ', $page )." Settings" );
-	
+
 	include_once $adminPage;
 
 	// Spiderr - a bit hackish, but need to force preferences refresh

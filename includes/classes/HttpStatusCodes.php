@@ -10,7 +10,7 @@
  */
 
 namespace Bitweaver;
- 
+
 class HttpStatusCodes {
 	// [Informational 1xx]
 	const HTTP_CONTINUE = 100;
@@ -59,8 +59,8 @@ class HttpStatusCodes {
 	const HTTP_SERVICE_UNAVAILABLE = 503;
 	const HTTP_GATEWAY_TIMEOUT = 504;
 	const HTTP_VERSION_NOT_SUPPORTED = 505;
-		
-	private static $messages = array(
+
+	private static $messages = [
 		// [Informational 1xx]
 		100=>'100 Continue',
 		101=>'101 Switching Protocols',
@@ -106,20 +106,20 @@ class HttpStatusCodes {
 		502=>'502 Bad Gateway',
 		503=>'503 Service Unavailable',
 		504=>'504 Gateway Timeout',
-		505=>'505 HTTP Version Not Supported'
-	);
-	
+		505=>'505 HTTP Version Not Supported',
+	];
+
 	public static function httpHeaderFor($code) {
 		return 'HTTP/1.1 ' . static::$messages[$code];
 	}
 	public static function getMessageForCode($code) {
 		return static::$messages[$code];
 	}
-	
+
 	public static function isError($code) {
 		return is_numeric($code) && $code >= static::HTTP_BAD_REQUEST;
 	}
-	
+
 	public static function canHaveBody($code) {
 		return
 			// True if not in 100s

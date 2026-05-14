@@ -57,7 +57,7 @@ class BitLogger {
 			self::WARNING,
 			self::NOTICE,
 			self::INFO,
-			self::DEBUG
+			self::DEBUG,
 		];
 
 		// Validate log level

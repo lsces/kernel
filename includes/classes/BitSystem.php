@@ -18,10 +18,9 @@
  */
 
 namespace Bitweaver;
+
 use Bitweaver\Users\BitHybridAuthManager;
 use Bitweaver\Wiki\BitPage;
-use Bitweaver\KernelTools;
-use Bitweaver\Users\RolePermUser;
 
 /**
  * required setup
@@ -102,11 +101,11 @@ class BitSystem extends BitSingleton {
 	public$mRequirements = [];
 	public $mServerTimestamp;
 	public $mTimer;
-	
+
 	// Output http status
 	public $mHttpStatus = HttpStatusCodes::HTTP_OK;
 
-    protected static $singleton = null;
+	protected static $singleton = null;
 	protected static function getSingleInstance() {
 		return static::$singleton;
 	}
@@ -190,8 +189,6 @@ class BitSystem extends BitSingleton {
 		}
 		return $ret;
 	}
-
-	
 
 	/**
 	 * Load all preferences and store them in $this->mConfig
@@ -411,10 +408,9 @@ class BitSystem extends BitSingleton {
 		mail($pMailHash['email'],
 			$pMailHash['subject'].' '.$_SERVER["SERVER_NAME"],
 			$pMailHash['body'],
-			"From: ".$fromEmail."\r\nContent-type: text/plain;charset=utf-8\r\n$extraHeaders"
+			"From: ".$fromEmail."\r\nContent-type: text/plain;charset=utf-8\r\n$extraHeaders",
 		);
 	}
-
 
 	/**
 	 * Set the http status, most notably for 404 not found for deleted content
@@ -425,7 +421,6 @@ class BitSystem extends BitSingleton {
 	public function setHttpStatus( $pHttpStatus ) {
 		$this->mHttpStatus = $pHttpStatus;
 	}
-
 
 	public function outputHeader() {
 		// Add the user to an apache ENV variable so it can be logged, like:
@@ -486,7 +481,7 @@ class BitSystem extends BitSingleton {
 	public function display( $pMid, $pBrowserTitle = null, $pOptionsHash = [] ) {
 		global $gBitSmarty, $gBitThemes, $gContent;
 		$gBitSmarty->verifyCompileDir();
-		
+
 		$this->outputHeader();
 		if( $this->mHttpStatus != 200 ) {
 //			error_log( "HTTP/1.0 ".HttpStatusCodes::getMessageForCode( $this->mHttpStatus )." http://".$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'] );
@@ -520,7 +515,7 @@ class BitSystem extends BitSingleton {
 		}
 
 		if( !empty( $pBrowserTitle )) {
-			$this->setBrowserTitle( $pBrowserTitle ); 
+			$this->setBrowserTitle( $pBrowserTitle );
 		}
 
 		// populate meta description with something useful so you are not penalized/ignored by web crawlers
@@ -549,7 +544,6 @@ class BitSystem extends BitSingleton {
 		print $gBitSmarty->fetch( 'bitpackage:kernel/html.tpl' );
 		$this->postDisplay( $pMid );
 	}
-
 
 	// === preDisplay
 	/**
@@ -858,7 +852,7 @@ class BitSystem extends BitSingleton {
 		if( $pFeatureName ) {
 			$featureValue = $this->getConfig($pFeatureName);
 			$ret =  empty($setting)
-				? !empty( $featureValue ) && ( $featureValue != 'n' ) 
+				? !empty( $featureValue ) && ( $featureValue != 'n' )
 				: !empty( $featureValue ) && ( $featureValue == $setting );
 		}
 		return $ret;
@@ -929,10 +923,10 @@ class BitSystem extends BitSingleton {
 		if( !defined( $pkgDefine )) {
 			$pkgPath = BIT_ROOT_PATH . basename( $path ) . '/';
 			define( $pkgDefine, $pkgPath );
-			$arrayHash = [ 
-				$pkgName.'_PKG_INCLUDE_PATH' => BIT_ROOT_PATH . basename( $path ) . '/includes/', 
+			$arrayHash = [
+				$pkgName.'_PKG_INCLUDE_PATH' => BIT_ROOT_PATH . basename( $path ) . '/includes/',
 				$pkgName.'_PKG_CLASS_PATH' => BIT_ROOT_PATH . basename( $path ) . '/includes/classes/',
-				$pkgName.'_PKG_ADMIN_PATH' => BIT_ROOT_PATH . basename( $path ) . '/admin/' 
+				$pkgName.'_PKG_ADMIN_PATH' => BIT_ROOT_PATH . basename( $path ) . '/admin/',
 			];
 			foreach( $arrayHash as $defName => $defPath ) {
 				if( !defined( $defName )) {
@@ -961,7 +955,7 @@ class BitSystem extends BitSingleton {
 		$pkgDefine = $pkgName.'_PKG_NAME';
 		if( !defined( $pkgDefine )) {
 			define( $pkgDefine, $name );
-			$this->mPackages[$pkgNameKey]['activatable']  = isset( $pRegisterHash['activatable'] ) ? $pRegisterHash['activatable'] : true;
+			$this->mPackages[$pkgNameKey]['activatable']  = $pRegisterHash['activatable'] ?? true;
 		}
 		$this->mPackages[$pkgNameKey]['name'] = $name;
 
@@ -1031,9 +1025,9 @@ class BitSystem extends BitSingleton {
 			$pMenuHash['menu_title']  = $this->getConfig( $pkg.'_menu_text',
 				!empty( $pMenuHash['menu_title'] )
 				? $pMenuHash['menu_title']
-				: ucfirst( constant( strtoupper( $pkg ).'_PKG_DIR' )));
-			$pMenuHash['menu_position'] = $this->getConfig( $pkg.'_menu_position', 
-				$pMenuHash['menu_position'] ?? '');
+				: ucfirst( constant( strtoupper( $pkg ).'_PKG_DIR' )), );
+			$pMenuHash['menu_position'] = $this->getConfig( $pkg.'_menu_position',
+				$pMenuHash['menu_position'] ?? '', );
 
 			$this->mAppMenu[$menuType][$pkg] = $pMenuHash;
 		} else {
@@ -1044,7 +1038,7 @@ class BitSystem extends BitSingleton {
 				'index_url'     => $pTitleUrl,
 				'menu_template' => $pMenuTemplate,
 				'admin_panel'   => $pAdminPanel,
-				'style'         => 'display:' . ( empty( $pMenuTitle ) || ( isset( $_COOKIE[$pMenuHash . 'menu'] ) && ( $_COOKIE[$pMenuHash . 'menu'] == 'o' ) ) ? 'block;' : 'none;' )
+				'style'         => 'display:' . ( empty( $pMenuTitle ) || ( isset( $_COOKIE[$pMenuHash . 'menu'] ) && ( $_COOKIE[$pMenuHash . 'menu'] == 'o' ) ) ? 'block;' : 'none;' ),
 			];
 		}
 		uasort( $this->mAppMenu[$menuType], 'Bitweaver\bit_system_menu_sort' );
@@ -1183,7 +1177,7 @@ class BitSystem extends BitSingleton {
 		if( !empty( $gPreScan ) && \is_array( $gPreScan )) {
 			// gPreScan may hold a list of packages that must be loaded first
 			foreach( $gPreScan as $pkgDir ) {
-			    $loadPkgs[] = $pkgDir;
+				$loadPkgs[] = $pkgDir;
 			}
 		}
 		// load lib configs
@@ -1198,9 +1192,8 @@ class BitSystem extends BitSingleton {
 
 		// load the list of pkgs in the right order
 		foreach( $loadPkgs as $loadPkg ) {
-            $this->loadPackage( $loadPkg, $pScanFile, $pAutoRegister, $pOnce );
+			$this->loadPackage( $loadPkg, $pScanFile, $pAutoRegister, $pOnce );
 		}
-
 
 		if( !defined( 'BIT_STYLES_PATH' ) && defined( 'THEMES_PKG_PATH' )) {
 			define( 'BIT_STYLES_PATH', THEMES_PKG_PATH.'styles/' );
@@ -1301,8 +1294,8 @@ class BitSystem extends BitSingleton {
 						$users_homepage = $gBitUser->getPreference( 'users_homepage' );
 						if( isset( $users_homepage ) && !empty( $users_homepage )) {
 							$home = [ 'title' => $users_homepage];
-							$url = strpos($users_homepage, '/') === false 
-								? BitPage::getDisplayUrlFromHash( $home ) 
+							$url = strpos($users_homepage, '/') === false
+								? BitPage::getDisplayUrlFromHash( $home )
 								: $users_homepage;
 						}
 					}
@@ -1340,7 +1333,7 @@ class BitSystem extends BitSingleton {
 		if( strpos( $url, 'http://' ) === false ) {
 			$url = preg_replace( "#//#", "/", $url );
 		}
-		
+
 		return $url;
 	}
 	// === setOnloadScript
@@ -1403,7 +1396,7 @@ class BitSystem extends BitSingleton {
 		global $gBitSmarty;
 		if( !empty( $pListInfo['total_pages'] ) && !empty( $pListInfo['page_records'] ) ) {
 			$relTags = "";
-			$baseUrl = isset( $pListInfo['url'] ) ? $pListInfo['url'] : $_SERVER['SCRIPT_URL'];
+			$baseUrl = $pListInfo['url'] ?? $_SERVER['SCRIPT_URL'];
 
 			if( !empty( $pListInfo['query_string'] ) ) {
 				$pageUrl = $baseUrl.'?'.$pListInfo['query_string'];
@@ -1460,7 +1453,7 @@ class BitSystem extends BitSingleton {
 	 */
 	public function setCanonicalLink( $pRelativeUrl ) {
 		global $gBitSmarty;
-		$baseUri = defined( 'CANONICAL_BASE_URI' ) ? CANONICAL_BASE_URI : BIT_BASE_URI; 
+		$baseUri = defined( 'CANONICAL_BASE_URI' ) ? CANONICAL_BASE_URI : BIT_BASE_URI;
 		$gBitSmarty->assign( 'canonicalLink', $baseUri.$pRelativeUrl );
 	}
 
@@ -1572,7 +1565,6 @@ class BitSystem extends BitSingleton {
 		return [ $ret, $verifyMime ];
 	}
 
-
 	// === verifyMimeType
 	/**
 	 * given a file, return the mime type
@@ -1585,8 +1577,8 @@ class BitSystem extends BitSingleton {
 		$mime = null;
 		if( file_exists( $pFile ) && filesize( $pFile ) ) {
 			if( function_exists( 'finfo_open' ) ) {
-				$finfo = KernelTools::is_windows() && defined( 'PHP_MAGIC_PATH' ) && is_readable( PHP_MAGIC_PATH ) 
-					? finfo_open( FILEINFO_MIME, PHP_MAGIC_PATH ) 
+				$finfo = KernelTools::is_windows() && defined( 'PHP_MAGIC_PATH' ) && is_readable( PHP_MAGIC_PATH )
+					? finfo_open( FILEINFO_MIME, PHP_MAGIC_PATH )
 					: finfo_open( FILEINFO_MIME );
 				$mime = finfo_file( $finfo, $pFile );
 				finfo_close( $finfo );
@@ -1693,12 +1685,12 @@ class BitSystem extends BitSingleton {
 		$docroot = BIT_ROOT_PATH;
 
 		$serverSoftware = $_SERVER['SERVER_SOFTWARE'] ?? '';
-		
+
 		if( stripos( $serverSoftware, 'nginx' ) !== false ) {
 			$this->setConfig( 'site_server_type', 'nginx' );
 		} elseif( stripos( $serverSoftware, 'apache' ) !== false ) {
 			// Check if mod_xsendfile is actually loaded
-			if( function_exists( 'apache_get_modules' ) && 
+			if( function_exists( 'apache_get_modules' ) &&
 				\in_array( 'mod_xsendfile', apache_get_modules() )) {
 				$this->setConfig( 'site_server_type', 'apache_xsendfile' );
 			} else {
@@ -1929,7 +1921,7 @@ class BitSystem extends BitSingleton {
 			$this->mPermHash[$perm[0]] = $perm;
 			$this->mPermHash[$perm[0]]['sql'] = "INSERT INTO `".BIT_DB_PREFIX."users_permissions` (`perm_name`, `perm_desc`, `perm_level`, `package`) VALUES ('$perm[0]', '$perm[1]', '$perm[2]', '$perm[3]')";
 			$this->registerSchemaDefault( $pPackagedir,
-				"INSERT INTO `".BIT_DB_PREFIX."users_permissions` (`perm_name`, `perm_desc`, `perm_level`, `package`) VALUES ('$perm[0]', '$perm[1]', '$perm[2]', '$perm[3]')");
+				"INSERT INTO `".BIT_DB_PREFIX."users_permissions` (`perm_name`, `perm_desc`, `perm_level`, `package`) VALUES ('$perm[0]', '$perm[1]', '$perm[2]', '$perm[3]')", );
 		}
 	}
 
@@ -1944,7 +1936,7 @@ class BitSystem extends BitSingleton {
 	public function registerConfig( $pPackagedir, $pPreferences ) {
 		foreach( $pPreferences as $pref ) {
 			$this->registerSchemaDefault( $pPackagedir,
-				"INSERT INTO `".BIT_DB_PREFIX."kernel_config`(`package`,`config_name`,`config_value`) VALUES ('$pref[0]', '$pref[1]','$pref[2]')");
+				"INSERT INTO `".BIT_DB_PREFIX."kernel_config`(`package`,`config_name`,`config_value`) VALUES ('$pref[0]', '$pref[1]','$pref[2]')", );
 		}
 	}
 
@@ -2382,7 +2374,7 @@ class BitSystem extends BitSingleton {
 						'color'     => $edgecolor,
 						'fontcolor' => $edgecolor,
 						'label'     => $label,
-					])
+					]),
 				);
 			}
 
@@ -2391,7 +2383,7 @@ class BitSystem extends BitSingleton {
 			} else {
 				return $graph->fetch( $pFormat, $pCommand );
 			}
-		} 
+		}
 		return false;
 	}
 
@@ -2622,7 +2614,7 @@ class BitSystem extends BitSingleton {
 		$error['number'] = 0;
 		$error['string'] = $data = '';
 
-// https://www.bitweaver.org/bitversion.txt is no longer available  
+// https://www.bitweaver.org/bitversion.txt is no longer available
 		// cache the bitversion.txt file locally and update only once a day
 		// if you don't have a connection to bitweaver.org, you can set a cronjob to 'touch' this file once a day to avoid waiting for a timeout.
 /*		if( !is_file( TEMP_PKG_PATH.'bitversion.txt' ) || ( time() - filemtime( TEMP_PKG_PATH.'bitversion.txt' )) > 86400 ) {

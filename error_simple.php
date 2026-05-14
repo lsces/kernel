@@ -25,7 +25,7 @@
 		<?php
 			if (isset($_REQUEST['error']) and !is_null($_REQUEST['error'])) {
 				if( $gBitSystem->isFeatureActive( 'site_closed' )){
-					echo $_REQUEST['error']; 
+					echo $_REQUEST['error'];
 				} else {
 					echo strip_tags($_REQUEST['error']);
 				}

@@ -1,6 +1,7 @@
 <?php
 namespace Bitweaver;
-	require_once '../../kernel/includes/setup_inc.php';
+
+require_once '../../kernel/includes/setup_inc.php';
 
 	if (!$gBitUser->isAdmin()) {
 		$gBitSmarty->assign('msg', KernelTools::tra("You dont have permission to use this feature"));

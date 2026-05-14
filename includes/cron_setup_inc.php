@@ -8,4 +8,3 @@ $_SERVER['REQUEST_URI'] = 'cron';
 $_SERVER['REMOTE_ADDR'] = 'cron';
 $_SERVER['HTTP_HOST'] = '';
 
-

@@ -12,7 +12,7 @@ function class_autoload( $className ) {
 		$parts[2] = $parts[1];
 		$parts[1] = 'kernel/includes/classes/';
 	} elseif ($parts[1] == 'Plugins' ) {
-		$parts[1] = 'themes/smartyplugins/';		
+		$parts[1] = 'themes/smartyplugins/';
 	} elseif (count($parts) <> 3) {
 		return;
 	} else {

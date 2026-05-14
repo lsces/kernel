@@ -8,6 +8,7 @@
 
 // Initialization
 namespace Bitweaver;
+
 require_once '../../kernel/includes/setup_inc.php';
 require_once KERNEL_PKG_INCLUDE_PATH.'backups_lib.php';
 
@@ -20,7 +21,7 @@ $backupPath = STORAGE_PKG_PATH."backups/$bitdomain";
 KernelTools::mkdir_p( $backupPath );
 
 if (isset($_REQUEST["generate"])) {
-	
+
 	$filename = md5($gBitSystem->genPass()). '.sql';
 
 	$backuplib->backup_database( $backupPath.$filename );
@@ -29,26 +30,26 @@ if (isset($_REQUEST["generate"])) {
 $gBitSmarty->assign('restore', 'n');
 
 if (isset($_REQUEST["restore"])) {
-	
+
 	$gBitSmarty->assign('restore', 'y');
 
 	$gBitSmarty->assign('restorefile', basename($_REQUEST["restore"]));
 }
 
 if (isset($_REQUEST["rrestore"])) {
-	
+
 	$backuplib->restore_database( $backupPath.basename($_REQUEST["rrestore"]));
 }
 
 if (isset($_REQUEST["remove"])) {
-	
+
 	$filename = $backupPath.basename($_REQUEST["remove"]);
 
 	unlink ($filename);
 }
 
 if (isset($_REQUEST["upload"])) {
-	
+
 	if (isset($_FILES['userfile1']) && is_uploaded_file($_FILES['userfile1']['tmp_name'])) {
 		$fp = fopen($_FILES['userfile1']['tmp_name'], "r");
 
@@ -91,5 +92,4 @@ closedir ($h);
 $gBitSmarty->assign('backups', $backups);
 $gBitSmarty->assign('bitdomain', $bitdomain);
 
-
-$gBitSystem->display( 'bitpackage:kernel/backup.tpl', KernelTools::tra( 'Backups') , array( 'display_mode' => 'admin' ));
+$gBitSystem->display( 'bitpackage:kernel/backup.tpl', KernelTools::tra( 'Backups') , [ 'display_mode' => 'admin' ]);

@@ -32,7 +32,7 @@ if( !$gStructure and $gContent ) {
 if( $gStructure and !empty($gStructure->mInfo['structure_path']) ) {
 	$secondbox = 0;
 	$tree = 1;
-	$gStructure->mInfo['structure_path'][0]['structure_id'];			
+	$gStructure->mInfo['structure_path'][0]['structure_id'];
 	if( $gStructure->mInfo['parent']['structure_id'] == 4 ) $sidebox = $gStructure->mInfo['content_id'] - 3;
 	elseif( $gStructure->mInfo['parent']['content_id'] > 4 ) $sidebox = $gStructure->mInfo['parent']['content_id'] - 3;
 	else $sidebox = 1;
@@ -44,7 +44,7 @@ if( $gStructure and !empty($gStructure->mInfo['structure_path']) ) {
 			$secondmenu = $gStructure->buildTreeToc( $secondbox );
 			$gBitSmarty->assign( 'secondmenu', $secondmenu[0]['sub'] );
 		}
-	}	
+	}
 } else {
 	$gStructure = new LibertyStructure( 1 );
 	$menu = $gStructure->buildTreeToc( 1 );

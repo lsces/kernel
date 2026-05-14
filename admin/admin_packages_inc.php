@@ -11,14 +11,14 @@ $fPackage = &$_REQUEST['fPackage'];   // emulate register_globals
 
 # rescan to include all packages, installed and not installed
 $gBitSystem->scanPackages(
-	'bit_setup_inc.php', true, 'all', true, true
+	'bit_setup_inc.php', true, 'all', true, true,
 );
 
 // make a copy of mPackages - expensive, but this is low use code
 
 if( !empty( $_REQUEST['features'] ) ) {
 	$pkgArray = $gBitSystem->mPackages;
-    foreach( array_keys( $pkgArray ) as $pkgKey ) {
+	foreach( array_keys( $pkgArray ) as $pkgKey ) {
 		$pkg = $pkgArray[$pkgKey];
 		if( !empty( $pkg['name'] )) {
 			$pkgName = strtolower( $pkg['name'] );

@@ -26,11 +26,9 @@ namespace Bitweaver;
 define( 'STORAGE_BINARY', 1 );
 define( 'STORAGE_IMAGE', 2 );
 
-
 interface BitCacheable  {
-	public function getCacheKey(); 
+	public function getCacheKey();
 }
-
 
 /**
  * Virtual base class (as much as one can have such things in PHP) for all
@@ -105,7 +103,6 @@ abstract class BitBase {
 	public $mDebugMicrotime;
 
 	protected $mPreventCache = true;
-
 
 	public const int CACHE_STATE_NONE = 0;
 	public const int CACHE_STATE_DELETE = -1;
@@ -216,9 +213,9 @@ abstract class BitBase {
 			if( $ret = apcu_fetch( static::getCacheUuidFromKey( $pCacheKey, $pContentTypeGuid ) ) ) {
 				$ret->mCacheObject = true;
 //vd( 'LOAD SUCCESS '.get_class( $ret ).' ' .$ret->getField( 'content_id' ) );
-			} else {
-//vd( 'LOAD FAILED' );
 			}
+//vd( 'LOAD FAILED' );
+
 		}
 
 		return $ret;
@@ -283,9 +280,9 @@ abstract class BitBase {
 		return $isRefresh;
 	}
 
-    final public static function getClass() {
-        return get_called_class();
-    }
+	final public static function getClass() {
+		return get_called_class();
+	}
 
 	public function getConfig( string $pName, string $pDefault = '' ) {
 		global $gBitSystem;
@@ -385,14 +382,14 @@ abstract class BitBase {
 			return false;
 		}
 		if( is_array( $pId )) {
-            foreach( $pId as $id ) {
-				if( (is_int( $id ) || ctype_digit( (string) $id ) || (is_numeric( $id ) ? intval( $id ) == $id : false)) ) {
+			foreach( $pId as $id ) {
+				if( (is_int( $id ) || ctype_digit( (string) $id ) || (is_numeric( $id ) ? (int) $id == $id : false)) ) {
 					return false;
 				}
 			}
 			return true;
 		}
-		return !empty( $pId ) && (is_int( $pId ) || ctype_digit( $pId ) || is_numeric( $pId )) && ($pId < 0x7FFFFFFF) && (intval( $pId ) == $pId);
+		return !empty( $pId ) && (is_int( $pId ) || ctype_digit( $pId ) || is_numeric( $pId )) && ($pId < 0x7FFFFFFF) && ((int) $pId == $pId);
 	}
 
 	/**
@@ -525,7 +522,7 @@ abstract class BitBase {
 		$pListHash['find'] = !empty( $pListHash["find"] ) ? $pListHash["find"] : null;
 		$gBitSmarty->assign( 'find', $pListHash['find'] );
 
-		$pListHash['date'] = isset( $_REQUEST['date'] ) ? $_REQUEST['date'] : $gBitSystem->getUTCTime();
+		$pListHash['date'] = $_REQUEST['date'] ?? $gBitSystem->getUTCTime();
 
 		if( empty( $pListHash['load_comments'] )) {
 			$pListHash['load_comments'] = false;
@@ -558,7 +555,6 @@ abstract class BitBase {
 
 		return false;
 	}
-
 
 	/**
 	* Updates results from any getList function to provide the control set

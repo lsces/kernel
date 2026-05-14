@@ -12,6 +12,7 @@
  * required setup
  */
 namespace Bitweaver;
+
 use Bitweaver\Plugins\ResourceBitpackage;
 use Bitweaver\Languages\BitLanguage;
 
@@ -25,7 +26,6 @@ if(( !empty( $_REQUEST['sort_mode'] ) && !is_array( $_REQUEST['sort_mode'] ) && 
 
 require_once BIT_ROOT_PATH.'kernel/includes/config_defaults_inc.php';
 require_once KERNEL_PKG_INCLUDE_PATH.'bit_error_inc.php';
-use Bitweaver\KernelTools;
 
 // set error reporting
 error_reporting( BIT_PHP_ERROR_REPORTING );
@@ -127,7 +127,7 @@ if( $gBitSystem->isDatabaseValid() ) {
 
 	$gBitSystem->scanPackages( 'bit_setup_inc.php', true, 'active', true, true );
 	$gBitSmarty->scanPackagePluginDirs();
-	
+
 	if( file_exists( CONFIG_PKG_INCLUDE_PATH.'kernel/override_inc.php' ) ) {
 		// possible install specific customizations for multi-sites, staging sites, etc.
 		require_once CONFIG_PKG_PATH.'kernel/override_inc.php';
@@ -135,13 +135,13 @@ if( $gBitSystem->isDatabaseValid() ) {
 
 	// some plugins check for active packages, so we do this *after* package scanning
 	$gBitSmarty->assign( 'gBitSystem', $gBitSystem );
-	
+
 	// some liberty plugins might need to run some functions.
 	// it's necessary that we call them early on after scanPackages() has been completed.
 	foreach( $gLibertySystem->getPluginFunctions( 'preload_function' ) as $func ) {
 		$func();
 	}
-	
+
 	// TODO: XSS security check
 	if( !empty( $_REQUEST['tk'] ) && empty( $_SERVER['bot'] ) ) {
 		//$gBitUser->verifyTicket();
@@ -215,10 +215,10 @@ if( $gBitSystem->isDatabaseValid() ) {
 	// All of the below deals with HTTPS - perhaps we should move this to a separate file
 	if( isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] == 'on' ) {
 		$site_http_port = 80;
-		$site_https_port = isset( $_SERVER['SERVER_PORT'] ) ? $_SERVER['SERVER_PORT'] : 443;
+		$site_https_port = $_SERVER['SERVER_PORT'] ?? 443;
 	} else {
 		$site_https_port = 443;
-		$site_http_port = isset( $_SERVER['SERVER_PORT'] ) ? $_SERVER['SERVER_PORT'] : 80;
+		$site_http_port = $_SERVER['SERVER_PORT'] ?? 80;
 	}
 
 	if( !$site_https_port = $gBitSystem->getConfig( 'site_https_port', $site_https_port ) ) {
@@ -228,7 +228,7 @@ if( $gBitSystem->isDatabaseValid() ) {
 	if( defined( 'SECURE_BIT_BASE_URI' ) ) {
 		define( 'SECURE_BIT_BASE_URI', 'https://'.$host.($site_https_port!=443?$site_https_port:'') );
 	}
-	
+
 	// we need this for backwards compatibility - use $gBitSystem->getPrerference( 'max_records' ) if you need it, or else the spanish inquisition will come and poke you with a soft cushion
 	$max_records = $gBitSystem->getConfig( "max_records", 10 );
 

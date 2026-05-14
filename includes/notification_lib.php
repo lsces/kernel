@@ -15,7 +15,6 @@
  * Licensed under the GNU LESSER GENERAL PUBLIC LICENSE. See http://www.gnu.org/copyleft/lesser.html for details
  */
 namespace Bitweaver;
-use Bitweaver\KernelTools;
 
 /**
  * A library use to store email addresses registered for specific notification events.
@@ -28,104 +27,104 @@ use Bitweaver\KernelTools;
  */
 class NotificationLib extends BitBase
 {
-    /**
-    * Lists registered notification events
-    * @param string $offset the location to begin listing from
-    * @param int $max_records the maximum number of records returned
-    * @param string $sort_mode the method of sorting used in the listing
-    * @param string $find text used to filter listing
-    * @return array of registered notification events
-    */
-    public function list_mail_events( string $offset, int $max_records, string $sort_mode, string $find): array
-    {
-        if ($find)
-        {
-            $findesc = '%' . strtoupper( $find ) . '%';
-            $mid = " where (UPPER(`event`) like ? or UPPER(`email`) like ?)";
-            $bindvars=[$findesc,$findesc];
-        }
-        else
-        {
-            $mid = " ";
-            $bindvars=[];
-        }
-        $query = "select * from `".BIT_DB_PREFIX."mail_notifications` $mid order by ".$this->mDb->convertSortmode($sort_mode);
-        $query_cant = "select count(*) from `".BIT_DB_PREFIX."mail_notifications` $mid";
-        $result = $this->mDb->query($query,$bindvars,$max_records,$offset);
-        $cant = $this->mDb->getOne($query_cant,$bindvars);
-        $ret = [];
-        while ($res = $result->fetchRow())
-        {
-            $ret[] = $res;
-        }
-        $retval = [];
-        $retval["data"] = $ret;
-        $retval["cant"] = $cant;
-        return $retval;
-    }
-    /**
-    * Adds an email address for a specified event notification
-    * @param string
-    * @param array
-    * @var string event the specified event
-    * @var string object the specified object
-    * @var string email the email to remove
-    * @param string
-    * @return void
-    */
-    public function add_mail_event($event, $object, $email)
-    {
-        $query = "insert into `".BIT_DB_PREFIX."mail_notifications`(`event`,`object`,`email`) values(?,?,?)";
-        $this->mDb->query( $query, [ 'event', $object, $email ] );
-    }
+	/**
+	* Lists registered notification events
+	* @param string $offset the location to begin listing from
+	* @param int $max_records the maximum number of records returned
+	* @param string $sort_mode the method of sorting used in the listing
+	* @param string $find text used to filter listing
+	* @return array of registered notification events
+	*/
+	public function list_mail_events( string $offset, int $max_records, string $sort_mode, string $find): array
+	{
+		if ($find)
+		{
+			$findesc = '%' . strtoupper( $find ) . '%';
+			$mid = " where (UPPER(`event`) like ? or UPPER(`email`) like ?)";
+			$bindvars=[$findesc,$findesc];
+		}
+		else
+		{
+			$mid = " ";
+			$bindvars=[];
+		}
+		$query = "select * from `".BIT_DB_PREFIX."mail_notifications` $mid order by ".$this->mDb->convertSortmode($sort_mode);
+		$query_cant = "select count(*) from `".BIT_DB_PREFIX."mail_notifications` $mid";
+		$result = $this->mDb->query($query,$bindvars,$max_records,$offset);
+		$cant = $this->mDb->getOne($query_cant,$bindvars);
+		$ret = [];
+		while ($res = $result->fetchRow())
+		{
+			$ret[] = $res;
+		}
+		$retval = [];
+		$retval["data"] = $ret;
+		$retval["cant"] = $cant;
+		return $retval;
+	}
+	/**
+	* Adds an email address for a specified event notification
+	* @param string
+	* @param array
+	* @var string event the specified event
+	* @var string object the specified object
+	* @var string email the email to remove
+	* @param string
+	* @return void
+	*/
+	public function add_mail_event($event, $object, $email)
+	{
+		$query = "insert into `".BIT_DB_PREFIX."mail_notifications`(`event`,`object`,`email`) values(?,?,?)";
+		$this->mDb->query( $query, [ 'event', $object, $email ] );
+	}
 
-    /**
-    * Removes an email address for a specified event notification
-    * @param string $event the specified event
-    * @param string $object the specified object
-    * @param string $email the email to remove
-    * @return void
-    */
-    public function remove_mail_event(string $event, string $object, string $email): void
-    {
-        $query = "delete from `".BIT_DB_PREFIX."mail_notifications` where `event`=? and `object`=? and `email`=?";
-        $this->mDb->query($query, [$event,$object,$email] );
-    }
+	/**
+	* Removes an email address for a specified event notification
+	* @param string $event the specified event
+	* @param string $object the specified object
+	* @param string $email the email to remove
+	* @return void
+	*/
+	public function remove_mail_event(string $event, string $object, string $email): void
+	{
+		$query = "delete from `".BIT_DB_PREFIX."mail_notifications` where `event`=? and `object`=? and `email`=?";
+		$this->mDb->query($query, [$event,$object,$email] );
+	}
 
-    /**
-    * Retrieves the email addresses for a specific event
-    * @param string $event event the specified event
-    * @param string $object the specified object
-    * @return array of email addresses
-    */
-    public function get_mail_events( string $event, string $object): array
-    {
-        $query = "select `email` from `".BIT_DB_PREFIX."mail_notifications` where `event`=? and (`object`=? or `object`='*')";
-        $result = $this->mDb->query($query, [ $event, $object ] );
-        $ret = [];
-        while ($res = $result->fetchRow())
-        {
-            $ret[] = $res["email"];
-        }
-        return $ret;
-    }
+	/**
+	* Retrieves the email addresses for a specific event
+	* @param string $event event the specified event
+	* @param string $object the specified object
+	* @return array of email addresses
+	*/
+	public function get_mail_events( string $event, string $object): array
+	{
+		$query = "select `email` from `".BIT_DB_PREFIX."mail_notifications` where `event`=? and (`object`=? or `object`='*')";
+		$result = $this->mDb->query($query, [ $event, $object ] );
+		$ret = [];
+		while ($res = $result->fetchRow())
+		{
+			$ret[] = $res["email"];
+		}
+		return $ret;
+	}
 
-    /**
-    * Post changes to registered email addresses related to a change event
-    * @param int $contentid number of the content item being updated
-    * @param string $type content_type of the item
-    * @param string $package the package that is being updated
-    * @param string $name the name of the object
-    * @param string $user the name of user making the change
-    * @param string $comment any comment added to the change
-    * @param string $data the content of the change
-    *
-    * @todo Improve the generic handling of the messages
-    * Param information probably needs to be passed as an array, or accessed from Content directly
-    */
-    public function post_content_event( int $contentid, string $type, string $package, string $name, string $user, string $comment, string $data): void
-    { global $gBitSystem;
-			
+	/**
+	* Post changes to registered email addresses related to a change event
+	* @param int $contentid number of the content item being updated
+	* @param string $type content_type of the item
+	* @param string $package the package that is being updated
+	* @param string $name the name of the object
+	* @param string $user the name of user making the change
+	* @param string $comment any comment added to the change
+	* @param string $data the content of the change
+	*
+	* @todo Improve the generic handling of the messages
+	* Param information probably needs to be passed as an array, or accessed from Content directly
+	*/
+	public function post_content_event( int $contentid, string $type, string $package, string $name, string $user, string $comment, string $data): void
+	{ global $gBitSystem;
+
 		$emails = $this->get_mail_events($package.'_page_changes', $type . $contentid);
 
 		foreach ($emails as $email) {
@@ -145,11 +144,11 @@ class NotificationLib extends BitBase
 		}
 	}
 
-    /**
-    * Notifies registered list of eMail recipients of new user registrations
-    * @param string name of the new user
-    */
-    public function post_new_user_event( string $user ): void
+	/**
+	* Notifies registered list of eMail recipients of new user registrations
+	* @param string name of the new user
+	*/
+	public function post_new_user_event( string $user ): void
 	{ global $gBitSystem, $gBitSmarty;
 		$emails = $this->get_mail_events('user_registers','*');
 		foreach($emails as $email) {

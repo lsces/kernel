@@ -9,7 +9,6 @@
  */
 
 namespace Bitweaver;
-use Bitweaver\KernelTools;
 
 class BitCache {
 	/**
@@ -52,9 +51,9 @@ class BitCache {
 	public function getCacheFile( $pFile ) {
 		if( !empty( $pFile )) {
 			return $this->mFolder."/".$pFile;
-		} else {
-			return false;
 		}
+			return false;
+
 	}
 
 	/**
@@ -84,9 +83,9 @@ class BitCache {
 				$isModified = filemtime( $this->getCacheFile( $pFile )) < $pModTime;
 			}
 			return empty( $isModified );
-		} else {
-			return false;
 		}
+			return false;
+
 	}
 
 	/**

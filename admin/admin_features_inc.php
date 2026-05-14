@@ -123,7 +123,7 @@ if( !empty( $_REQUEST['change_prefs'] ) ) {
 		"site_short_time_format",
 		"site_long_datetime_format",
 		"site_short_datetime_format",
-		"bit_index"
+		"bit_index",
 	];
 
 	foreach( $refValue as $britem ) {

@@ -57,27 +57,27 @@ function bit_print_log( $pLogParams, $pLogMessages ) {
 	$executionTime = BitBase::getParameter( $pLogParams, 'exectime', '-' );
 	$logTimestamp = BitBase::getParameter( $pLogParams, 'timestamp', date( '[d/M/Y:H:i:s O]' ) );
 
-	for( $i = 1; $i < func_num_args(); $i++ ) { 
-    	if( $pLogMessage = func_get_arg( $i ) ) {
+	for( $i = 1; $i < func_num_args(); $i++ ) {
+		if( $pLogMessage = func_get_arg( $i ) ) {
 			$errlines = explode( "\n", \is_array( $pLogMessage ) || \is_object( $pLogMessage ) ? vc( $pLogMessage, false ) : $pLogMessage);
-			foreach ($errlines as $txt) { 
+			foreach ($errlines as $txt) {
 				print "$virtualHost $remoteAddr $ident $userName $logTimestamp \"$scriptFilename\" $statusCode $executionTime \"$userAgent\" $pLogMessage\n";
 			}
 		} else {
 			print "$virtualHost $remoteAddr $ident $userName $logTimestamp \"$scriptFilename\" $statusCode $executionTime \"$userAgent\"\n";
 		}
-	} 
+	}
 }
 
 function bit_error_log() {
-	for( $i = 0; $i < func_num_args(); $i++ ) { 
-    	if( $pLogMessage = func_get_arg( $i ) ) {
+	for( $i = 0; $i < func_num_args(); $i++ ) {
+		if( $pLogMessage = func_get_arg( $i ) ) {
 			$errlines = explode( "\n", \is_array( $pLogMessage ) || \is_object( $pLogMessage ) ? vc( $pLogMessage, false ) : $pLogMessage);
-			foreach ($errlines as $txt) { 
-				error_log($txt); 
+			foreach ($errlines as $txt) {
+				error_log($txt);
 			}
 		}
-	} 
+	}
 	error_log( 'SCRIPT_URI: '.BitBase::getParameter( $_SERVER, 'SCRIPT_URI', 'OUTPUT' )."\n".bit_stack( 5 ) );
 }
 
@@ -126,13 +126,13 @@ function bit_error_email ( $pSubject, $pMessage, $pGlobalVars=[] ) {
 }
 
 function bit_error_handler ( $errno, $errstr, $errfile, $errline, $errcontext=null ) {
-    // error_reporting() === 0 if code was prepended with @
+	// error_reporting() === 0 if code was prepended with @
 
-    $reportingLevel = error_reporting();
-    if( $reportingLevel !== 0 && !strpos( $errfile, 'templates_c' ) ) {
+	$reportingLevel = error_reporting();
+	if( $reportingLevel !== 0 && !strpos( $errfile, 'templates_c' ) ) {
 		$errType = 'Error';
 		$isReported = true;
-        switch ($errno) {
+		switch ($errno) {
 			case E_ERROR: $errType = 'FATAL ERROR'; break;
 			case E_WARNING: $isReported = $reportingLevel & E_WARNING; $errType = 'WARNING'; break;
 			case E_PARSE: $isReported = $reportingLevel & E_PARSE; $errType = 'PARSE'; break;
@@ -147,17 +147,17 @@ function bit_error_handler ( $errno, $errstr, $errfile, $errline, $errcontext=nu
 			case E_RECOVERABLE_ERROR: $isReported = $reportingLevel & E_RECOVERABLE_ERROR; $errType = 'RECOVERABLE_ERROR'; break;
 			case E_DEPRECATED: $isReported = $reportingLevel & E_DEPRECATED; $errType = 'DEPRECATED'; break;
 			case E_USER_DEPRECATED: $isReported = $reportingLevel & E_USER_DEPRECATED; $errType = 'USER_DEPRECATED'; break;
-            default: $errType = 'Error '.$errno; break;
+			default: $errType = 'Error '.$errno; break;
 
-        }
+		}
 
 		if( $isReported ) {
 //eb( $isReported, $errType, $errno, $reportingLevel, $errfile );
 			$errorSubject = 'PHP '.$errType.' on '.php_uname( 'n' ).': '.$errstr;
-			$errorString = $errType." [#$errno]: $errstr \n in $errfile on line $errline\n\n".bit_error_string( array( 'errno'=>$errno, 'db_msg'=>$errType ) );
+			$errorString = $errType." [#$errno]: $errstr \n in $errfile on line $errline\n\n".bit_error_string( [ 'errno'=>$errno, 'db_msg'=>$errType ] );
 			if( \defined( 'IS_LIVE' ) && IS_LIVE ) {
 				if( \defined( 'ERROR_EMAIL' ) ) {
-        			// Send an e-mail to the administrator
+					// Send an e-mail to the administrator
 					bit_error_email( $errorSubject, $errorString );
 				} else {
 					error_log( $errorString );
@@ -170,10 +170,10 @@ function bit_error_handler ( $errno, $errstr, $errfile, $errline, $errcontext=nu
 				}
 			}
 		}
-     }
+	 }
 
-    // Execute PHP's internal error handler
-    return false;
+	// Execute PHP's internal error handler
+	return false;
 }
 
 function bit_shutdown_handler() {
@@ -188,7 +188,6 @@ function bit_shutdown_handler() {
 }
 
 register_shutdown_function('Bitweaver\bit_shutdown_handler');
-
 
 function bit_display_error( $pLogMessage, $pSubject, $pFatal = true ) {
 	global $gBitSystem;
@@ -335,7 +334,7 @@ function bit_stack( $pDepth = 999 ) {
 					if (\is_null($v) ) {
 						$args[] = 'null';
 					} elseif (\is_array($v)) { $args[] = 'Array['.\sizeof($v).']';
-					} elseif (\is_object($v)) { $args[] = 'Object:'.\get_class($v);
+					} elseif (\is_object($v)) { $args[] = 'Object:'.$v::class;
 					} elseif (\is_bool($v)) { $args[] = $v ? 'true' : 'false';
 					} else {
 						$v = (string) @$v;
@@ -360,9 +359,9 @@ function bit_stack( $pDepth = 999 ) {
 
 // variable argument var dump
 function vvd() {
-	for( $i = 0; $i < \func_num_args(); $i++ ) { 
-    	vd( func_get_arg( $i ) );
-	} 
+	for( $i = 0; $i < \func_num_args(); $i++ ) {
+		vd( func_get_arg( $i ) );
+	}
 }
 
 // var dump variable in something nicely readable in web browser
@@ -403,9 +402,9 @@ function vd( $pVar, $pGlobals=false, $pDelay=false ) {
 // variable argument var dump
 function vvc() {
 	$ret = '';
-	for( $i = 0; $i < func_num_args(); $i++ ) { 
-    	$ret .= vc( func_get_arg( $i ), false );
-	} 
+	for( $i = 0; $i < func_num_args(); $i++ ) {
+		$ret .= vc( func_get_arg( $i ), false );
+	}
 	return $ret;
 }
 
@@ -426,7 +425,7 @@ function vc( $iVar, $pHtml=true ) {
 			var_dump( $iVar );
 		}
 	} elseif( $pHtml && !empty( $_SERVER['HTTP_USER_AGENT'] ) && $_SERVER['HTTP_USER_AGENT'] != 'cron' && ((is_object( $iVar ) && !empty( $iVar )) || is_array( $iVar )) ) {
-	    include_once UTIL_PKG_INCLUDE_PATH.'dBug/dBug.php';
+		include_once UTIL_PKG_INCLUDE_PATH.'dBug/dBug.php';
 		new \dBug( $iVar, "", false );
 	} else {
 		print '<pre>';
@@ -443,7 +442,6 @@ function vc( $iVar, $pHtml=true ) {
 	ob_end_clean();
 	return "$ret\n";
 }
-
 
 function va( $iVar ) {
 	$dbg = var_export($iVar, 1);

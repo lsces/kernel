@@ -20,7 +20,7 @@ include_once '../kernel/includes/setup_inc.php';
 
 if (!$gBitUser->hasPermission( 'p_tidbits_configure_modules' )) {
 	$gBitSmarty->assign('msg', tra("You dont have permission to use this feature"));
-	$gBitSystem->display( 'error.tpl' , null, array( 'display_mode' => 'display' ));
+	$gBitSystem->display( 'error.tpl' , null, [ 'display_mode' => 'display' ]);
 	die;
 }
 /*if (!$gBitSystem->isFeatureActive( 'site_user_assigned_modules' ) && $check_req) {
@@ -30,7 +30,7 @@ if (!$gBitUser->hasPermission( 'p_tidbits_configure_modules' )) {
 }*/
 if (!$gBitUser->isRegistered()) {
 	$gBitSmarty->assign('msg', tra("You must log in to use this feature"));
-	$gBitSystem->display( 'error.tpl' , null, array( 'display_mode' => 'display' ));
+	$gBitSystem->display( 'error.tpl' , null, [ 'display_mode' => 'display' ]);
 	die;
 }
 
@@ -38,7 +38,7 @@ $url = $_SERVER["HTTP_REFERER"];
 
 //    global $debugger;
 //    $debugger->msg('Module control clicked: '.$check_req);
-    // Make defaults if user still ot configure modules for himself
+	// Make defaults if user still ot configure modules for himself
 //    if (!$usermoduleslib->user_has_assigned_modules($user))
 //        $usermoduleslib->create_user_assigned_modules($user);
 

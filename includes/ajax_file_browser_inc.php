@@ -43,7 +43,7 @@ if( !empty( $_REQUEST['ajax_path_conf'] ) && $gBitSystem->isFeatureActive( $_REQ
 	$fileList = ajax_dir_list( $gBitSystem->getConfig( $_REQUEST['ajax_path_conf'] ), !empty( $_REQUEST['relpath'] ) ? $_REQUEST['relpath'] . "/" : null);
 	$gBitSmarty->assign( 'fileList', $fileList );
 }
-$gBitThemes->loadAjax( 'mochikit', array( 'Iter.js', 'DOM.js', 'Async.js' ));
+$gBitThemes->loadAjax( 'mochikit', [ 'Iter.js', 'DOM.js', 'Async.js' ]);
 $gBitThemes->loadJavascript( KERNEL_PKG_PATH."scripts/BitFileBrowser.js", true );
 
 if( $gBitThemes->isAjaxRequest() ) {
@@ -57,7 +57,7 @@ if( $gBitThemes->isAjaxRequest() ) {
  * @param string $pRelPath relative path on top of base directory
  * @access public
  * @return array
- */ 
+ */
 function ajax_dir_list( $pDir, $pRelPath = null ) {
 	global $gBitSystem;
 	$ret = $files = [];
@@ -74,13 +74,13 @@ function ajax_dir_list( $pDir, $pRelPath = null ) {
 				$relFile = $pRelPath.$i;
 				$file = realpath( $pDir.$relFile );
 				if( strpos( $file, $pDir ) === 0 ) {
-					$info = array(
+					$info = [
 						'name'    => $i,
 						'relpath' => $relFile,
 						'indent'  => ( count( explode( '/', $relFile )) * 10 ),
 						'size'    => filesize( $file ),
 						'mtime'   => filemtime( $file ),
-					);
+					];
 					if( is_dir( $file )) {
 						$ret['dir'][$i] = $info;
 					} elseif( !preg_match( EVIL_EXTENSION_PATTERN, $file )) {
@@ -93,9 +93,9 @@ function ajax_dir_list( $pDir, $pRelPath = null ) {
 	}
 
 	if( empty( $ret )) {
-		$ret['file'][] = array(
+		$ret['file'][] = [
 			'indent'  => ( count( explode( '/', $pRelPath )) * 10 ),
-		);
+		];
 	}
 
 	return $ret;

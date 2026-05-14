@@ -12,15 +12,15 @@
  * @return void
  */
 function simple_set_configs( $pArray, $pPackageName = null ){
-    foreach( $pArray as $item => $data ) {
-        if( $data['type'] == 'numeric' ) {
-            simple_set_int( $item, $pPackageName );
-        } elseif( $data['type'] == 'toggle' ) {
-            simple_set_toggle( $item, $pPackageName );
-        } elseif( $data['type'] == 'input' ) {
-            simple_set_value( $item, $pPackageName );
-        }
-    }
+	foreach( $pArray as $item => $data ) {
+		if( $data['type'] == 'numeric' ) {
+			simple_set_int( $item, $pPackageName );
+		} elseif( $data['type'] == 'toggle' ) {
+			simple_set_toggle( $item, $pPackageName );
+		} elseif( $data['type'] == 'input' ) {
+			simple_set_value( $item, $pPackageName );
+		}
+	}
 }
 
 /**
@@ -34,7 +34,7 @@ function simple_set_toggle( $pFeature, $pPackageName = null ) {
 	if( isset( $_REQUEST[$pFeature][0] ) ) {
 		$_REQUEST[$pFeature] = $_REQUEST[$pFeature][0];
 	}
-	toggle_preference( $pFeature, ( isset( $_REQUEST[$pFeature] ) ? $_REQUEST[$pFeature] : null ), $pPackageName );
+	toggle_preference( $pFeature, ( $_REQUEST[$pFeature] ?? null ), $pPackageName );
 }
 
 /**

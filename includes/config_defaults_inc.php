@@ -225,7 +225,7 @@ if( !defined( 'STORAGE_PKG_PATH' ) ) {
 	define( 'STORAGE_PKG_PATH',   BIT_ROOT_PATH.'storage/' );
 }
 if( !defined( 'STORAGE_PKG_URL' ) ) {
-    define( 'STORAGE_PKG_URL',   BIT_ROOT_URL.'storage/' );
+	define( 'STORAGE_PKG_URL',   BIT_ROOT_URL.'storage/' );
 }
 if( !defined( 'STORAGE_PKG_INCLUDE_PATH' ) ) {
 	define( 'STORAGE_PKG_INCLUDE_PATH',   STORAGE_PKG_PATH.'includes/' );
@@ -236,7 +236,6 @@ if( !defined( 'STORAGE_PKG_CLASS_PATH' ) ) {
 if( !defined( 'STORAGE_PKG_ADMIN_PATH' ) ) {
 	define( 'STORAGE_PKG_ADMIN_PATH',   STORAGE_PKG_PATH.'admin/' );
 }
-
 
 define( 'THEMES_PKG_PATH',    BIT_ROOT_PATH.'themes/' );
 define( 'THEMES_PKG_INCLUDE_PATH', THEMES_PKG_PATH.'includes/' );

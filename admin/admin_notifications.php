@@ -15,13 +15,13 @@ include_once KERNEL_PKG_INCLUDE_PATH.'notification_lib.php';
 $gBitSystem->verifyPermission( 'p_admin' );
 
 if (isset($_REQUEST["add"])) {
-	
+
 	if (isset($_REQUEST["email"]) && !empty($_REQUEST["email"]))
 		$notificationlib->add_mail_event($_REQUEST["event"], ['*'], $_REQUEST["email"]);
 }
 
 if (isset($_REQUEST["removeevent"])) {
-	
+
 	$notificationlib->remove_mail_event($_REQUEST["removeevent"], $_REQUEST["object"], $_REQUEST["email"]);
 }
 
@@ -63,4 +63,4 @@ $gBitSmarty->assign('admin_mail', $admin_mail);
 $gBitSmarty->assign('cuser_mail', $cuser_mail);
 
 // Display the template
-$gBitSystem->display( 'bitpackage:kernel/admin_notifications.tpl', null, array( 'display_mode' => 'admin' ));
+$gBitSystem->display( 'bitpackage:kernel/admin_notifications.tpl', null, [ 'display_mode' => 'admin' ]);

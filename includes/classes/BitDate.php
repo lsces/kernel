@@ -10,7 +10,7 @@
  */
 
  namespace Bitweaver;
- 
+
 /**
  * BitDate
  *
@@ -72,15 +72,15 @@ class BitDate {
 
 		// Recompute offset each request in case DST kicked in
 		if ( $display_tz == "Local" && isset($_COOKIE["tz_offset"]))
-			$this->display_offset = intval($_COOKIE["tz_offset"]);
+			$this->display_offset = (int) ($_COOKIE["tz_offset"]);
 		else if ( $display_tz == "Fixed" )
-			$this->display_offset = $gBitUser->getPreference( 'site_display_timezone', 0 ); 
+			$this->display_offset = $gBitUser->getPreference( 'site_display_timezone', 0 );
 			if ( version_compare( phpversion(), "5.1.0", ">=" ) and !is_numeric( $this->display_offset ) ) {
 				$dateTimeZoneUser = new \DateTimeZone( $this->display_offset );
 				$dtNow = new \DateTime( "now" );
 				$this->display_offset = $dateTimeZoneUser->getOffset( $dtNow );
 			}
-           return $this->display_offset;
+		   return $this->display_offset;
 	}
 
 	/**
@@ -91,7 +91,7 @@ class BitDate {
 	 */
 	public function getDisplayDateFromUTC($_timestamp) {
 		global $gBitUser;
-		
+
 		if ( $gBitUser->getPreference('site_display_utc', "Local") == "Fixed" && class_exists( 'DateTime' ) ) {
 			date_default_timezone_set( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
 			$dateTimeUser = is_numeric( $_timestamp )
@@ -100,9 +100,9 @@ class BitDate {
 
 			$dateTimeUserZone = new \DateTimeZone( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
 			return strtotime( $dateTimeUser->format(DATE_ATOM) ) + timezone_offset_get( $dateTimeUserZone, $dateTimeUser );
-		} else {
-			return $this->getTimestampFromISO($_timestamp) + $this->display_offset;
 		}
+			return $this->getTimestampFromISO($_timestamp) + $this->display_offset;
+
 	}
 
 	/**
@@ -113,7 +113,7 @@ class BitDate {
 	 */
 	public function getUTCFromDisplayDate($_timestamp) {
 		global $gBitUser;
-		
+
 		if ( $gBitUser->getPreference('site_display_utc', "Local") == "Fixed" ) {
 			date_default_timezone_set( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
 			$dateTimeUser = is_numeric( $_timestamp )
@@ -122,9 +122,9 @@ class BitDate {
 
 			$dateTimeUserZone = new \DateTimeZone( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
 			return strtotime( $dateTimeUser->format(DATE_ATOM) ) - timezone_offset_get( $dateTimeUserZone, $dateTimeUser );
-		} else {
-			return $this->getTimestampFromISO($_timestamp) - $this->display_offset;
 		}
+			return $this->getTimestampFromISO($_timestamp) - $this->display_offset;
+
 	}
 
 	/**
@@ -188,21 +188,21 @@ class BitDate {
 	 */
 	public function getTimestampFromISO( $iso_date, $reverse = false ) {
 		$ret = 0;
-		if ( is_numeric($iso_date) ) { 
+		if ( is_numeric($iso_date) ) {
 			$ret = $iso_date;
 		} else if ( $reverse ) {
 			// Input d.m.y, h:m:s
 			if (preg_match(
 				"|^([0-9]{1,2})[-/\.]?([0-9]{1,2})[-/\.]?([0-9]{3,4}), ?(([0-9]{1,2}):?([0-9]{1,2}):?([0-9\.]{1,8}))?|",
-				$iso_date, $rr))
+				$iso_date, $rr, ))
 				$ret = !isset($rr[5])
 					? $this->gmmktime(0,0,0,$rr[2],$rr[1],$rr[3])
 					: $ret = @$this->gmmktime($rr[5],$rr[6],$rr[7],$rr[2],$rr[1],$rr[3]);
-		} else {	
+		} else {
 				// Input y.m.d h:m:s
 				if (preg_match(
 					"|^([0-9]{3,4})[-/\.]?([0-9]{1,2})[-/\.]?([0-9]{1,2})[ -]?(([0-9]{1,2}):?([0-9]{1,2}):?([0-9\.]{1,4}))?|",
-					$iso_date, $rr))
+					$iso_date, $rr, ))
 					$ret = !isset($rr[5])
 						? $this->gmmktime(0,0,0,$rr[2],$rr[3],$rr[1])
 						: $ret = @$this->gmmktime($rr[5],$rr[6],$rr[7],$rr[2],$rr[3],$rr[1]);
@@ -226,7 +226,7 @@ class BitDate {
 
 	Thursday, October 4, 1582 (Julian) was followed immediately by Friday, October 15, 1582 (Gregorian).
 	*/
-	$greg_correction = $year <= 1582 
+	$greg_correction = $year <= 1582
 		? ($year < 1582 || ($year == 1582 && ($month < 10 || ($month == 10 && $day < 15))) ? 3: 0) : 0;
 
 		if($month > 2)
@@ -256,12 +256,12 @@ class BitDate {
 	 */
 	public function weekOfYear($year, $month, $day)
 	{
-        $iso    = $this->gregorianToISO($year, $month, $day);
-        $parts  = explode('-',$iso);
-        $week_number = intval($parts[1]);
-        if ( $week_number == 0 ) $week_number = 53;
-        return $week_number;
-    }
+		$iso    = $this->gregorianToISO($year, $month, $day);
+		$parts  = explode('-',$iso);
+		$week_number = (int) ($parts[1]);
+		if ( $week_number == 0 ) $week_number = 53;
+		return $week_number;
+	}
 
 	/**
 	 * Checks for leap year, returns true if it is. No 2-digit year check. Also
@@ -423,7 +423,7 @@ class BitDate {
 					1630 => -10729324800,
 					1620 => -11044944000,
 					1610 => -11360476800,
-					1600 => -11676096000
+					1600 => -11676096000,
 				];
 
 			if ($is_gmt) $origd = $d;
@@ -523,7 +523,6 @@ class BitDate {
 			];
 		}
 
-
 		$dow = adodb_dow($year,$month,$day);
 
 		return [
@@ -555,7 +554,7 @@ class BitDate {
 		if ($d !== false) {
 			if (!preg_match(
 				"|^([0-9]{3,4})[-/\.]?([0-9]{1,2})[-/\.]?([0-9]{1,2})[ -]?(([0-9]{1,2}):?([0-9]{1,2}):?([0-9\.]{1,4}))?|",
-				$d, $rr)) return $this->date($fmt,false,$is_gmt);
+				$d, $rr, )) return $this->date($fmt,false,$is_gmt);
 
 			if ($rr[1] <= 100 && $rr[2]<= 1) return adodb_date($fmt,false,$is_gmt);
 
@@ -567,7 +566,6 @@ class BitDate {
 
 		return $this->date($fmt,$d,$is_gmt);
 	}
-
 
 	/**
 	 * Return formatted date based on timestamp $d
@@ -756,10 +754,9 @@ class BitDate {
 		$min = intval($min);
 		$sec = intval($sec);
 		*/
-		$mon = intval($mon);
-		$day = intval($day);
-		$year = intval($year);
-
+		$mon = (int) $mon;
+		$day = (int) $day;
+		$year = (int) $year;
 
 		$year = $this->year_digit_check($year);
 
@@ -772,7 +769,7 @@ class BitDate {
 			$mon += 12;
 			$year -= 1;
 		}
-		
+
 		$_day_power = 86400;
 		$_hour_power = 3600;
 		$_min_power = 60;
@@ -838,9 +835,9 @@ class BitDate {
 
 	public function strtotime($time, $now=null)
 	{
-		if ($now == null) 
+		if ($now == null)
 			return strtotime($time);
-		else
+
 			return strtotime($time, $now);
 	}
 
@@ -852,11 +849,11 @@ class BitDate {
 	   $formatter = new \IntlDateFormatter('en_GB', \IntlDateFormatter::LONG, \IntlDateFormatter::NONE);
 	   if ((abs($ls) <= 0x7FFFFFFF)) { // check if number in 32-bit signed range
 			if (!defined('ADODB_NO_NEGATIVE_TS') || $ls >= 0) // if windows, must be +ve integer
-			    return $is_gmt ? @$formatter->format($ls) : @$formatter->format($ls);
+				return $is_gmt ? @$formatter->format($ls) : @$formatter->format($ls);
 		}
 
 		if (empty($ADODB_DATE_LOCALE)) {
-		     $tstr = strtoupper($formatter->format(time())); // 30 Dec 1970, 1 am
+			 $tstr = strtoupper($formatter->format(time())); // 30 Dec 1970, 1 am
 			$sep = substr($tstr,2,1);
 			$hasAM = strrpos($tstr,'M') !== false;
 
@@ -954,7 +951,7 @@ class BitDate {
 	 */
 	// Transcribed to PHP by Jesus M. Castagnetto (blame him if it is fubared ;-)
 	public function gregorianToISO($year, $month, $day) {
-		$mnth = array (0,31,59,90,120,151,181,212,243,273,304,334);
+		$mnth =  [0,31,59,90,120,151,181,212,243,273,304,334];
 		if ($month == 0) {
 			$year--;
 			$month = 12;
@@ -969,11 +966,11 @@ class BitDate {
 		// find Jan 1 weekday (monday = 1, sunday = 7)
 		$yy = ($year - 1) % 100;
 		$c = ($year - 1) - $yy;
-		$g = $yy + intval($yy/4);
-		$jan1_weekday = 1 + intval(($c / 100 % 4 * 5 + $g) % 7);
+		$g = $yy + (int) ($yy/4);
+		$jan1_weekday = 1 + (int) (($c / 100 % 4 * 5 + $g) % 7);
 		// weekday for year-month-day
 		$h = $day_of_year_number + ($jan1_weekday - 1) - 1;
-		$weekday = 1 + intval(($h - 1) % 7);
+		$weekday = 1 + (int) (($h - 1) % 7);
 		// find if Y M D falls in YearNumber Y-1, WeekNumber 52 or
 		if ($day_of_year_number <= (8 - $jan1_weekday) && $jan1_weekday > 4){
 			$yearnumber = $year - 1;
@@ -993,7 +990,7 @@ class BitDate {
 		if ($yearnumber == $year) {
 			$j = $day_of_year_number + (7 - $weekday) + ($jan1_weekday - 1);
 			//$weeknumber = intval($j / 7) + 1; // kludge!!! - JMC
-	           $weeknumber = intval($j / 7); // kludge!!! - JMC
+			   $weeknumber = (int) ($j / 7); // kludge!!! - JMC
 			if ($jan1_weekday > 4) {
 				$weeknumber--;
 			}
@@ -1021,7 +1018,7 @@ class BitDate {
 
 				$absoffset = abs($offset /= 60000);
 				$plusminus = $offset < 0 ? '-' : '+';
-				$gmtoff = sprintf("GMT%1s%02d:%02d", $plusminus, $absoffset / 60, $absoffset - intval($absoffset / 60) * 60);
+				$gmtoff = sprintf("GMT%1s%02d:%02d", $plusminus, $absoffset / 60, $absoffset - (int) ($absoffset / 60) * 60);
 				$tzlongshort = $tz['longname'] . ' (' . $tz['shortname'] . ')';
 				$timezone_options[$tz_key] = sprintf('%-28.28s: %-36.36s %s', $tz_key, $tzlongshort, $gmtoff);
 			}
@@ -1076,7 +1073,7 @@ class BitDate {
 		}
 
 		$colon = $no_colon ? '' : ':';
-		$mins = intval(($secs + 30) / 60);
+		$mins = (int) (($secs + 30) / 60);
 
 		return sprintf("%s%02d%s%02d", $sign, $mins / 60, $colon, $mins % 60);
 	}
@@ -1207,7 +1204,7 @@ class BitDate {
 
 		$timeZonesArray = [
 			'GMT'           => [
-				'GMT' => +0 // GMT
+				'GMT' => +0, // GMT
 			],
 			'North America' => [
 				'NST'  => -3.5, // Newfoundland Standard Time
@@ -1225,7 +1222,7 @@ class BitDate {
 				'AKST' => -9, // Alaska Standard Time
 				'AKDT' => -8, // Alaska Daylight Time
 				'HAST' => -10, // Hawaii-Aleutian Standard Time
-				'HADT' => -9 // Hawaii-Aleutian Daylight Time
+				'HADT' => -9, // Hawaii-Aleutian Daylight Time
 			],
 			'Australia'     => [
 				'NFT' => +11.5, // Norfolk (Island) Time
@@ -1245,7 +1242,7 @@ class BitDate {
 				'CET'  => +1, // Central European Time
 				'CEST' => +2, // Central European Summer Time
 				'EET'  => +2, // Eastern European Time
-				'EEST' => +3 // Eastern European Summer Time
+				'EEST' => +3, // Eastern European Summer Time
 			],
 			'Military'      => [
 				'Z' => +0, // Zulu Time Zone
@@ -1272,7 +1269,7 @@ class BitDate {
 				'I' => +9, // India Time Zone
 				'K' => +10, // Kilo Time Zone
 				'L' => +11, // Lima Time Zone
-				'M' => +12 // Mike Time Zone
+				'M' => +12, // Mike Time Zone
 			],
 		];
 
@@ -1285,7 +1282,7 @@ class BitDate {
 			$retval = date( 'Y-m-d h:i:sa', $timeStamp +  3600 * $netDiff );
 
 		}
- 		return $retval;
+		return $retval;
 
 	} // end function calculateTimeZoneDate()
 

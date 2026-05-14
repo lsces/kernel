@@ -100,7 +100,7 @@ class BitDbAdodb extends BitDb {
 	public function createTables( array $pTables, array $pOptions = [] ): bool {
 		// If server support InnoDB for MySql set the selected engine
 		if( isset( $_SESSION['use_innodb'] )) {
-			$pOptions = $_SESSION['use_innodb'] == true 
+			$pOptions = $_SESSION['use_innodb'] == true
 				? [ ...$pOptions, 'MYSQL' => 'ENGINE=INNODB']
 				: [ ...$pOptions, 'MYSQL' => 'ENGINE=MYISAM'];
 		}
@@ -170,7 +170,7 @@ class BitDbAdodb extends BitDb {
 	public function qstr( string $pStr ): string {
 		return $this->mDb->qstr( $pStr );
 	}
-	
+
 	/**
 	 * Returns SUBSTRING function appropiate for database.
 	 * @return string using AdoDB->substr property
@@ -194,7 +194,7 @@ class BitDbAdodb extends BitDb {
 	 */
 	public function random() {
 		return $this->mDb->random;
-		
+
 	}
 
 	/** Queries the database, returning an error if one occurs, rather
@@ -211,8 +211,8 @@ class BitDbAdodb extends BitDb {
 	 */
 	public function queryError( string $pQuery, string &$pError, ?array $pValues = null, int $pNumRows = -1, int $pOffset = -1 ): array {
 		$this->convertQuery( $pQuery );
-		$result = $pNumRows == -1 && $pOffset == -1 
-			? $this->mDb->Execute($pQuery, $pValues) 
+		$result = $pNumRows == -1 && $pOffset == -1
+			? $this->mDb->Execute($pQuery, $pValues)
 			: $this->mDb->SelectLimit($pQuery, $pNumRows, $pOffset, $pValues);
 
 		if( !$result ) {
@@ -252,8 +252,8 @@ class BitDbAdodb extends BitDb {
 		}
 
 		$result = $numrows == BIT_QUERY_DEFAULT && $offset == BIT_QUERY_DEFAULT
-			? ( !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT 
-				? $this->mDb->Execute( $query, $values ) 
+			? ( !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT
+				? $this->mDb->Execute( $query, $values )
 				: $this->mDb->CacheExecute( $pCacheTime, $query, $values ) )
 			: ( !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT
 				? $this->mDb->SelectLimit( $query, $numrows, $offset, $values )
@@ -308,7 +308,7 @@ class BitDbAdodb extends BitDb {
 		}
 		$this->queryStart();
 		$this->convertQuery( $pQuery );
-		$result = !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT 
+		$result = !$this->isCachingActive() || $pCacheTime == BIT_QUERY_DEFAULT
 		? $this->mDb->GetAll( $pQuery, $pValues )
 		: $this->mDb->CacheGetAll($pCacheTime, $pQuery, $pValues );
 		//count the number of queries made
@@ -641,7 +641,7 @@ function bitdb_error_handler( $dbms, $fn, $errno, $errmsg, $p1, $p2, &$thisConne
 		'errno'=>$errno,
 		'db_msg'=>$errmsg,
 		'sql'=>$p1,
-		'p2'=>$p2
+		'p2'=>$p2,
 	];
 	$logString = bit_error_string( $dbParams );
 
@@ -660,7 +660,7 @@ function bitdb_error_handler( $dbms, $fn, $errno, $errmsg, $p1, $p2, &$thisConne
 	 *	3 message is appended to the file destination
 	 */
 	error_log( $logString,0 );
-	$subject = isset( $_SERVER['SERVER_NAME'] ) ? $_SERVER['SERVER_NAME'] : 'BITWEAVER';
+	$subject = $_SERVER['SERVER_NAME'] ?? 'BITWEAVER';
 
 	$fatal = false;
 	if(( $fn == 'EXECUTE' ) && ( $thisConnection->MetaError() != -5 ) && (empty( $gBitDb ) || $gBitDb->isFatalActive()) ) {

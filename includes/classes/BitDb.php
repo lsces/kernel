@@ -15,8 +15,7 @@
  */
 
  namespace Bitweaver;
- use \Bitweaver\KernelTools;
- 
+
 /**
  * ensure your AdoDB install is a subdirectory off your include path
  */
@@ -28,7 +27,6 @@ define( 'BIT_MAX_RECORDS', -1 );
 // num queries has to be global
 global $gNumQueries;
 $gNumQueries = 0;
-
 
 /**
  * This class is used for database access and provides a number of functions to help
@@ -414,7 +412,6 @@ class BitDb {
 		return [];
 	}
 
-
 	/** Executes the SQL and returns all elements of the first column as a 1-dimensional array. The recordset is discarded for you automatically. If an error occurs, false is returned.
 	* See AdoDB GetCol() function for more detail.
 	* @param string pQuery the SQL query. Use backticks (`) to quote all table
@@ -517,8 +514,8 @@ class BitDb {
 	* at the location identified in updateId which holds a name and value entry
 	* @param string updateTable Name of the table to be updated
 	* @param array updateData Array of data to be changed. Array keys provide the field names
-    * If an array key contains an '=' it will assumed to already be properly quoted.
-    * This allows use of keys like this: `column_name` = `column_name` + ?
+	* If an array key contains an '=' it will assumed to already be properly quoted.
+	* This allows use of keys like this: `column_name` = `column_name` + ?
 	* @param array updateId Array identifying the record to update.
 	*		Array key 'name' provide the field name, and 'value' the record key
 	* @return array Error status of the insert
@@ -781,7 +778,7 @@ class BitDb {
 	 */
 	public function OffsetDate( $pDays, $pColumn=null ) {
 		// PURE VIRTUAL
-		return;
+
 	}
 
 	/** Converts backtick (`) quotes to the appropriate quote for the
@@ -834,9 +831,9 @@ class BitDb {
 				$sql .= $this->convertSortmodeOneItem( $sortMode );
 			}
 			return $sql;
-		} else {
-			return $this->convertSortmodeOneItem( $pSortMode );
 		}
+			return $this->convertSortmodeOneItem( $pSortMode );
+
 	}
 
 	/**
@@ -969,8 +966,8 @@ class BitDb {
 		global $gBitDbType;
 		switch ( $gBitDbType ) {
 			case "postgres":
-				$search = array(chr(92), chr(0), chr(39));
-				$replace = array('\\\134', '\\\000', '\\\047');
+				$search = [chr(92), chr(0), chr(39)];
+				$replace = ['\\\134', '\\\000', '\\\047'];
 				$ret = str_replace($search, $replace, $pData);
 				break;
 			default:
@@ -1053,7 +1050,6 @@ class BitDb {
 		return defined( 'ADVANCED_PGSQL' );
 	}
 
-
 	/**
 	 * determine current version of the databse
 	 * @return # hash including 'description', 'version' full string, 'major', 'minor', and 'revsion'
@@ -1067,19 +1063,18 @@ class BitDb {
 		return $ret;
 	}
 
-
 	/**
 	 * Compatibility function for DBs with case insensitive searches
 	 * (like MySQL, see: http://dev.mysql.com/doc/refman/5.1/en/case-sensitivity.html)
 	 * How to use:
-     * 	AND ".$this->mDb->getCaseLessColumn('lc.title')." = 'page title'
-     * The reason all this matters is that huge performane difference between:
+	 * 	AND ".$this->mDb->getCaseLessColumn('lc.title')." = 'page title'
+	 * The reason all this matters is that huge performane difference between:
 	 *   where title = 'PAGE TITLE'
 	 * and
 	 *   where UPPER(tittle) = 'PAGE TITTLE'
-     * The latter version will not make use of the index on page title (at least for MySQl)
-     * while the first vesion will use the index.  In a case insensitive search DB (MySQL) both
-     * forms of the query will give the same results, the only difference being the preformance.
+	 * The latter version will not make use of the index on page title (at least for MySQl)
+	 * while the first vesion will use the index.  In a case insensitive search DB (MySQL) both
+	 * forms of the query will give the same results, the only difference being the preformance.
 	 * Spiderr suggested this solution and suppled the code below
 	 */
 	public function getCaselessColumn( $pColumn ) {

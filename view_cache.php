@@ -14,7 +14,6 @@
  */
 require_once '../kernel/includes/setup_inc.php';
 use Bitweaver\KernelTools;
-use Bitweaver\Wiki\BitPage;
 
 /*
 if($gBitSystem->getConfig('wiki_list_pages') != 'y') {
@@ -29,7 +28,7 @@ if (isset($_REQUEST['url'])) {
 	if (!$id) {
 		$gBitSmarty->assign('msg', KernelTools::tra("No cache information available"));
 
-		$gBitSystem->display( 'error.tpl' , null, array( 'display_mode' => 'display' ));
+		$gBitSystem->display( 'error.tpl' , null, [ 'display_mode' => 'display' ]);
 		die;
 	}
 
@@ -39,7 +38,7 @@ if (isset($_REQUEST['url'])) {
 if (!isset($_REQUEST["cache_id"])) {
 	$gBitSmarty->assign('msg', KernelTools::tra("No page indicated"));
 
-	$gBitSystem->display( 'error.tpl' , null, array( 'display_mode' => 'display' ));
+	$gBitSystem->display( 'error.tpl' , null, [ 'display_mode' => 'display' ]);
 	die;
 }
 
@@ -54,4 +53,4 @@ if (substr($info["url"], -4, 4) == ".txt") {
 
 $gBitSmarty->assign('ggcacheurl', $ggcacheurl);
 $gBitSmarty->assign('info', $info);
-$gBitSystem->display( 'bitpackage:kernel/view_cache.tpl', null, array( 'display_mode' => 'display' ));
+$gBitSystem->display( 'bitpackage:kernel/view_cache.tpl', null, [ 'display_mode' => 'display' ]);

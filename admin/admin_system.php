@@ -6,6 +6,7 @@
 // Licensed under the GNU LESSER GENERAL PUBLIC LICENSE. See http://www.gnu.org/copyleft/lesser.html for details.
 
 namespace Bitweaver\Liberty;
+
 require_once '../../kernel/includes/setup_inc.php';
 use Bitweaver\KernelTools;
 use Bitweaver\Nexus\Nexus;
@@ -135,7 +136,6 @@ $gBitSmarty->assign( 'templates', $templates );
 $gBitSmarty->assign( 'feedback', $feedback );
 
 $gBitSystem->display( 'bitpackage:kernel/admin_system.tpl', KernelTools::tra( "System Cache" ) , [ 'display_mode' => 'admin' ] );
-
 
 // {{{ Functions
 /**

@@ -40,20 +40,20 @@ class BitDbPear extends BitDb
 		if( empty( $pPearDsn ) ) {
 			global $gBitDbType, $gBitDbUser, $gBitDbPassword, $gBitDbHost, $gBitDbName;
 
-			$pPearDsn = array(
+			$pPearDsn = [
 				'phptype'  => $gBitDbType,
 				'username' => $gBitDbUser,
 				'password' => $gBitDbPassword ,
 				'database' => $gBitDbHost.'/'.$gBitDbName,
-			);
+			];
 		}
 
 		if( empty( $pPearOptions ) ) {
-			$pPearOptions = array(
+			$pPearOptions = [
 				'debug'       => 2,
 				'persistent'  => false,
 				'portability' => DB_PORTABILITY_ALL,
-			);
+			];
 		}
 
 		PEAR::setErrorHandling(PEAR_ERROR_CALLBACK, 'bit_pear_login_error' );
@@ -63,11 +63,11 @@ class BitDbPear extends BitDb
 		if( PEAR::isError( $this->mDb ) ) {
 			$this->mErrors['db_connect'] = $this->mDb->getDebugInfo();
 		} else {
-		
+
 			$this->mDb->setFetchMode( DB_FETCHMODE_ASSOC );
 			// Default to autocommit unless StartTrans is called
 			$this->mDb->autoCommit( TRUE );
-	
+
 			$this->mType = $pPearDsn['phptype'];
 			$this->mName = $pPearDsn['database'];
 		}
@@ -182,7 +182,7 @@ class BitDbPear extends BitDb
 	* @todo not currently used anywhere
 	*/
 
-	function getCol( $pQuery, $pValues=array(), $pTrim=FALSE )
+	function getCol( $pQuery, $pValues=[], $pTrim=FALSE )
 	{
 		if( empty( $this->mDb ) ) {
 			return FALSE;
@@ -238,7 +238,7 @@ class BitDbPear extends BitDb
 	* @param pFirst2Cols if set to true, only returns the first two columns
 	* @return the associative array, or false if an error occurs
 	*/
-	function getAssoc( $pQuery, $pValues=array(), $pForceArray=FALSE, $pFirst2Cols=FALSE, $pCacheTime=BIT_QUERY_DEFAULT )
+	function getAssoc( $pQuery, $pValues=[], $pForceArray=FALSE, $pFirst2Cols=FALSE, $pCacheTime=BIT_QUERY_DEFAULT )
 	{
 		if( empty( $this->mDb ) ) {
 			return FALSE;
@@ -431,7 +431,7 @@ class BitDbPear extends BitDb
 	 */
 	function MetaTables( $ttype = false, $showSchema = false, $mask=false ) {
 		error_log( '$gForceAdodb = TRUE; is needed on the page: '.$_SERVER['SCRIPT_FILENAME'] );
-		return array();
+		return [];
 	}
 
 	/**
@@ -445,11 +445,11 @@ class BitDbPear extends BitDb
 // This function will handle all errors
 function bit_pear_error_handler( $error_obj ) {
 	$bindVars = !empty( $error_obj->backtrace[0]['object']->backtrace[2]['object']->_data ) ? $error_obj->backtrace[0]['object']->backtrace[2]['object']->_data : NULL;
-	$dbParams = array(
+	$dbParams = [
 		'errno' => $error_obj->getCode(),
 		'db_msg'=> $error_obj->getMessage(),
 		'sql'=> $error_obj->getDebugInfo()." ('".implode( "','", $bindVars )."')",
-	);
+	];
 
 	$logString = bit_error_string( $dbParams );
 	bit_display_error( $logString, $dbParams['db_msg'] );

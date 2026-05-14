@@ -10,19 +10,19 @@ $processForm = set_tab();
 
 if( $processForm ) {
 
-	$pref_toggles = array(
+	$pref_toggles = [
 		"site_hidden",
 		"site_closed",
 		"site_use_load_threshold",
 		"site_use_proxy",
-		"site_store_session_db"
-	);
+		"site_store_session_db",
+	];
 
 	foreach( $pref_toggles as $item ) {
 		simple_set_toggle( $item, KERNEL_PKG_NAME );
 	}
 
-	$pref_simple_values = array(
+	$pref_simple_values = [
 		"kernel_server_name",
 		"site_sender_email",
 		"site_proxy_host",
@@ -31,20 +31,20 @@ if( $processForm ) {
 		"site_load_threshold",
 		"site_busy_msg",
 		"site_closed_msg",
-		"storage_host"
-	);
+		"storage_host",
+	];
 
 	foreach( $pref_simple_values as $item ) {
 		simple_set_value( $item, KERNEL_PKG_NAME );
 	}
 
-	$pref_byref_values = array(
+	$pref_byref_values = [
 		"site_title",
 		"site_slogan",
 		"site_description",
 		"site_notice",
 		"site_error_title",
-	);
+	];
 
 	foreach( $pref_byref_values as $item ) {
 		$_REQUEST['site_description'] = substr( $_REQUEST['site_description'], 0, 180 );
@@ -69,7 +69,7 @@ if( $processForm ) {
 			$gBitSystem->getConfig( 'site_keywords' ).
 			$gBitSystem->getConfig( 'site_keywords_1' ).
 			$gBitSystem->getConfig( 'site_keywords_2' ).
-			$gBitSystem->getConfig( 'site_keywords_3' )
+			$gBitSystem->getConfig( 'site_keywords_3' ),
 		);
 	}
 
