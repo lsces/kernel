@@ -1245,32 +1245,10 @@ class BitSystem extends BitSingleton {
 			if( !empty( $role_home )) {
 				if( $this->verifyId( $role_home ) ) {
 					$url = BIT_ROOT_URL."index.php".( !empty( $role_home ) ? "?content_id=".$role_home : "" );
-				// wiki dependence - NO bad idea
-				// } elseif( strpos( $group_home, '/' ) === false ) {
-				// 	$url = BitPage::getDisplayUrl( $group_home );
 				} elseif(  strpos( $role_home, 'http://' ) === false ){
 					$url = BIT_ROOT_URL.$role_home;
 				} else {
 					$url = $role_home;
-				}
-			}
-		} elseif( $pIndexType == 'group_home') {
-			// See if we have first a user assigned default group id, and second a group default system preference
-			if( !$gBitUser->isRegistered() && ( $group_home = $gBitUser->getGroupHome( ANONYMOUS_GROUP_ID ))) {
-			} elseif( @$this->verifyId( $gBitUser->mInfo['default_group_id'] ) && ( $group_home = $gBitUser->getGroupHome( $gBitUser->mInfo['default_group_id'] ))) {
-			} elseif( $this->getConfig( 'default_home_group' ) && ( $group_home = $gBitUser->getGroupHome( $this->getConfig( 'default_home_group' )))) {
-			}
-
-			if( !empty( $group_home )) {
-				if( $this->verifyId( $group_home ) ) {
-					$url = BIT_ROOT_URL."index.php".( !empty( $group_home ) ? "?content_id=".$group_home : "" );
-				// wiki dependence - NO bad idea
-				// } elseif( strpos( $group_home, '/' ) === false ) {
-				// 	$url = BitPage::getDisplayUrl( $group_home );
-				} elseif(  strpos( $group_home, 'http://' ) === false ){
-					$url = BIT_ROOT_URL.$group_home;
-				} else {
-					$url = $group_home;
 				}
 			}
 		} elseif( $pIndexType == 'my_page' || $pIndexType == 'my_home' || $pIndexType == 'user_home'  ) {
