@@ -16,20 +16,21 @@
 /**
  * Initialization
  */
+use Bitweaver\KernelTools;
 include_once '../kernel/includes/setup_inc.php';
 
 if (!$gBitUser->hasPermission( 'p_tidbits_configure_modules' )) {
-	$gBitSmarty->assign('msg', tra("You dont have permission to use this feature"));
+	$gBitSmarty->assign('msg', KernelTools::tra("You dont have permission to use this feature"));
 	$gBitSystem->display( 'error.tpl' , null, [ 'display_mode' => 'display' ]);
 	die;
 }
 /*if (!$gBitSystem->isFeatureActive( 'site_user_assigned_modules' ) && $check_req) {
-	$gBitSmarty->assign('msg', tra("This feature is disabled").": site_user_assigned_modules");
+	$gBitSmarty->assign('msg', KernelTools::tra("This feature is disabled").": site_user_assigned_modules");
 	$gBitSystem->display( 'error.tpl' , null, array( 'display_mode' => 'display' ));
 	die;
 }*/
 if (!$gBitUser->isRegistered()) {
-	$gBitSmarty->assign('msg', tra("You must log in to use this feature"));
+	$gBitSmarty->assign('msg', KernelTools::tra("You must log in to use this feature"));
 	$gBitSystem->display( 'error.tpl' , null, [ 'display_mode' => 'display' ]);
 	die;
 }
