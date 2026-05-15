@@ -131,8 +131,5 @@ if( !empty( $_REQUEST['change_prefs'] ) ) {
 	}
 }
 
-if ( defined( 'ROLE_MODEL' ) ) {
-	$gBitSmarty->assign( "role_model", true );
-}
 
 $gBitSystem->setHelpInfo('Features','Settings','Help with the features settings');

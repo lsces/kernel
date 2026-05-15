@@ -528,9 +528,7 @@ class BitSystem extends BitSingleton {
 
 		$this->preDisplay( $pMid );
 		$gBitSmarty->assign( 'mid', $pMid );
-		if( defined( 'ROLE_MODEL' ) ) {
-			$gBitSmarty->assign( 'role_model', true );
-		}
+		
 
 		// Create key for CSP nonce value ... TODO ? this could be the tk ticket value
 		// tk only exists when logged in ;)
