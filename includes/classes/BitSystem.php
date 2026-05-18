@@ -552,10 +552,6 @@ class BitSystem extends BitSingleton {
 	 */
 	public function preDisplay( $pMid ) {
 		global $gCenterPieces, $gBitSmarty, $gBitThemes, $gDefaultCenter;
-		if( !defined( 'JSCALENDAR_PKG_URL' ) ) {
-			define( 'JSCALENDAR_PKG_URL', UTIL_PKG_URL.'javascript/libs/dynarch/jscalendar/' );
-		}
-
 		$gBitThemes->loadLayout();
 
 		// check to see if we are working with a dynamic center area
@@ -657,7 +653,11 @@ class BitSystem extends BitSingleton {
 		if( defined( strtoupper( $pPackageName ).'_PKG_NAME' ) ) {
 			if( $name = strtolower( @constant( strtoupper( $pPackageName ).'_PKG_NAME' ))) {
 				// kernel always active
-				$ret = $name == 'kernel' ? $ret = 'y' : $this->getConfig( 'package_'.$name, 'n' );
+				$ret = $name == 'kernel' ? 'y' : $this->getConfig( 'package_'.$name, 'n' );
+				// During install getConfig() is a no-op; fall back to mPackages state set by verifyInstalledPackages
+				if( $ret == 'n' && defined( 'BIT_INSTALL' ) && !empty( $this->mPackages[$name]['installed'] ) ) {
+					$ret = 'y';
+				}
 			}
 		}
 
@@ -2052,7 +2052,7 @@ class BitSystem extends BitSingleton {
 	 * @param string $pDefault Version number
 	 * @return string version number on success
 	 */
-	public function getVersion( ?string $pPackage = null, $pDefault = '0.0.0' ) {
+	public function getVersion( ?string $pPackage = null, $pDefault = BITWEAVER_VERSION ) {
 		global $gBitSystem;
 		$config = empty( $pPackage ) ? 'bitweaver_version' : "package_".$pPackage."_version";
 
@@ -2423,26 +2423,37 @@ class BitSystem extends BitSingleton {
 						}
 					} else {
 						$this->mPackages[$package]['db_tables_found'] = false;
-						if( !$this->getConfig( 'package_'.strtolower( $package ) ) ){
-							$this->mPackages[$package]['installed'] = false;
+						if( empty( $this->mPackages[$package]['required'] ) ) {
+							$configVal = $this->getConfig( 'package_'.strtolower( $package ) );
+							if( !$configVal && defined( 'BIT_INSTALL' ) ) {
+								// getConfig() is a no-op during install; query DB directly
+								$configVal = $this->mDb->getOne( "SELECT `config_value` FROM `".BIT_DB_PREFIX."kernel_config` WHERE `config_name`=?", ['package_'.strtolower( $package )] );
+							}
+							if( !$configVal ) {
+								$this->mPackages[$package]['installed'] = false;
+							}
 						}
 					}
 
 					$this->mPackages[$package]['active_switch'] = $this->getConfig( 'package_'.strtolower( $package ) );
-					if( !empty( $this->mPackages[$package]['required'] ) && $this->mPackages[$package]['active_switch'] != 'y' ) {
-						// we have a disabled required package. turn it back on!
-						$this->storeConfig( 'package_' . $package, 'y', $package );
-						$this->mPackages[$package]['active_switch'] = $this->getConfig( 'package_' . $package );
-					} elseif( !empty( $this->mPackages[$package]['required'] ) && $this->mPackages[$package]['installed'] &&  $this->getConfig( 'package_'.$package ) != 'i' &&  $this->getConfig( 'package_'.$package ) != 'y' ) {
-						$this->storeConfig( 'package_' . $package, 'i', $package );
-					} elseif( !empty( $this->mPackages[$package]['installed'] ) && !$this->isFeatureActive( 'package_'.strtolower( $package ) ) ) {
-						// set package to i if it is installed but not isFeatureActive (common when re-installing packages)
-						$this->storeConfig( 'package_' . $package, 'i', $package );
-						if( $version = $this->getLatestUpgradeVersion( $package ) ) {
-							$this->storeVersion( $package, $version );
-							$this->registerPackageVersion( $package, $version );
-							$this->mPackages[$package]['info']['version'] = $version;
-							unset( $this->mPackages[$package]['info']['upgrade'] );
+					// During install getConfig() always returns null (BIT_INSTALL blocks config loading),
+					// so skip all storeConfig calls — the installer manages package status itself
+					if( !defined( 'BIT_INSTALL' ) ) {
+						if( !empty( $this->mPackages[$package]['required'] ) && $this->mPackages[$package]['active_switch'] != 'y' ) {
+							// we have a disabled required package. turn it back on!
+							$this->storeConfig( 'package_' . $package, 'y', $package );
+							$this->mPackages[$package]['active_switch'] = $this->getConfig( 'package_' . $package );
+						} elseif( !empty( $this->mPackages[$package]['required'] ) && $this->mPackages[$package]['installed'] &&  $this->getConfig( 'package_'.$package ) != 'i' &&  $this->getConfig( 'package_'.$package ) != 'y' ) {
+							$this->storeConfig( 'package_' . $package, 'i', $package );
+						} elseif( !empty( $this->mPackages[$package]['installed'] ) && !$this->isFeatureActive( 'package_'.strtolower( $package ) ) ) {
+							// set package to i if it is installed but not isFeatureActive (common when re-installing packages)
+							$this->storeConfig( 'package_' . $package, 'i', $package );
+							if( $version = $this->getLatestUpgradeVersion( $package ) ) {
+								$this->storeVersion( $package, $version );
+								$this->registerPackageVersion( $package, $version );
+								$this->mPackages[$package]['info']['version'] = $version;
+								unset( $this->mPackages[$package]['info']['upgrade'] );
+							}
 						}
 					}
 				}
