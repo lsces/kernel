@@ -178,7 +178,10 @@ if( !defined( 'BIT_MAJOR_VERSION' ) ) {
 // When updating to certain versions of bitweaver, we need to force a visit to the installer to fix certain stuff in the database.
 // Enter the minimum version number here in the format: '2.1.0-beta'
 if( !defined( 'MIN_BIT_VERSION' ) ) {
-	define( 'MIN_BIT_VERSION', '4.0.0' );
+	define( 'MIN_BIT_VERSION', '5.0.0' );
+}
+if( !defined( 'BITWEAVER_VERSION' ) ) {
+	define( 'BITWEAVER_VERSION', '5.0.0' );
 }
 
 // These defines have to happen FIRST because core classes depend on them.
