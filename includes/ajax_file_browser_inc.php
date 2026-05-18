@@ -43,7 +43,6 @@ if( !empty( $_REQUEST['ajax_path_conf'] ) && $gBitSystem->isFeatureActive( $_REQ
 	$fileList = ajax_dir_list( $gBitSystem->getConfig( $_REQUEST['ajax_path_conf'] ), !empty( $_REQUEST['relpath'] ) ? $_REQUEST['relpath'] . "/" : null);
 	$gBitSmarty->assign( 'fileList', $fileList );
 }
-$gBitThemes->loadAjax( 'mochikit', [ 'Iter.js', 'DOM.js', 'Async.js' ]);
 $gBitThemes->loadJavascript( KERNEL_PKG_PATH."scripts/BitFileBrowser.js", true );
 
 if( $gBitThemes->isAjaxRequest() ) {
