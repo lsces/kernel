@@ -38,6 +38,9 @@ if( !empty( $_REQUEST['features'] ) ) {
 	}
 }
 
+// Detect whether the installer is accessible (symlink present on production sites)
+$gBitSmarty->assign( 'install_pkg_accessible', is_readable( BIT_ROOT_PATH . 'install/install.php' ) );
+
 global $gBitInstaller;
 $gBitInstaller = &$gBitSystem;
 $gBitInstaller->verifyInstalledPackages();

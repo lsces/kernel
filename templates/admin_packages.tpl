@@ -1,10 +1,10 @@
 {strip}
-{* checks if installer path is available *}
-{assign var=installfile value="`$smarty.const.INSTALL_PKG_PATH`install.php"|is_file}
-{assign var=installread value="`$smarty.const.INSTALL_PKG_PATH`install.php"|is_readable}
-{if $installfile neq 1 && $installread neq 1}
+{* install_unavailable: shown near install links/buttons when installer is not accessible *}
+{if $install_pkg_accessible}
+	{capture assign=install_unavailable}{/capture}
+{else}
 	{capture assign=install_unavailable}
-		<p>{tr}You might have to rename your <strong>install/install.done</strong> file back to <strong>install/install.php</strong>.{/tr}</p>
+		<p class="text-muted"><em>{tr}Installer not accessible — to install or upgrade packages, symlink the <code>install</code> directory into the web root, then reload this page.{/tr}</em></p>
 	{/capture}
 {/if}
 
@@ -17,7 +17,12 @@
 			{jstab title="Upgradable"}
 				{legend legend="Upgradable packages"}
 					<p class="warning">
-						{biticon class="img-responsive" iname="large/dialog-warning" iexplain="Warning"} {tr}You seem to have at least one package that can be upgraded.{/tr} <a href="{$smarty.const.INSTALL_PKG_URL}install.php?step=4">We recommend you visit the installer now</a>.
+						{biticon class="img-responsive" iname="large/dialog-warning" iexplain="Warning"} {tr}You seem to have at least one package that can be upgraded.{/tr}
+						{if $install_pkg_accessible}
+							<a href="{$smarty.const.INSTALL_PKG_URL}install.php?step=4">{tr}We recommend you visit the installer now.{/tr}</a>
+						{else}
+							<em class="text-muted">{tr}Make the installer accessible to proceed with upgrades.{/tr}</em>
+						{/if}
 					</p>
 
 					{foreach from=$upgradable item=package key=name}
@@ -40,7 +45,12 @@
 		{jstab title="Installed"}
 			{legend legend="Packages installed on your system"}
 				<p>
-					{tr}Packages with checkmarks are currently enabled, packages without are disabled.  To enable or disable a package, check or uncheck it, and click the 'Modify Activation' button.{/tr} <a href='{$smarty.const.INSTALL_PKG_URL}install.php?step=3'>{tr}To uninstall or reinstall a package, visit the installer.{/tr}</a>
+					{tr}Packages with checkmarks are currently enabled, packages without are disabled.  To enable or disable a package, check or uncheck it, and click the 'Modify Activation' button.{/tr}
+					{if $install_pkg_accessible}
+						<a href='{$smarty.const.INSTALL_PKG_URL}install.php?step=3'>{tr}To uninstall or reinstall a package, visit the installer.{/tr}</a>
+					{else}
+						{tr}You will need to enable the installer to manage packages.{/tr}
+					{/if}
 				</p>
 
 				{$install_unavailable}
@@ -281,9 +291,12 @@
 		{jstab title="Not Installed"}
 			{legend legend="bitweaver packages available for installation"}
 
-						<p><a class="btn btn-default" href='{$smarty.const.INSTALL_PKG_URL}install.php?step=3'>{tr}Install Packages{/tr}</a></p>
-
-						{$install_unavailable}
+						{if $install_pkg_accessible}
+							<p><a class="btn btn-default" href='{$smarty.const.INSTALL_PKG_URL}install.php?step=3'>{tr}Install Packages{/tr}</a></p>
+						{else}
+							<p><a class="btn btn-default disabled" href='#' aria-disabled="true">{tr}Install Packages{/tr}</a></p>
+							{$install_unavailable}
+						{/if}
 
 				<hr style="clear:both" />
 
