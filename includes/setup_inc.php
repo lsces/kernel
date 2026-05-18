@@ -144,7 +144,7 @@ if( $gBitSystem->isDatabaseValid() ) {
 
 	// TODO: XSS security check
 	if( !empty( $_REQUEST['tk'] ) && empty( $_SERVER['bot'] ) ) {
-		//$gBitUser->verifyTicket();
+		$gBitUser->verifyTicket();
 	} elseif( !empty( $_SERVER['bot'] ) ) {
 	}
 
