@@ -1557,7 +1557,6 @@ class BitSystem extends BitSingleton {
 					? finfo_open( FILEINFO_MIME, PHP_MAGIC_PATH )
 					: finfo_open( FILEINFO_MIME );
 				$mime = finfo_file( $finfo, $pFile );
-				finfo_close( $finfo );
 			} else {
 				if( KernelTools::function_enabled( "escapeshellarg" ) && KernelTools::function_enabled( "exec" )) {
 					$mime = exec( trim( 'file -bi ' . escapeshellarg( $pFile )));
