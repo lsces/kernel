@@ -226,11 +226,11 @@ class BitSystem extends BitSingleton {
 	 * @param string $pDefault only manipulate settings with this value set
 	 * @access public
 	 **/
-	public function getConfig( string $pName, string $pDefault = '' ): string {
+	public function getConfig( string $pName, string|null $pDefault = null ): string {
 		if( empty( $this->mConfig ) ) {
 			$this->loadConfig();
 		}
-		return empty( $this->mConfig[$pName] ) ? $pDefault : $this->mConfig[$pName];
+		return empty( $this->mConfig[$pName] ) ? ($pDefault ?? '') : $this->mConfig[$pName];
 	}
 
 	// <<< getConfigMatch
