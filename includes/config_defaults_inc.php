@@ -171,7 +171,7 @@ if( substr_count( $_SERVER['HTTP_HOST'], '.' ) >= 2 ) {
 if( !defined( 'BIT_MAJOR_VERSION' ) ) {
 	define( 'BIT_MAJOR_VERSION',	'5' );
 	define( 'BIT_MINOR_VERSION',	'0' );
-	define( 'BIT_SUB_VERSION',	'0' );
+	define( 'BIT_SUB_VERSION',	'1' );
 	define( 'BIT_LEVEL',			'dev' ); // dev < alpha < beta < RC# < '' < pl
 }
 
