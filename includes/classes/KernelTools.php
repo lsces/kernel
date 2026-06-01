@@ -607,6 +607,10 @@ class KernelTools
 	//		apache_setenv( 'USERID', $gBitUser->getField('login', '-'), true );
 		}
 
+		if( empty($pUrl) ) {
+			return;
+		}
+
 		// clean up URL before executing it
 		while( strstr( $pUrl, '&&' ) ) {
 			$pUrl = str_replace( '&&', '&', $pUrl );
