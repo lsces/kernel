@@ -42,14 +42,12 @@
 
 	{if $gBitSystem->isFeatureActive( 'bidirectional_text' )}<div dir="rtl">{/if}
 
-	{if $gBitThemes->mDisplayMode != 'edit'}
-		{if $gBitSystem->isFeatureActive( 'site_left_column' ) && !$gHideModules && $gBitThemes->hasColumnModules('l')}
-			{assign var=leftCol value=$gBitThemes->fetchLayoutColumn('l')}
-		{/if}
+	{if $gBitSystem->isFeatureActive( 'site_left_column' ) && !$gHideModules && $gBitThemes->hasColumnModules('l')}
+		{assign var=leftCol value=$gBitThemes->fetchLayoutColumn('l')}
+	{/if}
 
-		{if $gBitSystem->isFeatureActive( 'site_right_column' ) && !$gHideModules && $gBitThemes->hasColumnModules('r')}
-			{assign var=rightCol value=$gBitThemes->fetchLayoutColumn('r')}
-		{/if}
+	{if $gBitSystem->isFeatureActive( 'site_right_column' ) && !$gHideModules && $gBitThemes->hasColumnModules('r')}
+		{assign var=rightCol value=$gBitThemes->fetchLayoutColumn('r')}
 	{/if}
 
 	{if !empty($leftCol)}
