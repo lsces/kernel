@@ -54,7 +54,7 @@
 							<td>{$item.path|replace:$smarty.const.BIT_ROOT_PATH:""|replace:"//":"/"}</td>
 							<td class="alignright">{$item.du.count}</td>
 							<td class="alignright">{$item.du.size|display_bytes}</td>
-							<td class="actionicon">{smartlink ititle=Empty booticon="icon-trash" prune=$key}</td>
+							<td class="actionicon">{smartlink ititle=Empty biticon="edit-delete" prune=$key}</td>
 						</tr>
 					{/foreach}
 				</table>
@@ -75,7 +75,7 @@
 							<td>{$item.path|replace:$smarty.const.BIT_ROOT_PATH:""|replace:"//":"/"}{$key}</td>
 							<td class="alignright">{$item.du.count}</td>
 							<td class="alignright">{$item.du.size|display_bytes}</td>
-							<td class="actionicon">{smartlink ititle="Compile Templates" booticon="icon-edit" compiletemplates=$key}</td>
+							<td class="actionicon">{smartlink ititle="Compile Templates" biticon="document-properties" compiletemplates=$key}</td>
 						</tr>
 					{/foreach}
 				</table>

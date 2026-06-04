@@ -1,7 +1,7 @@
 {strip}
 <nav class="navbar navbar-default {if $gBitSystem->getConfig('layout-header')}navbar-static-top{/if}" id="bittopbar">
 	<div class="navbar-header">
-		<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bit-top-menu">{booticon iname="icon-reorder"}</button>
+		<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bit-top-menu">{biticon ipackage="icons" iname="view-sort-ascending"}</button>
 		<a class="navbar-brand" href="{$smarty.const.BIT_ROOT_URL}" {if $gBitSystem->getConfig('site_slogan')} title="{$gBitSystem->getConfig('site_slogan')|escape}" {/if}>{$gBitSystem->getConfig('site_title')}</a>
 	</div>
 	{if $gBitSystem->mAppMenu}
