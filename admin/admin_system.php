@@ -78,7 +78,8 @@ if( !empty( $_GET['prune'] ) ) {
 	foreach( $diskUsage as $key => $item ) {
 		if( $_GET['prune'] == $key || $_GET['prune'] == 'all' ) {
 			$dir = $item['path'].( !empty( $item['subdir'] ) ? '/'.$item['subdir'] : '' );
-			if( is_dir( $dir ) && strpos( $item['path'], BIT_ROOT_PATH ) === 0 ) {
+			$safeRoot = strpos( $item['path'], BIT_ROOT_PATH ) === 0 || strpos( $item['path'], TEMP_PKG_PATH ) === 0 || strpos( $item['path'], STORAGE_PKG_PATH ) === 0;
+			if( is_dir( $dir ) && $safeRoot ) {
 				if( KernelTools::unlink_r( $dir )) {
 					$reload = true;
 				} else {
