@@ -54,7 +54,7 @@
 							<td>{$item.path|replace:$smarty.const.BIT_ROOT_PATH:""|replace:"//":"/"}</td>
 							<td class="alignright">{$item.du.count}</td>
 							<td class="alignright">{$item.du.size|display_bytes}</td>
-							<td class="actionicon">{smartlink ititle=Empty biticon="edit-delete" prune=$key}</td>
+							<td class="actionicon">{smartlink ititle=Empty biticon="user-trash" prune=$key}</td>
 						</tr>
 					{/foreach}
 				</table>
