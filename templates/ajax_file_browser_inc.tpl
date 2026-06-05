@@ -12,7 +12,7 @@
 			{foreach from=$fileList.file item=finfo}
 				{if $finfo.relpath}
 					<div class="{cycle values="even,odd"}" style="margin-left:{$finfo.indent}px;" onclick='document.getElementById("ajax_input").value="{$finfo.relpath}"' title="{tr}Last Modified{/tr}: {$finfo.mtime|bit_long_datetime}">
-						{biticon iname=text-x-generic iexplain="File"} {$finfo.name} <small class="floatright clearright">{$finfo.size|display_bytes}</small>
+						{biticon iname=view-list-text iexplain="File"} {$finfo.name} <small class="floatright clearright">{$finfo.size|display_bytes}</small>
 					</div>
 				{else}
 					<div class="{cycle values="even,odd"}" style="margin-left:{$finfo.indent}px;">
