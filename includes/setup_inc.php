@@ -274,8 +274,12 @@ if( $gBitSystem->isDatabaseValid() ) {
 
 // INSTALLER_FORCE was set earlier and here we force the installer if needed.
 if( defined( 'INSTALLER_FORCE' )) {
-	// After login via validate.php, redirect back to the installer rather than the site homepage.
-	$_SESSION['loginfrom'] = INSTALL_PKG_URL.'install.php';
+	if( !$gBitUser->isAdmin() ) {
+		// Non-admin: redirect to the normal signin page so the reliable cookie/session
+		// login flow handles auth, then bring the user back to the installer.
+		$_SESSION['loginfrom'] = INSTALL_PKG_URL.'install.php';
+		KernelTools::bit_redirect( USERS_PKG_URL.'signin.php' );
+	}
 	$gBitSmarty->display( "bitpackage:kernel/force_installer.tpl" );
 	die;
 }
