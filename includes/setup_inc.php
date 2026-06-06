@@ -179,7 +179,9 @@ if( $gBitSystem->isDatabaseValid() ) {
 	//$gBitSmarty->assign( "gBitSystemPackages", $gBitSystem->mPackages ); doesn't seem to be used - xing
 
 	// check to see if admin has closed the site
-	if(( isset( $_SERVER['SCRIPT_URL'] ) && $_SERVER['SCRIPT_URL'] == USERS_PKG_URL.'validate.php' )) {
+	// SCRIPT_URL is Apache-only; fall back to PHP_SELF (set by nginx) for nginx stacks
+	$scriptUrl = $_SERVER['SCRIPT_URL'] ?? $_SERVER['PHP_SELF'] ?? '';
+	if( $scriptUrl === USERS_PKG_URL.'validate.php' ) {
 		$bypass_siteclose_check = 'y';
 	}
 	if( empty($gShellScript) && $gBitSystem->isFeatureActive( 'site_closed' ) && !$gBitUser->hasPermission( 'p_access_closed_site' ) && !isset( $bypass_siteclose_check )) {
