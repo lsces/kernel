@@ -31,19 +31,64 @@ define( 'CENTER_COLUMN', 'c' );
 define( 'HOMEPAGE_LAYOUT', 'home' );
 
 /**
- * kernel::BitSystem
+ * The global system singleton — `$gBitSystem` — that bootstraps and coordinates bitweaver.
  *
- * Purpose:
+ * BitSystem is instantiated once in `setup_inc.php` and is available everywhere as
+ * `$gBitSystem`.  It owns six concerns:
  *
- *     This is the main system class that does the work of seeing bitweaver has an
- * 	operable environment and has methods for modifying that environment.
+ * ## 1. Package registry
  *
- * 	Currently gBitSystem derives from this class for backward compatibility sake.
- * 	Ultimate goal is to put system code from BitBase here, and base code from
- * 	gBitSystem (code that ALL features need) into BitBase and code gBitSystem that
- * 	is Package specific should be moved into that package
+ * Every package self-registers by calling `$gBitSystem->registerPackage()` from its
+ * `bit_setup_inc.php`.  Registration defines the `<PKG>_PKG_PATH`, `_PKG_URL`, `_PKG_NAME`
+ * constants and populates `$mPackages`.  `scanPackages()` iterates the web-root directories
+ * and loads each package's setup file; `loadPackage()` loads one by name.
  *
- * @author spider <spider@steelsun.com>
+ * Package status is stored in kernel_config as `package_<name>`:
+ *   - `'y'` active (installed + enabled)
+ *   - `'i'` installed but not active
+ *   - `'n'` / absent — not installed
+ *
+ * `registerAppMenu()` adds a package's navbar dropdown to `$mAppMenu`, which is rendered
+ * by `kernel/templates/top_bar.tpl`.
+ *
+ * ## 2. Configuration (`kernel_config` table)
+ *
+ * `$mConfig` is a flat string→string hash loaded from `kernel_config` at startup.
+ * Read via `getConfig($name, $default)`, written persistently via `storeConfig($name, $value)`,
+ * transiently via `setConfig()` (in-process only, no DB write).  `isFeatureActive($name)`
+ * returns true when the config value is non-empty and not `'n'`.
+ *
+ * ## 3. Display pipeline
+ *
+ * `display($pMid, $browserTitle, $optionsHash)` is the final call on every page.  It sets
+ * HTTP headers, loads the theme, assigns Smarty variables, and renders `kernel/html.tpl`
+ * (which pulls in layout columns, modules, and `$pMid` as the centre piece).  For non-HTML
+ * output use `outputJson()` or `outputRaw()`.  `fatalError()` and `fatalPermission()` both
+ * terminate with `die` after rendering an error template.
+ *
+ * ## 4. Permissions and access control
+ *
+ * `fatalPermission($perm)` redirects unauthenticated users to the login form and shows a
+ * permission-denied message to authenticated users who lack the required permission.
+ * `isFeatureActive()`, `verifyPackage()`, and `verifyFeature()` are convenience guards that
+ * call `fatalError()` when the condition is not met.
+ *
+ * ## 5. Installer and schema registration
+ *
+ * During install, each package's `admin/schema_inc.php` calls the `register*` family of
+ * methods to declare its DB tables, sequences, indexes, constraints, default data, and
+ * permissions.  These populate `$mPackages[$pkg]['tables']`, `['defaults']`, etc.
+ * `verifyInstalledPackages()` cross-checks the live DB against the registered schema to
+ * determine what is installed, missing, or needs upgrading.
+ *
+ * ## 6. Utilities
+ *
+ * - **MIME types** — `lookupMimeType()`, `verifyMimeType()`, `verifyFileExtension()`
+ * - **Versioning** — `getVersion()`, `storeVersion()`, `getBitVersion()`, `getLatestUpgradeVersion()`
+ * - **Time/date** — thin wrappers over `$mServerTimestamp` (a BitDate): `getUTCTime()`,
+ *   `get_short_date_format()`, etc.
+ * - **Navigation** — `getDefaultPage()`, `getIndexPage()`, `setBrowserTitle()`,
+ *   `setPagination()`, `setCanonicalLink()`
  *
  * @package kernel
  */
