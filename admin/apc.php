@@ -233,6 +233,7 @@ if (isset($MYREQUEST['IMG']))
 	}
 
 	function fill_arc($im, $centerX, $centerY, $diameter, $start, $end, $color1,$color2,$text='',$placeindex=0) {
+		$start = (int)$start; $end = (int)$end;
 		$r=$diameter/2;
 		$w=deg2rad((360+$start+($end-$start)/2)%360);
 
@@ -261,6 +262,7 @@ if (isset($MYREQUEST['IMG']))
 	}
 
 	function text_arc($im, $centerX, $centerY, $diameter, $start, $end, $color1,$text,$placeindex=0) {
+		$start = (int)$start; $end = (int)$end;
 		$r=$diameter/2;
 		$w=deg2rad((360+$start+($end-$start)/2)%360);
 
@@ -275,6 +277,7 @@ if (isset($MYREQUEST['IMG']))
 
 	function fill_box($im, $x, $y, $w, $h, $color1, $color2,$text='',$placeindex='') {
 		global $col_black;
+		$h = (int)$h;
 		$x1=$x+$w-1;
 		$y1=$y+$h-1;
 
@@ -399,7 +402,7 @@ if (isset($MYREQUEST['IMG']))
 			uasort($free, 'block_sort');
 			foreach($free as $block) {
 				if($block['offset']!=$ptr) {       // Used block
-					$h=(GRAPH_SIZE-5)*($block['offset']-$ptr)/$s;
+					$h=(int)((GRAPH_SIZE-5)*($block['offset']-$ptr)/$s);
 					if ($h>0) {
 												$j++;
 						if($j<75) fill_box($image,$x,$y,50,$h,$col_black,$col_red,bsize($block['offset']-$ptr),$j);
@@ -407,7 +410,7 @@ if (isset($MYREQUEST['IMG']))
 										}
 					$y+=$h;
 				}
-				$h=(GRAPH_SIZE-5)*($block['size'])/$s;
+				$h=(int)((GRAPH_SIZE-5)*($block['size'])/$s);
 				if ($h>0) {
 										$j++;
 					if($j<75) fill_box($image,$x,$y,50,$h,$col_black,$col_green,bsize($block['size']),$j);
@@ -417,7 +420,7 @@ if (isset($MYREQUEST['IMG']))
 				$ptr = $block['offset']+$block['size'];
 			}
 			if ($ptr < $mem['seg_size']) { // memory at the end
-				$h = (GRAPH_SIZE-5) * ($mem['seg_size'] - $ptr) / $s;
+				$h = (int)((GRAPH_SIZE-5) * ($mem['seg_size'] - $ptr) / $s);
 				if ($h > 0) {
 					fill_box($image,$x,$y,50,$h,$col_black,$col_red,bsize($mem['seg_size']-$ptr),$j++);
 				}
