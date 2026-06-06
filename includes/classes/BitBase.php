@@ -31,8 +31,40 @@ interface BitCacheable  {
 }
 
 /**
- * Virtual base class (as much as one can have such things in PHP) for all
- * derived bitweaver classes that require database access.
+ * Abstract root class for all DB-aware bitweaver objects.
+ *
+ * Every class that touches the database — content types, user objects, system
+ * singletons — extends BitBase directly or via LibertyBase / LibertyContent.
+ * It provides four concerns shared by the entire class hierarchy:
+ *
+ * ## Database connection
+ *
+ * `$mDb` is set from the global `$gBitDb` on construct and on `__wakeup()`.
+ * All DB calls go through this reference.  `StartTrans()` / `CompleteTrans()` /
+ * `RollbackTrans()` are thin wrappers that also clear the APCu object cache on
+ * transaction start (data change implied).
+ *
+ * ## Data hash
+ *
+ * `$mInfo` is the primary data store for a loaded object — an associative array
+ * of DB column values populated by `load()` and read via `getField()`.
+ * `$mErrors` accumulates validation failures from `verify()` and is checked by
+ * callers via `count($this->mErrors) == 0`.
+ *
+ * ## Object caching (APCu)
+ *
+ * Optional APCu caching is gated by `isCacheActive()`.  Cache keys are scoped
+ * per host + DB + class + content_id via `getCacheUuidFromKey()`.  Subclasses
+ * opt in by overriding `isCacheableClass()` (returns true) and `getCacheKey()`
+ * (returns the primary key value).  Cache is cleared on `StartTrans()` and on
+ * `__destruct()` if the object is marked non-cacheable.
+ *
+ * ## List utilities
+ *
+ * `prepGetList(&$pListHash)` normalises pagination parameters (offset, max_records,
+ * sort_mode, find) before any `getList()` query.  `postGetList(&$pListHash)` builds
+ * the `listInfo` hash that Smarty pagination helpers consume.  Both are static so
+ * they can be called without a loaded object instance.
  *
  * @package kernel
  */
