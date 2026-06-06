@@ -1699,11 +1699,13 @@ class BitSystem extends BitSingleton {
 		if( $checked ) {
 			return;
 		}
-
+		if( empty( $this->mConfig ) ) {
+			$this->loadConfig();
+		}
 		$errors = '';
 
 		$docroot = BIT_ROOT_PATH;
-
+	
 		$serverSoftware = $_SERVER['SERVER_SOFTWARE'] ?? '';
 
 		if( stripos( $serverSoftware, 'nginx' ) !== false ) {
