@@ -845,12 +845,7 @@ class BitDate {
 	public static function strftime($fmt, $ls=false,$is_gmt=false)
 	{
 	global $ADODB_DATE_LOCALE;
-	// TODO FIX GMT DATES using IntlDateFormatter::format
 	   $formatter = new \IntlDateFormatter('en_GB', \IntlDateFormatter::LONG, \IntlDateFormatter::NONE);
-	   if ((abs($ls) <= 0x7FFFFFFF)) { // check if number in 32-bit signed range
-			if (!defined('ADODB_NO_NEGATIVE_TS') || $ls >= 0) // if windows, must be +ve integer
-				return $is_gmt ? @$formatter->format($ls) : @$formatter->format($ls);
-		}
 
 		if (empty($ADODB_DATE_LOCALE)) {
 			 $tstr = strtoupper($formatter->format(time())); // 30 Dec 1970, 1 am
