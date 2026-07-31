@@ -185,6 +185,21 @@ function bit_shutdown_handler() {
 		print "Internal Server Error";
 		bit_error_handler( $error['type'], $error['message'], $error['file'], $error['line'] );
 	}
+
+	// Safety net for any code path that leaves a transaction open when the request ends -
+	// fatal errors, aborted connections, and timeouts all reach here but skip any try/catch
+	// in the code that started the transaction, so StartTrans()/CompleteTrans() pairs with
+	// no RollbackTrans() fallback (see wiki/CLAUDE.md) can otherwise orphan a Firebird
+	// transaction indefinitely.
+	// NOTE: check transOff, not transCnt - the PDO driver (adodb-pdo.inc.php beginTrans())
+	// delegates to an internal $_driver sub-object and increments transCnt *there*, not on
+	// $gBitDb->mDb itself, so transCnt is unreliable here. transOff is set directly on
+	// whichever object StartTrans() was called on, so it doesn't have this problem.
+	// Confirmed empirically 2026-07-31, not assumed - see feedback_adodb_transcnt_pdo memory.
+	global $gBitDb;
+	if( isset( $gBitDb ) && is_object( $gBitDb ) && !empty( $gBitDb->mDb->transOff ) ) {
+		$gBitDb->RollbackTrans();
+	}
 }
 
 register_shutdown_function('Bitweaver\bit_shutdown_handler');
