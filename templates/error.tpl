@@ -6,7 +6,7 @@
 		{/if}
 	</div>
 
-	<div class="body row">
+	<div class="body">
 		{if $fatalTitle}
 		<h2>{tr}{$fatalTitle}{/tr}</h2>
 		{/if}
@@ -17,7 +17,7 @@
 
 
 	{if $template}
-	<div class="row">
+	<div>
 		{include file=$template}
 	</div>
 	{/if}
