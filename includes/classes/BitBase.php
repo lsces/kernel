@@ -154,7 +154,12 @@ abstract class BitBase {
 	}
 
 	public function __destruct() {
-		unset( $this->mDb );
+		// mDb must stay live through storeInCache() - getCacheKey() (e.g. LibertyContent's,
+		// via isValid()) needs it to compute the cache key. __sleep() already unsets mDb at
+		// the correct point (called internally by apcu_store()/apcu_add() during
+		// serialisation), so this doesn't need to happen here too - doing it here as well,
+		// before storeInCache() runs, was a fatal error waiting for any class whose
+		// getCacheKey() queries the DB (found 2026-08-11: StockAssembly::isValid()).
 		$this->storeInCache();
 	}
 
