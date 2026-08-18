@@ -67,6 +67,15 @@ class BitDbAdodb extends BitDb {
 			}
 			$this->mType = $pConnectionHash['db_type'];
 			$this->mName = $pConnectionHash['db_name'];
+			// The real database engine (firebird, mysql, postgres, ...) - for 'pdo' this is
+			// the driver prefix of the DSN (e.g. "firebird" from "firebird:dbname=..."),
+			// otherwise it's just the db_type itself (a native, non-pdo driver name).
+			// Kept generic rather than hardcoded so DataDict calls work under any driver.
+			if( $this->mType == 'pdo' && ( $colonPos = strpos( $pConnectionHash['db_host'], ':' )) !== false ) {
+				$this->mEngine = substr( $pConnectionHash['db_host'], 0, $colonPos );
+			} else {
+				$this->mEngine = $this->mType;
+			}
 			if( !isset( $this->mName )) {
 				die( "No database name specified" );
 			}
@@ -104,7 +113,7 @@ class BitDbAdodb extends BitDb {
 				? [ ...$pOptions, 'MYSQL' => 'ENGINE=INNODB']
 				: [ ...$pOptions, 'MYSQL' => 'ENGINE=MYISAM'];
 		}
-		$dict = NewDataDictionary( $this->mDb, 'firebird' );
+		$dict = NewDataDictionary( $this->mDb, $this->getEngine() );
 		$this->mFailed = [];
 		$result = true;
 		foreach( array_keys( $pTables ) AS $tableName ) {
@@ -128,7 +137,7 @@ class BitDbAdodb extends BitDb {
 	 * @return bool true if table already exists
 	 */
 	public function tableExists( string $pTable ): bool {
-		$dict = NewDataDictionary( $this->mDb, 'firebird' );
+		$dict = NewDataDictionary( $this->mDb, $this->getEngine() );
 		$pTable = preg_replace( "/`/", "", $pTable );
 		$tables = $dict->MetaTables( );
 		return array_search( $pTable, $tables ) !== false;
@@ -143,7 +152,7 @@ class BitDbAdodb extends BitDb {
 	 * false if errors are stored in $this->mFailed
 	 */
 	public function dropTables( array $pTables ): bool {
-		$dict = NewDataDictionary( $this->mDb, 'firebird' );
+		$dict = NewDataDictionary( $this->mDb, $this->getEngine() );
 		$this->mFailed = [];
 		$return = true;
 		foreach( $pTables AS $tableName ) {
@@ -524,20 +533,22 @@ class BitDbAdodb extends BitDb {
 	 * @todo investigate replacement by AdoDB NameQuote() function
 	 */
 	public function convertQuery( string &$pQuery ): void {
-		if( !empty( $this->mType )) {
-			switch( $this->mType ) {
-			case "oci8":
-				// convert bind variables - adodb does not do that
-				$qe = explode( "?", $pQuery );
-				$pQuery = "";
-				for( $i = 0; $i < sizeof($qe) - 1; $i++ ) {
-					$pQuery .= $qe[$i] . ":" . $i;
-				}
-				$pQuery .= $qe[$i];
-			default:
-				parent::convertQuery( $pQuery );
-				break;
+		// Note: no !empty($this->mType) guard here - an empty mType (e.g. during
+		// install, before a real connection exists) must still fall through to
+		// parent::convertQuery(), which strips backticks for that case rather
+		// than leaving them for Firebird to choke on as invalid syntax.
+		switch( $this->mType ) {
+		case "oci8":
+			// convert bind variables - adodb does not do that
+			$qe = explode( "?", $pQuery );
+			$pQuery = "";
+			for( $i = 0; $i < sizeof($qe) - 1; $i++ ) {
+				$pQuery .= $qe[$i] . ":" . $i;
 			}
+			$pQuery .= $qe[$i];
+		default:
+			parent::convertQuery( $pQuery );
+			break;
 		}
 	}
 

@@ -56,6 +56,11 @@ class BitDb {
 	*/
 	public $mType;
 	/**
+	* The real database engine (firebird, mysql, postgres, ...) - see getEngine()
+	* @private
+	*/
+	public $mEngine;
+	/**
 	* Used to store failed commands
 	* @private
 	*/
@@ -197,6 +202,15 @@ class BitDb {
 	**/
 	public function getDebugLevel(): bool|int {
 		return $this->mDebug;
+	}
+	/**
+	* Returns the real database engine (firebird, mysql, postgres, ...) - distinct from
+	* mType, which for 'pdo' just says "pdo" and doesn't say which driver PDO is using.
+	* Falls back to mType for subclasses/connections that never set mEngine explicitly.
+	* @return string
+	*/
+	public function getEngine(): string {
+		return !empty( $this->mEngine ) ? $this->mEngine : (string)$this->mType;
 	}
 	/**
 	* Sets the case sensitivity mode which is used in convertQuery
@@ -789,7 +803,13 @@ class BitDb {
 	 */
 	public function convertQuery( string &$pQuery ) {
 		$pQuery = preg_replace( "!(^\s+)|(\s+$)!s", "", $pQuery );
-		if( !empty( $this->mType ) ) {
+		if( empty( $this->mType ) ) {
+			// No real DB type set yet (e.g. during install, before a real connection
+			// exists). This stack is Firebird/pdo-only and case-insensitive, so strip
+			// backticks entirely rather than leaving them for Firebird to choke on as
+			// invalid syntax (matches the firebird/pdo case below for a connected db).
+			$pQuery = str_replace( '`', '', $pQuery );
+		} else {
 			switch( $this->mType ) {
 				case "oci8":
 				case "oci8po":
