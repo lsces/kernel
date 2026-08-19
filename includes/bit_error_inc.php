@@ -200,6 +200,20 @@ function bit_shutdown_handler() {
 	if( isset( $gBitDb ) && is_object( $gBitDb ) && !empty( $gBitDb->mDb->transOff ) ) {
 		$gBitDb->RollbackTrans();
 	}
+
+	// Same safety net for the installer specifically: $gBitDb isn't set during install (that's
+	// exactly why install_packages.php opens its own connection), so the check above never
+	// catches a fatal mid-install. Without this, a fatal there leaves the transaction genuinely
+	// orphaned - php-fpm workers reuse persistent DB connections across requests, so "the
+	// connection will close and roll back on its own" doesn't hold; the transaction stays open,
+	// attached, and idle until that specific worker process is killed, and can block later
+	// DDL/DML that touches the same rows in the meantime (confirmed empirically 2026-08-19: a
+	// leftover open transaction from an earlier install fatal blocked an unrelated cleanup query
+	// for minutes until the attachment was killed by hand via MON$ATTACHMENTS).
+	global $gBitInstaller;
+	if( isset( $gBitInstaller ) && is_object( $gBitInstaller ) && !empty( $gBitInstaller->mDb ) && !empty( $gBitInstaller->mDb->mDb->transOff ) ) {
+		$gBitInstaller->mDb->RollbackTrans();
+	}
 }
 
 register_shutdown_function('Bitweaver\bit_shutdown_handler');
