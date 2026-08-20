@@ -3,7 +3,7 @@
 {foreach from=$gSiteMapHash item=map}
 {if $map.loc}
 	 <url>
-		<loc>{$map.loc}</loc>
+		<loc>{$map.loc|escape:'html'}</loc>
 		{if $map.lastmod}
 			<lastmod>{$map.lastmod}</lastmod>
 		{/if}
