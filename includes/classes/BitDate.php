@@ -93,12 +93,19 @@ class BitDate {
 		global $gBitUser;
 
 		if ( $gBitUser->getPreference('site_display_utc', "Local") == "Fixed" && class_exists( 'DateTime' ) ) {
-			date_default_timezone_set( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
+			// Explicit DateTimeZone passed straight into the constructor, not
+			// date_default_timezone_set() — that mutates PHP's *global* ambient
+			// timezone for the rest of the request with no restore, silently
+			// corrupting any later bare strtotime()/date()/mktime() call
+			// elsewhere in the same request (real incident: food package's
+			// event_time handling, see Claude memory
+			// project_food_bst_timestamp_fix). DateTime's own $timezone param
+			// achieves the same per-call conversion with zero global side effect.
+			$dateTimeUserZone = new \DateTimeZone( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
 			$dateTimeUser = is_numeric( $_timestamp )
 				? new \DateTime( '@'.$_timestamp )
-				: new \DateTime( $_timestamp );
+				: new \DateTime( $_timestamp, $dateTimeUserZone );
 
-			$dateTimeUserZone = new \DateTimeZone( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
 			return strtotime( $dateTimeUser->format(DATE_ATOM) ) + timezone_offset_get( $dateTimeUserZone, $dateTimeUser );
 		}
 			return $this->getTimestampFromISO($_timestamp) + $this->display_offset;
@@ -115,12 +122,13 @@ class BitDate {
 		global $gBitUser;
 
 		if ( $gBitUser->getPreference('site_display_utc', "Local") == "Fixed" ) {
-			date_default_timezone_set( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
+			// See getDisplayDateFromUTC()'s matching comment — explicit
+			// DateTimeZone into the constructor, never date_default_timezone_set().
+			$dateTimeUserZone = new \DateTimeZone( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
 			$dateTimeUser = is_numeric( $_timestamp )
 				? new \DateTime( '@'.$_timestamp )
-				: new \DateTime( $_timestamp );
+				: new \DateTime( $_timestamp, $dateTimeUserZone );
 
-			$dateTimeUserZone = new \DateTimeZone( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
 			return strtotime( $dateTimeUser->format(DATE_ATOM) ) - timezone_offset_get( $dateTimeUserZone, $dateTimeUser );
 		}
 			return $this->getTimestampFromISO($_timestamp) - $this->display_offset;
