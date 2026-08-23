@@ -93,3 +93,32 @@ fix` and `reference_firebird_clock_and_bitweaver_tz` memories.
 **Why this had nowhere to land before today**: no `kernel/CLAUDE.md` existed, so this fix
 originally went into the top-level `bitweaver/CLAUDE.md`'s session log instead (see that file's
 2026-08-22 entry, now trimmed to a pointer here).
+
+## 2026-08-23 — installer can't offer a package's own upgrade if that upgrade adds a table
+
+A package can't add a genuinely new (non-`liberty_xref`) table without a two-step rollout: the
+table has to exist ONLY in `admin/upgrades/X.Y.Z.php` until every live site has actually run that
+upgrade — NOT also in `admin/schema_inc.php`'s `registerSchemaTable()` calls, even though a fresh
+install needs it there too (upgrade files' DDL isn't replayed on a fresh install, only the version
+number is recorded — see `install/includes/install_packages.php` ~line 503). Add it to
+`schema_inc.php` only once every live site is confirmed upgraded.
+
+Found via `health`'s `health_hr_raw` table (added in its 5.0.2): declaring it in
+`schema_inc.php` immediately made the installer stop offering health's own pending 5.0.2 upgrade
+on srv9, and dropped health from the requirements table entirely — despite identical code to
+desktop (which looked fine only because `health_hr_raw` already existed there from an unrelated
+manual isql create, masking the exact bug). Root cause: `BitSystem::verifyInstalledPackages()`
+checks every `registerSchemaTable()`-declared table against the live DB and ANDs the result into
+`mPackages[$pkg]['installed']`. During install, `getConfig()` is deliberately a no-op (so the
+wizard doesn't trust a DB value that might be mid-change), so `getPackageStatus()` falls back to
+that same `installed` flag — with it false, `isPackageActive()`/`isPackageInstalled()` both read
+false, which skips the package in `calculateRequirements()` and fails `loadUpgradeFiles()`'s
+`isPackageActive()` gate, so the upgrade file never even gets `include`d. A package can't be
+offered the one upgrade that would create the table the installer is using to decide it isn't
+installed.
+
+Not fixed at the kernel level (would need `verifyInstalledPackages()`/`getPackageStatus()` to
+somehow distinguish "table missing because never installed" from "table missing because the
+matching upgrade hasn't run yet" — not attempted this session). Workaround only: keep new tables
+out of `schema_inc.php` until rollout is complete. See `health/CLAUDE.md`'s own session log for
+the fix as applied there.
