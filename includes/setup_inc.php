@@ -121,6 +121,7 @@ if( $gBitSystem->isDatabaseValid() ) {
 		$root .= '/';
 	}
 	define( 'UTIL_PKG_URL', $root.'util/' );
+	define( 'UTIL_PKG_INCLUDE_PATH', BIT_ROOT_PATH.'util/includes/' );
 	define( 'LIBERTY_PKG_URL', $root.'liberty/' );
 
 	// load only installed and active packages
