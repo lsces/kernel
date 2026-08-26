@@ -45,7 +45,7 @@
 	{assign var=pageUrl value="`$pgnUrl`?`$pageUrlVar`"}
 {/if}
 {if !empty($listInfo) && $listInfo.total_pages > 1 && $listInfo.page_records}
-<div class="paginator overflow-hidden clear">
+<nav class="paginator overflow-hidden clear">
 	<ul class="pagination pull-left">
 		{if $listInfo.current_page > 1}
 			{assign var=blockStart value=1}
@@ -91,6 +91,6 @@
 				{tr}Go to page{/tr} <input class="input-mini" type="text" size="3" maxlength="6" name="list_page" /> {tr}of{/tr} <strong>{$listInfo.total_pages}</strong>
 		{/form}
 	</div>
-</div>
+</nav>
 {/if}
 {/strip}
