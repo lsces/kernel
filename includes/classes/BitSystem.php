@@ -350,36 +350,39 @@ class BitSystem extends BitSingleton {
 	 **/
 	public function storeConfig( $pName, $pValue, $pPackage = '' ) {
 		global $gMultisites;
-		//stop undefined offset error being thrown after packages are installed
-		if( !empty( $this->mConfig )) {
-			// store the pref if we have a value _AND_ it is different from the default
-			if( ( empty( $this->mConfig[$pName] ) || ( $this->mConfig[$pName] != $pValue ))) {
-				// make sure the value doesn't exceede database limitations
-				$pValue = substr( $pValue ?? '', 0, 250 );
+		// store the pref if we have a value _AND_ it is different from the default. An unloaded
+		// mConfig (BIT_INSTALL - loadConfig() is deliberately blocked then, see getVersion()'s
+		// own docblock in install/includes/classes/BitInstaller.php) means we have no default to
+		// compare against, not that nothing needs storing - so treat that as "different from
+		// default" rather than skipping the write entirely. Confirmed 2026-08-28: this exact gap
+		// silently dropped a package version bump (storeVersion() -> here) during a real
+		// installer-driven upgrade, even though the upgrade's own SQL steps applied successfully.
+		if( empty( $this->mConfig ) || empty( $this->mConfig[$pName] ) || ( $this->mConfig[$pName] != $pValue )) {
+			// make sure the value doesn't exceede database limitations
+			$pValue = substr( $pValue ?? '', 0, 250 );
 
-				// store the preference in multisites, if used
-				if( $this->isPackageActive( 'multisites' ) && BitBase::verifyId( $gMultisites->mMultisiteId ) && isset( $gMultisites->mConfig[$pName] )) {
-					$query = "UPDATE `".BIT_DB_PREFIX."multisite_preferences` SET `config_value`=? WHERE `multisite_id`=? AND `config_name`=?";
-					$result = $this->mDb->query( $query, [ empty( $pValue ) ? '' : $pValue, $gMultisites->mMultisiteId, $pName ] );
-				} else {
-					$this->StartTrans();
-					$query = "DELETE FROM `".BIT_DB_PREFIX."kernel_config` WHERE `config_name`=?";
-					$result = $this->mDb->query( $query, [ $pName ] );
-					// make sure only non-empty values get saved, including '0'
-					if( isset( $pValue ) && ( !empty( $pValue ) || is_numeric( $pValue ))) {
-						$query = "INSERT INTO `".BIT_DB_PREFIX."kernel_config`(`config_name`,`config_value`,`package`) VALUES (?,?,?)";
-						$result = $this->mDb->query( $query, [ $pName, $pValue, strtolower( $pPackage ) ]);
-					}
-					$this->CompleteTrans();
+			// store the preference in multisites, if used
+			if( $this->isPackageActive( 'multisites' ) && BitBase::verifyId( $gMultisites->mMultisiteId ) && isset( $gMultisites->mConfig[$pName] )) {
+				$query = "UPDATE `".BIT_DB_PREFIX."multisite_preferences` SET `config_value`=? WHERE `multisite_id`=? AND `config_name`=?";
+				$result = $this->mDb->query( $query, [ empty( $pValue ) ? '' : $pValue, $gMultisites->mMultisiteId, $pName ] );
+			} else {
+				$this->StartTrans();
+				$query = "DELETE FROM `".BIT_DB_PREFIX."kernel_config` WHERE `config_name`=?";
+				$result = $this->mDb->query( $query, [ $pName ] );
+				// make sure only non-empty values get saved, including '0'
+				if( isset( $pValue ) && ( !empty( $pValue ) || is_numeric( $pValue ))) {
+					$query = "INSERT INTO `".BIT_DB_PREFIX."kernel_config`(`config_name`,`config_value`,`package`) VALUES (?,?,?)";
+					$result = $this->mDb->query( $query, [ $pName, $pValue, strtolower( $pPackage ) ]);
 				}
-
-				// Force the ADODB cache to flush
-				$isCaching = $this->mDb->isCachingActive();
-				$this->mDb->setCaching( false );
-				$this->loadConfig();
-				$this->mDb->setCaching( $isCaching );
-				$this->clearFromCache();
+				$this->CompleteTrans();
 			}
+
+			// Force the ADODB cache to flush
+			$isCaching = $this->mDb->isCachingActive();
+			$this->mDb->setCaching( false );
+			$this->loadConfig();
+			$this->mDb->setCaching( $isCaching );
+			$this->clearFromCache();
 		}
 		$this->setConfig( $pName, $pValue );
 		return true;
@@ -2083,7 +2086,15 @@ class BitSystem extends BitSingleton {
 			if( empty( $pPackage )) {
 				$gBitSystem->storeConfig( "bitweaver_version", $pVersion, 'kernel' );
 				$ret = true;
-			} elseif( !empty( $gBitSystem->mPackages[$pPackage] )) {
+			} else {
+				// No mPackages[$pPackage] gate here any more - it required the package to
+				// already be loaded into memory, which loadConfig()/loadPackages() being
+				// blocked during BIT_INSTALL (see getVersion()'s docblock in
+				// install/includes/classes/BitInstaller.php) meant it silently wasn't during
+				// an installer-driven upgrade. Every real caller (registerPackageUpgrade()'s
+				// verifyPackageUpgrade(), and loadPackages() iterating its own mPackages keys)
+				// already only ever passes a real, valid package name - this was redundant
+				// defense that cost correctness in the one case (BIT_INSTALL) it needed to work.
 				$gBitSystem->storeConfig( "package_".$pPackage."_version", $pVersion, $pPackage );
 				$ret = true;
 			}
