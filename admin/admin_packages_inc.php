@@ -50,17 +50,13 @@ $gBitSmarty->assign( 'requirementsMap', $gBitInstaller->drawRequirementsGraph( t
 $upgradable = [];
 foreach( $gBitSystem->mPackages as $name => &$pkg ) {
 	if( $gBitSystem->isPackageInstalled( $name ) && !empty( $pkg['info']['upgrade'] )) {
-		// If no tables then just do a quiet 'auto-upgrade' of version number
-		if( !isset( $pkg['tables'] ) || empty( $pkg['tables'] ) ) {
-			$gBitSystem->storeVersion( $name, $pkg['info']['upgrade'] );
-			$gBitSystem->registerPackageVersion( $name, $pkg['info']['upgrade'] );
-			$pkg['info']['version'] = $pkg['info']['upgrade'];
-			unset( $pkg['info']['upgrade'] );
-		} else { // add to a list of displayed packages that need upgrading
-			// only display relevant information to keep things tight.
-			$upgradable[$name]['info']['version'] = $pkg['info']['version'];
-			$upgradable[$name]['info']['upgrade'] = $pkg['info']['upgrade'];
-		}
+		// A pending upgrade's steps may have nothing to do with this package's own
+		// registered tables at all (a QUERY-only change against another package's
+		// tables, an xref registration, dropping a table down to none) - whether the
+		// package currently owns any tables is not a valid signal for whether there's
+		// real work to apply, so always surface it and let the real upgrade run.
+		$upgradable[$name]['info']['version'] = $pkg['info']['version'];
+		$upgradable[$name]['info']['upgrade'] = $pkg['info']['upgrade'];
 	}
 }
 
