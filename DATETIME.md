@@ -107,11 +107,36 @@ instead of `I8`:
 | `boards` | `track_date`, `notify_date` | `notify_date` may be user/system-set to a future reminder — worth checking |
 
 **`I8` (64-bit) has no such limit anywhere in this codebase** — the whole `liberty_content` family
-is already safe. The fix for the confirmed `blogs`/`articles` bug is widening those two columns
-from `I4` to `I8` (a real schema migration, needs an upgrade script per domain, not a hand-push —
-not yet started). Native `TIMESTAMP` would also be 2038-safe (Firebird's range is 0001–9999 AD,
-no epoch dependency at all) but is the larger convention-change direction, not the minimal fix for
-this specific active bug.
+is already safe. Native `TIMESTAMP` would also be 2038-safe (Firebird's range is 0001–9999 AD, no
+epoch dependency at all) but is the larger convention-change direction, not the minimal fix for
+this specific active bug — `I8` widening is the fix actually being shipped.
+
+**Fix written 2026-08-29, `admin/upgrades/5.0.1.php` in each of `blogs`, `search`, `articles`,
+`boards`** (all four were still at base version `5.0.0`, so `5.0.1` is each package's first real
+upgrade) — `schema_inc.php` updated to `I8` and a matching `ALTER TABLE ... ALTER COLUMN ... TYPE
+BIGINT` upgrade script added for: `blogs.blog_posts.publish_date`/`expire_date`,
+`blogs.blogs_posts_map.date_added`, `search.search_index.last_update`,
+`search.search_syllable.last_used`/`last_updated`, `articles.articles.publish_date`/`expire_date`,
+`boards.boards_tracking.track_date`/`notify_date`. Tested directly against a restored copy of
+desktop's `myhomecloud` database before writing the final SQL. Not yet run through the real
+installer — that's the next step, testing via the admin packages page's upgrade-detection flow
+rather than more manual `isql`.
+
+**`content_id` widening deliberately deferred, real lesson learned testing it**: `blog_posts`/
+`blogs`/`search_index` etc. all have their own `content_id` (`I4`) referencing `liberty_content
+.content_id` (`I4 PRIMARY`) — same 32-bit ceiling, longer runway (~2.1 billion rows) than the date
+columns, looked like a reasonable one-more-thing to fix while touching these tables. It isn't a
+small addition: **Firebird's `ALTER COLUMN TYPE` will widen `INTEGER`→`BIGINT` but refuses to
+narrow `BIGINT`→`INTEGER` at all** ("Conversion from base type BIGINT to INTEGER is not
+supported") — there is no simple way back once a referencing column is widened. Attempting it
+live also surfaced that a `content_id` FK can't be recreated pointing at a still-`INTEGER`
+`liberty_content.content_id` ("partner index segment has incompatible data type") — so widening
+even one leaf table's `content_id` is not actually independent of every other table that
+references `liberty_content`; it's a coupled, whole-codebase change or nothing, not something to
+slip in package-by-package. Reverted by restoring desktop's `myhomecloud` from that morning's
+local backup (`firebird-restore myhomecloud`) rather than trying to hand-reconstruct the original
+state. Left as `I4` in all four packages' `schema_inc.php`/upgrade scripts for now — a real future
+item, but its own separate, carefully-scoped piece of work, not a rider on the date-column fix.
 
 ## Display modes: `UTC` / `Local` / `Fixed`
 
