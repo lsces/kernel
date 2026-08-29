@@ -292,3 +292,116 @@ requirement is understood to be webtrees' job, not this file's. Requires, in ord
 Not scoped in detail yet — every real call site of `strftime()`/`date()`/`_getDate()` across the
 codebase needs mapping first, since some may depend on the current `$is_gmt`-boolean-only
 behaviour in ways not yet audited.
+
+## Separate track: `liberty_xref` TIMESTAMP→I8, and the satellite-code audit that feeds it
+
+Distinct decision from everything above — whether to bring `liberty_xref`'s four native
+`TIMESTAMP` columns (`entry_date`/`last_update_date`/`start_date`/`end_date`) into the `I8`
+epoch-int convention the rest of the codebase (`liberty_content` and ~12 other packages) already
+uses. Not decided, not started. Two real constraints found so far:
+
+**Firebird won't do this in place.** Confirmed by direct test: `ALTER TABLE ... ALTER COLUMN ...
+TYPE BIGINT` on a `TIMESTAMP` column fails outright — *"Conversion from base type TIMESTAMP to
+BIGINT is not supported."* Same restriction family as the `BIGINT`→`INTEGER` narrowing block
+found earlier (see the `content_id` lesson above). Any migration needs a real per-row data
+transform, not a metadata-only `ALTER` — a `liberty_xref2`-style new table + `INSERT...SELECT`
+epoch conversion + cutover, not an in-place change. Because `liberty_xref` is shared kernel code
+hit by every site on a server simultaneously (unlike `blogs`/`articles`, scoped per-package), a
+code-level cutover can't be staged per-domain the way today's `I4`→`I8` fixes were — the working
+theory is the *table* has to be the migration boundary (old code keeps using `liberty_xref`
+untouched, new code only ever knows `liberty_xref2`), not runtime format-detection in the code
+itself (deliberately rejected — that's exactly the two-formats-in-parallel mess this would be
+trying to clean up, not add a third variant of).
+
+**Satellite-code audit (2026-08-29)** — run as scoping input, not yet acted on: does the code
+using `liberty_xref` across `contact`/`food`/`health`/`mapper`/`stock` go through `LibertyXref`'s
+own methods (`store()`/`verify()`/etc.), or touch its columns directly (raw SQL, `associateInsert`)?
+**Finding: direct-access debt is real and scattered, not confined to `liberty` itself.** `food`
+and `mapper` are mostly clean already. `health` and `contact` are not:
+
+- **`health/import/Import*.php` — 14 near-identical files** (Pulse, HRV, Sleep, BP, WT, Oxi, Temp,
+  Steps, Energy, Exercise, RaisedHR, RespiratoryRate, SkinTemperature, StepTrack), each with a raw
+  `SELECT xref_id FROM liberty_xref WHERE content_id=? AND item=? AND start_date=?` dedup check —
+  bypasses `LibertyXref` entirely, same pattern copy-pasted 14 times.
+- **`contact/includes/classes/Contact.php`** — heaviest offender. Raw `DELETE`/`INSERT INTO
+  liberty_xref`. Two of those inserts set `last_update_date => NULL`, bypassing the auto-stamp
+  convention — **a real bug independent of the migration question**, worth fixing on its own.
+  Also joins `end_date IS NULL OR end_date > CURRENT_TIMESTAMP` directly against Firebird's clock,
+  which would need rewriting against PHP `time()` if `end_date` ever becomes epoch-int.
+- **`stock/includes/classes/StockMovement.php`** — raw `UPDATE liberty_xref SET start_date = ?`
+  with its own hand-rolled date formatting (a third, independent reimplementation of the int/
+  string handling `LibertyXref::store()` already has), plus `start_date` used directly in
+  `ORDER BY` subqueries for sort modes — the trickiest single spot, since that's ordering
+  semantics, not just a format swap.
+- 6 more call sites (stock/contact import scripts) use `associateInsert('liberty_xref', [...])`,
+  each independently re-implementing the `last_update_date` auto-stamp rather than calling
+  `store()`.
+
+**Bottom line**: not a `liberty`-only change — realistically `liberty` (the base classes) plus
+meaningful surgery in `health` and `contact` specifically (`health`'s 14-file pattern and
+`Contact.php` each roughly a day's work in isolation), `stock` for the sort-mode piece. `food`/
+`mapper` were already close to clean.
+
+**Decided direction, 2026-08-29**: rather than resolve the big `TIMESTAMP`→`I8`/`liberty_xref2`
+question first, clean up satellite code to go through `LibertyXref`'s own methods properly *on
+the current schema* as the actual starting point — valuable regardless of whether the bigger
+migration ever happens, and reduces the audit's "needs touching" list either way.
+
+**`food`/`mapper` done, same session.** `food`: checked directly, genuinely nothing to fix — the
+`start_date` reads are pure passthrough (type-agnostic), the one write already goes through
+`storeXref()`, the `end_date IS NULL` check is type-agnostic. Zero commits needed. `mapper`:
+`Map::load()` never called `loadXrefInfo()` at all (unlike `Contact`) — `$this->mXrefInfo` was
+always `null`. Fixed, then converted every raw query in `Map.php` (the `upsertSingleXref()`
+lookup, the `EXCL` existence check, both raw `DELETE`s for `OVERVIEWHEIGHT`/`LAYER`) to read
+`mXrefInfo` and write via `storeXref()`/`stepXref()`. `LAYER`'s deliberate delete-all-then-recreate
+semantics (a re-upload's layer set genuinely replaces the old one wholesale, not an incremental
+diff) preserved exactly — only the mechanism changed. Committed `mapper` `b5b37bc`.
+
+**`contact` done too, three real bugs found live-testing, not just a mechanical conversion**:
+1. The raw `INSERT`s really did hardcode `last_update_date => NULL` (the bug already flagged
+   above) — now via `storeXref()`/`stepXref()`, gets the real auto-stamp. `entry_date` had the
+   identical gap, never mentioned before because nobody had compared P01 against P02+/B01+.
+2. The whole P01/P02+/B01+ block was blanket delete-all-then-reinsert on *every* save — meaning
+   adding one new type tag reset every other tag's `entry_date` too, confirmed live. Now diffs
+   against what's actually stored, only touches rows that changed.
+3. `if( !empty($pParamHash['contact_types']) )` meant unchecking someone's *only* type tag did
+   nothing at all — an all-unchecked checkbox group sends no `contact_types[]` key, indistinguishable
+   from a caller that doesn't touch type tags at all (an import script, say) and must leave existing
+   ones alone. Found via xdebug after static reading missed it entirely. Fixed with a hidden
+   `fContactTypesSubmitted` sentinel field (`edit_type_header.tpl`) so the two cases can be told
+   apart — the guard couldn't distinguish them from `contact_types` alone. Committed `contact`
+   `0c8562b`.
+
+**Real architectural finding surfaced fixing `contact`**: `P01`/`P02`/`B01`-`B04` are *type-marker*
+items — `x_group='type'`, `sort_order=0` (confirmed directly in `liberty_xref_group`, all three
+content types that use it: `contactperson`, `contactbusiness`, `foodassembly`). `LibertyXrefType
+::loadContent()` explicitly filters `WHERE g.sort_order > 0` — type-marker items are **deliberately
+excluded** from `$this->mXrefInfo` no matter how freshly it's loaded, the documented "type-marker
+convention," not a bug. First attempt used `mXrefInfo->findByItem()` for P01 and silently created a
+*second* P01 row instead of updating the existing one — `mXrefInfo` genuinely never contained it.
+Added `LibertyXrefType::getTypeMarkerXrefs( int $pContentId ): array` (`liberty` `b751840`) — the
+"what's actually stored" counterpart to the already-existing `getTypeMarkers()` (which only returns
+what's schema-*possible*). Also added `LibertyXrefContent::allItems()` (same commit) — every loaded
+xref_id keyed by item code, for callers diffing a submitted set against normal (`sort_order>0`)
+group items, which *are* correctly in `mXrefInfo`. Anything reaching for "read this content's own
+xref state without querying the DB" needs to know which of these two situations it's in.
+
+**Outstanding, not touched this session**:
+- **`stock/includes/classes/StockMovement.php`** — the real remaining item. Raw `UPDATE liberty_xref
+  SET start_date = ?` (a write bypassing `store()`, its own third independent reimplementation of
+  the int/string date handling), plus `start_date` used directly in `ORDER BY` subqueries for sort
+  modes — trickier than a mechanism swap, since that's ordering semantics.
+- **6 `associateInsert('liberty_xref', [...])` call sites** — 5 in `stock/import/*.php`, 1 in
+  `contact/import/ImportContactCSV.php` — same shape as `Contact.php`'s original bug, not yet
+  looked at.
+- **`health`'s 14-file import dedup pattern** — all reads, not a real issue by the standard
+  established fixing `contact`/`mapper` (reads are fine; the actual problem class is writes that
+  bypass `store()`). Doesn't need the same treatment.
+- **`Contact.php`'s own remaining raw reads** (`loadXrefTypeList()`, the `#S`/`#L` address-lookup
+  joins in `load()`) and the hardcoded `'MERG Kit Elf'` pre-upgrade-fallback string in
+  `getAvailableTypeItems()` — flagged directly by Lester as needing a bigger rethink, not a
+  mechanical fix: the pre-5.0.3 fallback branches are dead code now (every live/local DB is fully
+  on the generic `liberty_xref_item`/`liberty_xref_group` model, confirmed, "needs tidying away"),
+  and the hardcoded display strings should come from the schema (`cross_ref_title`) instead —
+  anticipated to matter more once `rdmcloud`'s own person-type markers expand beyond the current
+  set (Family/Friend/Contact, etc. named directly as upcoming). Not scoped, not started.
