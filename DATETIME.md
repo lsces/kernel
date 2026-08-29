@@ -1,0 +1,209 @@
+# Date/Time/Timezone — Reference
+
+How date/time actually works across this stack today — storage, display modes, the render path,
+and the adodb-derived formatting engine underneath it. For the history of *why* — bugs found,
+investigation trails, wrong turns — see `CLAUDE.md`'s dated session log and the linked memories
+instead; this file only tracks current behaviour and known gaps.
+
+## Storage layer
+
+**Firebird's own clock is local (BST), not UTC.** `CURRENT_TIMESTAMP` reads `Europe/Isle_of_Man`
+wall-clock time, same as the OS. `BitDb::NOW()` (`kernel/includes/classes/BitDb.php`) knows this
+and deliberately never uses Firebird's own `NOW()`/`CURRENT_TIMESTAMP` for firebird/pdo — it
+substitutes `$gBitSystem->getUTCTimestamp()` (PHP's own `time()`, timezone-independent) instead.
+So `entry_date`/`last_update_date`/`created`/`last_modified` defaults are genuinely correct UTC
+throughout, despite the DB server's own clock not being UTC.
+
+**Firebird 4's `WITH TIME ZONE` column type is deliberately avoided.** This stack sticks with
+plain `TIMESTAMP` (naive, always-UTC-by-convention) and epoch-int (`I8`) columns — never the
+newer tz-aware type. Don't introduce `WITH TIME ZONE` anywhere without checking first; it's a
+known-bad experience specifically, not just an unfamiliar option.
+
+### `liberty_content` vs `liberty_xref` — two schema generations, two conventions
+
+`liberty_content` (`liberty/admin/schema_inc.php:21-38`): `content_id I4 PRIMARY`, and three
+separate `I8` epoch-int date fields — `created`, `last_modified`, `event_time`.
+
+`liberty_xref` (`liberty/admin/schema_inc.php:244-257`): `xref_id I8 PRIMARY`, `content_id I8
+NOTNULL` (a genuine width mismatch against the `I4` it references — not yet an observed problem,
+Firebird widens implicitly on join, but worth knowing), and four native Firebird `T` (TIMESTAMP)
+columns: `entry_date`, `last_update_date`, `start_date`, `end_date`. This is why `liberty_content`
+shows bare numbers in FlameRobin and `liberty_xref` shows real date/time — different storage
+convention across the two schema generations, not a display quirk.
+
+Column-by-column mapping:
+
+- **`liberty_content.created` ↔ `liberty_xref.entry_date`** — same concept (creation stamp), same
+  intended behaviour: always auto-stamped with the current UTC time by the object itself, never
+  meant to be passed manually in normal operation. `LibertyXref::store()`
+  (`liberty/includes/classes/LibertyXref.php:253-258`) accepts an explicit override, but that path
+  exists specifically for historic imports backdating to a source record's real original
+  timestamp — not a general-purpose parameter.
+- **`liberty_content.last_modified` ↔ `liberty_xref.last_update_date`** — same pairing, same
+  auto-not-manual rule, same import-backdating exception (`LibertyXref.php:260-263`).
+- **`liberty_content.event_time`** has no direct xref equivalent — it's a user-facing, user-editable
+  business timestamp ("when did this thing actually happen"), not an audit-trail stamp.
+  `liberty_xref`'s closest analogue is `start_date`/`end_date`, but those describe a *validity
+  window* (see `liberty/MANUAL.md`'s negative-`multiple` section for the stepping-xref pattern that
+  uses them), not a single event instant — not really the same concept even though both are
+  "a date the user sets."
+
+### `LibertyXref::store()`'s `start_date`/`end_date` — dual parameter semantics (real footgun)
+
+Unlike `entry_date`/`last_update_date` (plain UTC either way — `gmdate()` for an int, `NOW()`
+default, no display-timezone involvement at all), `start_date`/`end_date`
+(`LibertyXref.php:267-291`) mean two different things depending on caller input type:
+
+- **Pass an int** (epoch) → clean UTC `gmdate('Y-m-d H:i:s', $d)` conversion.
+- **Pass a string** (e.g. from a `start_Month/Day/Year/Hour/Minute` form submission) → assumed to
+  be in the *viewer's current display timezone*, run through
+  `$gBitSystem->mServerTimestamp->getUTCFromDisplayDate()` — subject to `'Local'` mode's
+  single-instant-offset limitation (see below).
+
+Know which one you're passing. A caller that doesn't realise this distinction can silently get a
+value reinterpreted through a viewer's display offset when it expected a literal UTC conversion,
+or vice versa.
+
+## Display modes: `UTC` / `Local` / `Fixed`
+
+`BitDate::get_display_offset()` (`kernel/includes/classes/BitDate.php:61-84`) reads
+`$gBitUser->getPreference('site_display_utc', "Local")` — default `'Local'` for any account that
+hasn't explicitly switched to `'Fixed'` in Preferences. This applies equally to anonymous
+visitors: they get a real `RolePermUser` loaded for `ANONYMOUS_USER_ID`
+(`users/includes/bit_setup_inc.php:128`), never null, and since nobody can ever save a preference
+*as* the anonymous account, they always fall through to the `'Local'` default.
+
+**`'Local'` mode**: `tz_offset` cookie, set client-side by `BitBase.init()`
+(`themes/js/bitweaver.js:71-78`, called unconditionally at module load,
+`themes/js/bitweaver.js:1264`, on every page that loads this near-universal script) —
+`self.setCookie("tz_offset", -(self.DATE.getTimezoneOffset() * 60))`. This genuinely fires for any
+JS-enabled browser from the second page load onward (an earlier investigation wrongly concluded
+this cookie was never set anywhere — it is; the earlier grep just missed `themes/js/`).
+
+**The permanent limitation of `'Local'` mode, not a bug to chase**: JS's `getTimezoneOffset()`
+only ever returns a raw minutes-from-UTC number for the instant it's called — no IANA zone
+identity attached, no way to derive correct DST behaviour for any date other than "right now." The
+cookie refreshes each page load with *today's* offset, then that single number gets applied
+blindly to every timestamp shown on the page, regardless of which date it's actually from (a July
+record viewed in December gets December's GMT offset, not July's BST — off by an hour). There is
+no way to recover a browser visitor's actual named timezone without them being logged in and
+having manually set `'Fixed'`. **Explicitly out of scope to fix** — accept it, don't rebuild
+around it.
+
+**`'Fixed'` mode**: a real IANA zone name in `site_display_timezone`. This is the only mode with
+genuine per-date DST correctness, and the only mode real (logged-in) users should be steered
+toward if timezone accuracy matters to them.
+
+### Where rendering actually happens
+
+The real per-page date-rendering path used by virtually every `.tpl` template is the
+`bit_date_format` Smarty modifier (`themes/smartyplugins/modifier.bit_date_format.php`), not
+`BitDate` called directly:
+
+- **`'Fixed'` mode** (lines 40-51): its own separate conversion — `date_default_timezone_set(
+  $gBitUser->getPreference('site_display_timezone', 'UTC') )` then a plain `new DateTime($pString)`.
+  This is **structurally necessary**, not just careless duplication — see "The adodb formatting
+  engine" below for why.
+- **`'Local'`/default `'UTC'`** (lines 52-60): `$gBitSystem->get_display_offset()`, a thin proxy
+  (`kernel/includes/classes/BitSystem.php:2544-2545`) into `BitDate::get_display_offset()` — the
+  tz_offset-cookie-or-zero path above.
+
+## `RoleUser::getUserTimezone()` — the real user's own zone, kernel-level
+
+`users/includes/classes/RoleUser.php`, added right after `defaults()` (next to that method's own
+dead/commented-out `site_display_timezone` default block, which had already flagged this exact
+gap without anyone following through):
+
+```php
+public function getUserTimezone(): \DateTimeZone {
+	$tzName = $this->getPreference( 'site_display_timezone', 'UTC' );
+	if( empty( $tzName ) ) { $tzName = 'UTC'; }
+	try {
+		return new \DateTimeZone( $tzName );
+	} catch ( \Exception $e ) {
+		return new \DateTimeZone( 'UTC' );
+	}
+}
+```
+
+Available on `$gBitUser` from any package, no include needed. **Use this instead of hardcoding a
+place name anywhere code needs a real named zone** (parsing offset-less wall-clock input,
+calendar-day bucketing for aggregation, anything that wants "the actual logged-in user's own
+zone" rather than a display-mode-dependent offset). `UTC` fallback, never a hardcoded place.
+
+First real caller: the health package had 20 `new DateTimeZone('Europe/London')` call sites
+across its import and display code (Samsung/HealthForYou data), all switched to
+`$gBitUser->getUserTimezone()` — see `health/CLAUDE.md`'s matching 2026-08-29 entry for the
+worked example, including the distinction between "bucketing an already-UTC epoch into local
+calendar days" (most call sites) and "genuinely parsing offset-less wall-clock input"
+(`ImportWT.php`, the one real exception — both want the real user's zone, just for different
+reasons).
+
+## The adodb formatting engine — what it is, and its real limits
+
+`BitDate::strftime()` → `date()` → `_getDate()` (`BitDate.php:594`) is built on adodb's
+`adodb-time.inc.php` (symlinked in via `externals/adodb`, the real repo lives at
+`~/Development/adodb`, not inside the bitweaver checkout itself). When `$is_gmt` isn't explicitly
+passed `true`, `_getDate()` calls `adodb_get_gmt_diff(false,false,false)`
+(`adodb-time.inc.php:726-756`) — whose live code path (the `DateTimeZone`-based branch is dead,
+gated behind `ADODB_TEST_DATES` which is never defined) computes `mktime(...) - gmmktime(...)`,
+i.e. **reads PHP's ambient default timezone**. There is no other parameter anywhere in this chain
+to receive a zone. This is *why* the Smarty modifier's `'Fixed'` branch calls
+`date_default_timezone_set()` — it's the only channel by which a Fixed-mode user's chosen zone
+ever reaches this formatter. Removing it without giving the formatter chain a real
+`DateTimeZone` parameter would silently degrade every Fixed-mode user to the server's own
+configured PHP timezone.
+
+**adodb's own file header undercuts the reason it was ever pulled in**:
+`@deprecated 5.22.6 Use 64-bit PHP native functions instead` — it existed to work around PHP's
+*old* 32-bit-signed-integer `date()`/`mktime()` year-2038 limitation, moot on any 64-bit PHP build
+(this stack's). Its own documented/tested range is "100 A.D. to 3000 A.D." (years below 100 hit
+ambiguous 2-digit-year conversion) — **it was never actually built or tested for genuine BC
+dates**, despite the impression its size/complexity gives. Tested directly: native `DateTime`
+parses/round-trips negative-year dates (`-0100-01-01`) fine, at least as well as adodb.
+
+**The one real, measurable difference**: adodb documents and correctly implements the 1582
+Julian→Gregorian calendar jump (`adodb_mktime(Oct 15 1582) - adodb_mktime(Oct 4 1582) == 1 day`).
+Native `DateTime` does not — `(new DateTime('1582-10-15'))->diff(new DateTime('1582-10-04'))`
+gives 11 days, pure proleptic Gregorian, no historical correction at all. But adodb's correction is
+hardcoded to the *Catholic-Europe* 1582 transition — Britain/Isle of Man didn't adopt Gregorian
+until 1752 — so adodb's own "historical accuracy" is also wrong for genuinely British/Manx
+genealogical records. Neither library gets this specific case right out of the box.
+
+## Genealogical dates belong in webtrees, not here
+
+`webtrees` (this machine's genealogy application, ported to Firebird via `illuminate-firebird` —
+see `[[project_webtrees]]` memory) fully stripped adodb (confirmed: no reference anywhere in its
+`composer.json` or code). It replaced it not with bare `DateTime`, but with
+`fisharebest/ext-calendar` (composer, v2.6.0, written by webtrees' own lead developer) — a portable
+pure-PHP reimplementation of PHP's compiled `calendar` extension
+(`gregoriantojd()`/`jdtogregorian()`-equivalent), used because the real compiled extension isn't
+reliably available across hosts. On top of that, webtrees built its own `app/Date/` class
+hierarchy — `GregorianDate`, `JulianDate`, `JewishDate`, `HijriDate`, `RomanDate`, `JalaliDate`,
+`FrenchDate` (French Republican calendar), all extending `AbstractCalendarDate` — every date
+explicitly tagged with *which calendar it was recorded in* (matching GEDCOM's own
+`@#DJULIAN@`/`@#DHEBREW@`/etc. convention), converted to/from a Julian Day Number as the universal
+calendar-agnostic interchange value. `convertToCalendar()` does explicit, deliberate conversion —
+never silent normalization.
+
+**Working conclusion**: `DateTime` is, in practice, another "post-1970-shaped" tool — it parses
+old dates without erroring, but has no real multi-calendar-system awareness. Part of why webtrees
+was ported to run on Firebird in the first place may have been exactly this — to keep genuinely
+historical/genealogical material in the tool that actually handles it properly, rather than ever
+needing `liberty_content`/`BitDate` to become calendar-system-aware itself. Under that framing,
+`BitDate`'s real job is narrower than it first looks: modern audit-trail timestamps and business
+timestamps that are inherently recent/ongoing (`event_time` — food/health data, never genuinely
+ancient) — a domain `DateTime` is entirely adequate for.
+
+## Open — not yet started
+
+**Strip adodb from `BitDate` in favour of `DateTime`**, now that the genealogical-accuracy
+requirement is understood to be webtrees' job, not this file's. Requires, in order:
+1. Give `BitDate`'s formatter chain (`strftime()`/`date()`/`_getDate()`) a real `DateTimeZone`
+   parameter, replacing the ambient-global-mutation trick.
+2. Once that exists, the Smarty modifier's `'Fixed'` branch can drop `date_default_timezone_set()`
+   entirely and use `$gBitUser->getUserTimezone()` directly.
+
+Not scoped in detail yet — every real call site of `strftime()`/`date()`/`_getDate()` across the
+codebase needs mapping first, since some may depend on the current `$is_gmt`-boolean-only
+behaviour in ways not yet audited.
