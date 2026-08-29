@@ -64,6 +64,55 @@ Know which one you're passing. A caller that doesn't realise this distinction ca
 value reinterpreted through a viewer's display offset when it expected a literal UTC conversion,
 or vice versa.
 
+### `I8` epoch-seconds is the dominant convention codebase-wide — `liberty_xref` is the outlier
+
+Audited every package's `schema_inc.php` (2026-08-29) on the assumption there might be a handful
+of stray `I8` timestamp columns outside `liberty_content`. There are far more than a handful —
+`I8` epoch-seconds is the established norm almost everywhere, and `liberty_xref`'s native
+`TIMESTAMP` columns are the exception, not a pattern that's spreading:
+
+| Package | `I8` date/time columns |
+|---|---|
+| `liberty` (beyond `liberty_content`) | `last_modified` (×2 tables), `last_hit`, `liberty_process_queue`'s `queue_date`/`begin_date`/`end_date` |
+| `users` | `provpass_expires`, `registration_date`, `created`, `connect_time`, `last_login` (×2 tables), `current_login`, `pass_due`, `last_get` |
+| `newsletters` | `subscribed_date`, `unsubscribe_date`, `error_date`, `queue_date` (×2 tables), `send_date`, `begin_date`, `sent_date`, `last_read_date`, `last_sent` |
+| `messages` | `msg_date` |
+| `fisheye` | `photo_date` |
+| `rss` | `last_updated` (×2 tables) |
+| `themes` | `cache_time` |
+| `articles` | `created` |
+| `languages` | `created`, `last_modified` |
+| `tags` | `tagged_on` |
+| `stats` | `last` (and `stats_day`, possibly a day-bucket key rather than a true timestamp — not confirmed) |
+
+So "switch to proper `TIMESTAMP` fields," if ever undertaken, isn't a `liberty_content`-scoped
+change — it's a whole-codebase schema migration touching roughly a dozen packages. Conversely,
+bringing `liberty_xref` *into* the `I8` convention (rather than the other way round) is the
+smaller, norm-consistent direction — see the Year-2038 finding below for why `I8` specifically
+(not `TIMESTAMP`) is the safe target either way.
+
+### Real, active bug: `I4`-typed date columns overflow in 2038 — not theoretical, already hit
+
+Separate from the `I8`/`TIMESTAMP` convention question above: several packages use plain `I4`
+(32-bit signed integer) for columns that get set to a *future* date, which genuinely overflows —
+max signed 32-bit value is 2,147,483,647 = 19 January 2038. Past that, the value cannot be stored
+at all, not a rounding or display issue. Found by the same schema audit, searching for `I4`
+instead of `I8`:
+
+| Package | `I4` date/time columns | Risk |
+|---|---|---|
+| `blogs` | `publish_date`, `expire_date`, `date_added` | **Confirmed hit live** — setting a blog post's `expire_date` past 2038 overflows |
+| `articles` | `publish_date`, `expire_date` | Same schema shape as `blogs` (clearly copied from it) — same latent bug, not yet hit |
+| `search` | `last_update`, `last_updated` | Lower risk — always stamped "now," not user-set to a future date |
+| `boards` | `track_date`, `notify_date` | `notify_date` may be user/system-set to a future reminder — worth checking |
+
+**`I8` (64-bit) has no such limit anywhere in this codebase** — the whole `liberty_content` family
+is already safe. The fix for the confirmed `blogs`/`articles` bug is widening those two columns
+from `I4` to `I8` (a real schema migration, needs an upgrade script per domain, not a hand-push —
+not yet started). Native `TIMESTAMP` would also be 2038-safe (Firebird's range is 0001–9999 AD,
+no epoch dependency at all) but is the larger convention-change direction, not the minimal fix for
+this specific active bug.
+
 ## Display modes: `UTC` / `Local` / `Fixed`
 
 `BitDate::get_display_offset()` (`kernel/includes/classes/BitDate.php:61-84`) reads
