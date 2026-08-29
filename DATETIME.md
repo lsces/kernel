@@ -117,10 +117,21 @@ upgrade) — `schema_inc.php` updated to `I8` and a matching `ALTER TABLE ... AL
 BIGINT` upgrade script added for: `blogs.blog_posts.publish_date`/`expire_date`,
 `blogs.blogs_posts_map.date_added`, `search.search_index.last_update`,
 `search.search_syllable.last_used`/`last_updated`, `articles.articles.publish_date`/`expire_date`,
-`boards.boards_tracking.track_date`/`notify_date`. Tested directly against a restored copy of
-desktop's `myhomecloud` database before writing the final SQL. Not yet run through the real
-installer — that's the next step, testing via the admin packages page's upgrade-detection flow
-rather than more manual `isql`.
+`boards.boards_tracking.track_date`/`notify_date`. Verified via the real installer upgrade flow
+(admin packages page, not manual `isql`) on desktop's `myhomecloud` 2026-08-29 — applied cleanly,
+all ten target columns confirmed `BIGINT`. Committed and pushed to all four packages' repos.
+**Not yet deployed to srv9/srv10** — desktop-only so far, needs `server-pull-all.sh blogs search
+articles boards` (then the installer's own upgrade-detection, which runs automatically) when
+ready to go live. Considered and rejected: doing this via adodb's own datadict `ChangeTableSQL()`
+instead of raw SQL for portability — traced its implementation and found it silently generates no
+SQL at all when given the plain field-definition string every other schema/upgrade file in this
+codebase uses (the diffing logic only runs `if (is_array($flds))`; `createTableSQL()` parses that
+string via `_genFields()` first, but `applyUpgrade()`'s `'ALTER'` case never does the equivalent
+before calling `changeTableSQL()`) — a real, seemingly-never-exercised gap in `BitInstaller.php`
+(zero working `'ALTER'`/`'DATADICT'` examples exist anywhere in this codebase, only `'CREATE'`).
+Not fixed — this stack only ever runs Firebird in practice, so raw `'QUERY'`/`'SQL92'` (already
+proven, matching the one existing precedent in `liberty/admin/upgrades/5.0.2.php`) was the
+pragmatic call rather than debugging blind on a code path nothing else here has ever used.
 
 **`content_id` widening deliberately deferred, real lesson learned testing it**: `blog_posts`/
 `blogs`/`search_index` etc. all have their own `content_id` (`I4`) referencing `liberty_content
