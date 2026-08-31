@@ -357,7 +357,73 @@ reimplementation), `strftime()` both with and without the new `DateTimeZone` par
 
 Committed: `kernel` (`ef2f817` the `DateTimeZone` param, `0d73d9a` the deletion), `themes`
 (`4281f35`), `calendar` (`e90b90d` the `cal_date_format` fix, `4d71a77` the native-call rewrite).
-Not yet deployed past desktop.
+Deployed srv9 (rdmcloud, calendar's only current live user) and srv10 (no visible change expected
+there — only minimal display-time code paths currently exercised on those sites).
+
+## `get_display_offset()` — 'Fixed'-mode offset was resolved against "now", not the viewed date
+
+Follow-on question from Lester once the above landed live: "if we move to a larger tz offset does
+the day view get the right set of material for the local day?" The day-bucketing arithmetic itself
+(`gmmktime(0,0,0,...)` on a shifted timestamp) turned out to be offset-magnitude-agnostic and
+correct regardless of how large an offset — that wasn't the bug. The real bug: `get_display_offset()`
+`'Fixed'`-mode branch built its `DateTimeZone::getOffset()` reference instant from `new
+\DateTime("now")` unconditionally, not from the date actually being displayed. For a DST-observing
+zone this is flat wrong outside of "today" — reproduced concretely with `Pacific/Auckland`
+(NZDT +13h in January, NZST +12h in August): a January-cached offset applied to an August date (or
+vice versa) is off by an hour, which at a day boundary silently buckets an event onto the wrong
+calendar day for the viewer.
+
+**Fix, per Lester's explicit "go for the 'more correct' fit as this is more generic" direction**
+(offered as the alternative to a Calendar.php-only patch): widened `get_display_offset()` itself to
+accept an optional epoch (`?int $pForDate = null`) to resolve DST against, defaulting to `now` only
+when omitted — not scoped to calendar. Dropped the `$_user`/`$pUser` parameter both `BitDate` and
+`BitSystem`'s thin proxy carried; confirmed via codebase-wide grep no caller anywhere had ever
+passed one.
+
+**The cascading "priming call" pattern this surfaced**: `getDisplayDateFromUTC()`/
+`getUTCFromDisplayDate()`'s `'Local'`-mode branches (the `'Fixed'`-mode branches were already
+self-sufficient, building their own `DateTime`+`DateTimeZone` per call) read `$this->display_offset`
+— a property with no guarantee of being current unless *some earlier, unrelated call* on the same
+`BitDate` instance happened to have called `get_display_offset()` first as a side effect. Auditing
+every such "priming" call site found three different situations behind what looked like the same
+pattern:
+- `themes/smartyplugins/function.html_select_time.php` — genuinely needed (confirmed live,
+  used by `articles`' publish/expire-date pickers and `contact`'s xref start/end-date pickers) —
+  now redundant instead, since the two methods below resolve their own offset internally.
+- `articles/includes/classes/BitArticle.php` — same: needed for later `getUTCFromDisplayDate()`
+  calls on the same object, now redundant for the same reason.
+- `contact/includes/classes/Contact.php` — checked and found **fully dead**: no reader anywhere
+  in the file or via the object's only external `mDate` use (`add_xref_address.php`, which calls
+  `getUTCTime()`, untouched by `display_offset`). Deleted outright, not just simplified.
+
+Rather than leave three near-identical call sites with three different "is this actually needed"
+answers, made `getDisplayDateFromUTC()`/`getUTCFromDisplayDate()` self-sufficient: their
+`'Local'`-mode branches now call `$this->get_display_offset($_timestamp)` themselves (when
+`$_timestamp` is numeric) instead of trusting an externally-primed property. This removes the
+priming dependency everywhere at once rather than auditing every call site by hand — the three
+external calls above became either fully redundant (simplified/removed) or already-dead (removed).
+Also deleted `getTzName()` in the same pass — reads the same fragile property, confirmed zero
+callers anywhere, dead code per Lester's "dead code probably needs stripping" instruction.
+
+**`Calendar.php` threaded through properly** rather than just inheriting the generic fix passively:
+the three `focus_date`-based view-range calculations now resolve offset against `focus_date` itself,
+and the per-item day-bucketing loop in `getList()` resolves offset against each item's own raw
+timestamp — not a single value cached once at construction (effectively always "now"'s offset,
+regardless of which date range or which item was actually being rendered). A month/week view
+spanning a DST transition, or any view of a date outside "today"'s DST state, is now bucketed
+correctly. Dropped the now-dead `display_offset` public property and its constructor-time
+assignment (confirmed zero external readers first).
+
+**Verified functionally** (not just `php -l`): a standalone harness constructing `BitDate` with a
+stubbed `'Fixed'`/`Pacific/Auckland` user preference confirmed `get_display_offset()` returns
++13h for a January epoch and +12h for an August epoch, `getDisplayDateFromUTC()`/
+`getUTCFromDisplayDate()` roundtrip losslessly for both, and a fresh `BitDate` instance with no
+prior priming call produces the identical August result — confirming the self-sufficiency fix
+actually eliminates the dependency, not just papers over it in the one call path that was tested
+before.
+
+Committed: `kernel` (`a684b74`), `calendar` (`adbe5b7`), `themes` (`f9b4e71`), `articles`
+(`51df025`), `contact` (`5996be0`). Not yet deployed past desktop.
 
 ## `liberty_xref` TIMESTAMP→I8 — DONE, 2026-08-31
 
