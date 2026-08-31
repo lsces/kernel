@@ -280,18 +280,50 @@ needing `liberty_content`/`BitDate` to become calendar-system-aware itself. Unde
 timestamps that are inherently recent/ongoing (`event_time` — food/health data, never genuinely
 ancient) — a domain `DateTime` is entirely adequate for.
 
-## Open — not yet started
+## `bit_date_format`'s `'Fixed'` mode: real `DateTimeZone`, no more global mutation — DONE, 2026-08-31
 
-**Strip adodb from `BitDate` in favour of `DateTime`**, now that the genealogical-accuracy
-requirement is understood to be webtrees' job, not this file's. Requires, in order:
-1. Give `BitDate`'s formatter chain (`strftime()`/`date()`/`_getDate()`) a real `DateTimeZone`
-   parameter, replacing the ambient-global-mutation trick.
-2. Once that exists, the Smarty modifier's `'Fixed'` branch can drop `date_default_timezone_set()`
-   entirely and use `$gBitUser->getUserTimezone()` directly.
+Prompted by the `liberty_xref` migration just below — same session, same "is the storage really
+UTC-only, and are we just mapping to/from a viewer's local time" question, now answered for the
+*display* side too, not just storage.
 
-Not scoped in detail yet — every real call site of `strftime()`/`date()`/`_getDate()` across the
-codebase needs mapping first, since some may depend on the current `$is_gmt`-boolean-only
-behaviour in ways not yet audited.
+**Full call-site map done first** (the prerequisite this section used to say wasn't scoped yet):
+every external caller of `BitDate`/`mServerTimestamp` across the whole codebase, 13 files. Found
+**one genuine bug**: `cal_date_format` (calendar package's own modifier) checks whether a display
+offset exists — only to decide whether to strip a misleading `%Z`/`"UTC"` literal from the output
+format string — but never actually applies `getDisplayDateFromUTC()` to the value itself, unlike
+every other caller. `calendar_box.tpl`'s "First created"/"Last modified" fields (genuine
+timestamps) were rendering in raw UTC for every viewer regardless of their `Local`/`Fixed`
+preference. Not fixed in `cal_date_format` itself, since its *other* real callers
+(`calendar.tpl`/`package.tpl`'s day-grid navigation — `focus_date`, `day.day`, `time.time`) are
+all `gmmktime(0,0,0,...)`-style GMT-anchored calendar-day/slot markers, not real timestamps —
+shifting those by a viewer's offset would flip which day a grid cell shows for anyone west of UTC,
+a different and much worse bug. Fixed by switching `calendar_box.tpl`'s two lines to
+`bit_date_format` instead, which already does the right thing (`calendar` repo `e90b90d`).
+Everything else audited checked out clean (RFC2822 email header dates, pure UTC deltas, UTC
+write-side stamps, form-input UTC-conversion on write — all correctly following or correctly not
+needing the UTC↔display-offset model).
+
+**The actual modernisation**: `BitDate::strftime()` gained an optional `?\DateTimeZone $pTimezone`
+fourth parameter (fully backward compatible — every existing 3-or-fewer-arg caller is untouched).
+When given, it builds a real `DateTime` at the target epoch and calls `setTimezone($pTimezone)`
+before formatting, instead of falling through to native `date()`/`gmdate()`, which for the
+`'Fixed'` case relied on `date_default_timezone_set()` having mutated PHP's *global* default
+timezone moments earlier. `bit_date_format`'s `'Fixed'` branch now calls
+`$gBitUser->getUserTimezone()` (already established elsewhere, see the health/2026-08-29 section
+above) and passes it straight through — no global mutation anywhere in the path, verified
+directly against native `DateTime` for a large-offset zone (`Pacific/Auckland`, spanning a
+day-boundary crossing) and confirmed identical output.
+
+**One assumption checked and found not to matter in practice**: `_getDate()`'s own historical/
+BC-date calendar math (used by `BitDate::date()`'s slow path, `strftime()` never touches it) always
+computes its GMT offset from *today's* date, not the date being formatted (`adodb_get_gmt_diff()`
+is never given the target date - `ADODB_TEST_DATES`, the only branch that would, is never
+defined) — a genuine latent DST bug in principle. Confirmed it doesn't matter here: this path is
+only reachable for dates outside the 32-bit signed range (pre-1970/post-2038), which per this
+file's own "Genealogical dates belong in webtrees, not here" conclusion, `BitDate` is never asked
+to format for real data in this codebase. Not fixed - correctly out of scope, not a live bug.
+
+Committed: `kernel` (this file + `BitDate.php`), `themes` (`modifier.bit_date_format.php`).
 
 ## `liberty_xref` TIMESTAMP→I8 — DONE, 2026-08-31
 

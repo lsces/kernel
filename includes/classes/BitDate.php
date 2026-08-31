@@ -850,7 +850,7 @@ class BitDate {
 	}
 
 	// hack - convert to adodb_date
-	public static function strftime($fmt, $ls=false,$is_gmt=false)
+	public static function strftime($fmt, $ls=false,$is_gmt=false, ?\DateTimeZone $pTimezone=null)
 	{
 	global $ADODB_DATE_LOCALE;
 	   $formatter = new \IntlDateFormatter('en_GB', \IntlDateFormatter::LONG, \IntlDateFormatter::NONE);
@@ -936,6 +936,13 @@ class BitDate {
 		}
 		//echo "fmt=",$fmtdate,"<br>";
 		if ($ls === false) $ls = time();
+		if( $pTimezone !== null ) {
+			// Real per-call DateTimeZone, not PHP's ambient default - correctly picks up the
+			// zone's own DST rule for this specific instant (native date()/gmdate() would too,
+			// but only via date_default_timezone_set()'s global mutation; this avoids that
+			// entirely). See kernel/DATETIME.md's "adodb formatting engine" section.
+			return ( new \DateTime( '@'.$ls ) )->setTimezone( $pTimezone )->format( $fmtdate );
+		}
 		$ret = $is_gmt ? gmdate( $fmtdate, $ls ) : date( $fmtdate, $ls );
 		return $ret;
 	}
