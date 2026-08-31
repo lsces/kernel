@@ -55,29 +55,31 @@ class BitDate {
 	 * @param int the logged-in user.
 	 * @return int the preferred offset to UTC or 0 for straight UTC display
 	 */
-	public function get_display_offset($_user = false) {
+	public function get_display_offset( ?int $pForDate = null ) {
 		global $gBitUser;
 
-		// Cache preference from DB
-		$display_tz = "UTC";
-
-		// Default to UTC get_display_offset
 		$this->display_offset = 0;
-
-		// Load pref from DB if cache is empty
-		$display_tz = $gBitUser->getPreference('site_display_utc', "Local");
+		$display_tz = $gBitUser->getPreference( 'site_display_utc', "Local" );
 
 		// Recompute offset each request in case DST kicked in
-		if ( $display_tz == "Local" && isset($_COOKIE["tz_offset"]))
+		if ( $display_tz == "Local" && isset($_COOKIE["tz_offset"]) ) {
 			$this->display_offset = (int) ($_COOKIE["tz_offset"]);
-		else if ( $display_tz == "Fixed" )
+		} else if ( $display_tz == "Fixed" ) {
 			$this->display_offset = $gBitUser->getPreference( 'site_display_timezone', 0 );
-			if ( version_compare( phpversion(), "5.1.0", ">=" ) and !is_numeric( $this->display_offset ) ) {
+			if ( !is_numeric( $this->display_offset ) ) {
+				// A real IANA zone name (e.g. 'Europe/Isle_of_Man'), not a plain numeric
+				// offset - resolve via DateTimeZone::getOffset() against the date actually
+				// being displayed, not "now". A DST-observing zone's offset genuinely
+				// differs by season; reusing "now"'s offset for every date silently misdates
+				// events near a day boundary whenever the viewed date and today fall in
+				// different DST states (found 2026-08-31 auditing the calendar package's
+				// day-view bucketing - see kernel/DATETIME.md).
 				$dateTimeZoneUser = new \DateTimeZone( $this->display_offset );
-				$dtNow = new \DateTime( "now" );
-				$this->display_offset = $dateTimeZoneUser->getOffset( $dtNow );
+				$dtRef = $pForDate !== null ? ( new \DateTime( '@'.$pForDate ) ) : new \DateTime( 'now' );
+				$this->display_offset = $dateTimeZoneUser->getOffset( $dtRef );
 			}
-		   return $this->display_offset;
+		}
+		return $this->display_offset;
 	}
 
 	/**
@@ -105,8 +107,12 @@ class BitDate {
 
 			return strtotime( $dateTimeUser->format(DATE_ATOM) ) + timezone_offset_get( $dateTimeUserZone, $dateTimeUser );
 		}
-			return $this->getTimestampFromISO($_timestamp) + $this->display_offset;
-
+		// Resolves its own offset per call now, rather than depending on some earlier
+		// unrelated call having already primed $this->display_offset as a side effect - that
+		// fragile pattern (several real call sites relied on it, several genuinely didn't)
+		// found and cleaned up 2026-08-31, see kernel/DATETIME.md.
+		$utcTimestamp = $this->getTimestampFromISO($_timestamp);
+		return $utcTimestamp + $this->get_display_offset( is_numeric( $_timestamp ) ? (int)$_timestamp : $utcTimestamp );
 	}
 
 	/**
@@ -128,8 +134,9 @@ class BitDate {
 
 			return strtotime( $dateTimeUser->format(DATE_ATOM) ) - timezone_offset_get( $dateTimeUserZone, $dateTimeUser );
 		}
-			return $this->getTimestampFromISO($_timestamp) - $this->display_offset;
-
+		// Self-sufficient, matching getDisplayDateFromUTC() - see its comment.
+		$utcTimestamp = $this->getTimestampFromISO($_timestamp);
+		return $utcTimestamp - $this->get_display_offset( is_numeric( $_timestamp ) ? (int)$_timestamp : $utcTimestamp );
 	}
 
 	/**
@@ -172,15 +179,6 @@ class BitDate {
 	 */
 	public function getUTCDate() {
 		return gmdate("Y-m-d");
-	}
-
-	/**
-	 * Get the name of the current timezone.
-	 * Currently, only "UTC" or an empty string (Local).
-	 * @return string Current timezone
-	 */
-	public function getTzName() {
-		return $this->display_offset == 0 ? "UTC" : '';
 	}
 
 	/**

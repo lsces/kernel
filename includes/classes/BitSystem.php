@@ -2540,9 +2540,11 @@ class BitSystem extends BitSingleton {
 
 	/**
 	 * Retrieves the user's preferred offset for displaying dates.
+	 * @param ?int $pForDate  epoch of the date actually being displayed, for correct
+	 *                        per-date DST resolution in 'Fixed' mode - null uses "now"
 	 */
-	public function get_display_offset( $pUser = false ) {
-		return $this->mServerTimestamp->get_display_offset( $pUser );
+	public function get_display_offset( ?int $pForDate = null ) {
+		return $this->mServerTimestamp->get_display_offset( $pForDate );
 	}
 
 	/**
