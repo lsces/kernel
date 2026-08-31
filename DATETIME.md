@@ -425,6 +425,34 @@ before.
 Committed: `kernel` (`a684b74`), `calendar` (`adbe5b7`), `themes` (`f9b4e71`), `articles`
 (`51df025`), `contact` (`5996be0`). Not yet deployed past desktop.
 
+**Follow-on, same session — the actual switchover day itself**: Lester's next question — "what
+happens on the switchover days, I think at one time I did have 25 hours or 23 hours" — pointed at a
+gap the above didn't cover. `doRangeCalculations()` computes `view_start`/`view_end` always exactly
+a day/week/month apart (plain `86400`-seconds-per-day arithmetic in GMT-shifted units); `getList()`'s
+three callers then subtracted *one shared* display offset (now correctly resolved for `focus_date`,
+per the fix above) from *both* boundaries. On an actual DST transition day the real local day is 23h
+or 25h, not 24h — a single shared offset can't represent that. Checked the pre-PHP8.4 version of
+`doRangeCalculations()` (`calendar` `032957e`, the oldest version in this repo's history) and found
+the exact same `gmmktime()`+shared-offset structure already there — this is not a regression from
+the adodb strip, it predates all visible history here. (Lester's memory of once having real 23h/25h
+handling is most likely from `phpgedview` or an even older pre-bitweaver system, not this codebase.)
+
+Proved the actual failure mode concretely for `Europe/London`'s real 2026 DST dates:
+- **2026-03-29 (spring forward, 23h day)**: current code fetches a full 24h window — 1 hour too
+  many. Harmless: that extra hour is really the *next* day's first hour, and per-item bucketing
+  (already fixed above) correctly places it there rather than duplicating or misdating anything.
+- **2026-10-25 (fall back, 25h day)**: current code fetches only 24h — 1 hour too few, and it's a
+  **genuine gap**: the day's real last local hour is never fetched by that day's window (ends too
+  early) *or* by the next day's window (starts at true local midnight already) — any event
+  scheduled in that hour silently never appears in the day view at all, on either side.
+
+Fix: new `Calendar::resolveViewBounds()` resolves `get_display_offset()` against `view_start` and
+`view_end` **independently** rather than reusing one shared value, so the query window naturally
+comes out 23h/25h on a transition day, 24h otherwise. Replaces the shared-`$rangeOffset` pattern at
+all three `getList()`-family call sites. Verified with a standalone harness against the real
+Europe/London 2026 transition dates — both boundaries now land exactly on the true local-day
+edges, confirmed against ordinary-day arithmetic staying unchanged. `calendar` `535cb03`.
+
 ## `liberty_xref` TIMESTAMP→I8 — DONE, 2026-08-31
 
 Brought `liberty_xref`'s four native `TIMESTAMP` columns (`entry_date`/`last_update_date`/
