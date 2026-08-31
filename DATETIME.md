@@ -345,10 +345,12 @@ unrelated public method) called `$this->getdate()` with no arguments — a metho
 exist anywhere in the class, no `__call()` fallback either. Zero external callers, deleted along
 with the other four. Separately, `calendar/Calendar.php` itself had *three* call sites doing the
 exact same thing (`$this->mDate->getdate(...)`, no underscore — again, no such method) in
-`buildDay()` (not currently reachable — nothing calls it) and `buildCalendarNavigation()` (a
-**live** bug — this method is called from `mod_calendar.php`, the sidebar widget module, so it
-would fatal whenever that module actually renders). All fixed as part of the same native-`gmdate()`
-rewrite.
+`buildDay()` and `buildCalendarNavigation()` — **both live bugs**, not just the latter as first
+thought: `buildCalendarNavigation()` is called from `mod_calendar.php`'s sidebar widget, and
+`buildDay()` is called unconditionally from `buildCalendar()` (`package_page.php`'s day view). The
+original claim here that `buildDay()` had "no callers anywhere" was a false negative — see the
+2026-08-31 switchover-day section below for how that was found and corrected. All fixed as part of
+the same native-`gmdate()` rewrite.
 
 Verified directly post-deletion: `getUTCTimestamp()`/`getUTCDate()`, `gmmktime()`/`mktime()`
 (unaffected — confirmed they never called adodb internally, just BitDate's own O(n)
@@ -452,6 +454,38 @@ comes out 23h/25h on a transition day, 24h otherwise. Replaces the shared-`$rang
 all three `getList()`-family call sites. Verified with a standalone harness against the real
 Europe/London 2026 transition dates — both boundaries now land exactly on the true local-day
 edges, confirmed against ordinary-day arithmetic staying unchanged. `calendar` `535cb03`.
+
+**Follow-on, same session — `package_page.php`'s actual day-view grid had the same bug, plus a
+false-negative lesson**: Lester asked directly whether the day view's rendered grid would show 25
+rows for 2026-10-25. The section above (`BitDate`/adodb, 2026-08-31) had claimed `Calendar::
+buildDay()` — the method that builds exactly this hour-row grid — had "no callers anywhere,"
+used to justify leaving its undefined-`getdate()` bug fixed but the method itself undisturbed.
+That claim was wrong: `buildDay()` is called unconditionally from `buildCalendar()`, itself called
+from `package_page.php` (confirmed live once Lester reported an actual 24-hour grid rendering, which
+prompted re-checking). Root cause of the false claim: this session's `grep` is a shell function
+wrapping `ugrep --ignore-files`, and the `~/Development/bitweaver` wrapper repo's own `.gitignore`
+lists every package directory (each is its own nested repo) — a recursive grep from that root
+silently skips every file inside every package, which is where the real call site lived. Re-checked
+with `command grep` (bypassing the wrapper) to confirm `getTzName()`'s earlier "confirmed dead"
+deletion still holds — it does, genuinely zero callers even without the filter. See
+`feedback_gitignore_aware_grep_false_negative` memory — any future "confirmed via grep, no callers"
+claim from a repo-root-recursive search needs re-verifying the same way before being trusted.
+
+`buildDay()`'s actual bug, once found: its row count came from `$stop_time - $start_time` using a
+fixed `24 - day_end` hour offset — same "every day is 24h" assumption `doRangeCalculations()` had,
+independently reintroduced here since this method builds its own scaffold rather than reusing
+`resolveViewBounds()`. On a transition day this always built exactly 24 rows regardless: missing
+the real 25th row on a fall-back day (nowhere for that hour's events to bucket into, silently
+dropped from the grid — the row-matching loop just below never gets a slot to put them in) or
+including a row for an hour that never happened locally on a spring-forward day (harmless, just an
+empty row). Fixed the same way as `resolveViewBounds()` — `get_display_offset()` resolved
+independently at `$start_time` and `$stop_time` before computing the real elapsed hour count. On a
+fall-back day's extra row, `$hour` legitimately runs to 24 and `gmmktime()` rolls that into
+`$mday+1` at hour 0 — an honest representation of the real repeated local hour, not a bug (a genuine
+UI ambiguity — "01:00" appearing to occur twice — inherent to any wall-clock grid on that specific
+day, not something this fix set out to solve further). Verified against the real Europe/London 2026
+dates (23/24/25 hours as expected) and a partial `day_start`/`day_end` window that doesn't span the
+transition (unaffected, as expected). `calendar` `e8aa288`.
 
 ## `liberty_xref` TIMESTAMP→I8 — DONE, 2026-08-31
 
