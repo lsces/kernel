@@ -293,27 +293,41 @@ Not scoped in detail yet — every real call site of `strftime()`/`date()`/`_get
 codebase needs mapping first, since some may depend on the current `$is_gmt`-boolean-only
 behaviour in ways not yet audited.
 
-## Separate track: `liberty_xref` TIMESTAMP→I8, and the satellite-code audit that feeds it
+## `liberty_xref` TIMESTAMP→I8 — DONE, 2026-08-31
 
-Distinct decision from everything above — whether to bring `liberty_xref`'s four native
-`TIMESTAMP` columns (`entry_date`/`last_update_date`/`start_date`/`end_date`) into the `I8`
-epoch-int convention the rest of the codebase (`liberty_content` and ~12 other packages) already
-uses. Not decided, not started. Two real constraints found so far:
+Brought `liberty_xref`'s four native `TIMESTAMP` columns (`entry_date`/`last_update_date`/
+`start_date`/`end_date`) into the `I8` epoch-int convention the rest of the codebase
+(`liberty_content` and ~12 other packages) already uses. Live on every site, srv9 and srv10,
+same day it was scoped — see liberty.md's 2026-08-31 entry for the full narrative; this section
+keeps the technical reference (constraints, code changes, what the satellite audit found) since
+that's still the accurate current-behaviour record.
 
-**Firebird won't do this in place.** Confirmed by direct test: `ALTER TABLE ... ALTER COLUMN ...
-TYPE BIGINT` on a `TIMESTAMP` column fails outright — *"Conversion from base type TIMESTAMP to
-BIGINT is not supported."* Same restriction family as the `BIGINT`→`INTEGER` narrowing block
-found earlier (see the `content_id` lesson above). Any migration needs a real per-row data
-transform, not a metadata-only `ALTER` — a `liberty_xref2`-style new table + `INSERT...SELECT`
-epoch conversion + cutover, not an in-place change. Because `liberty_xref` is shared kernel code
-hit by every site on a server simultaneously (unlike `blogs`/`articles`, scoped per-package), a
-code-level cutover can't be staged per-domain the way today's `I4`→`I8` fixes were — the working
-theory is the *table* has to be the migration boundary (old code keeps using `liberty_xref`
-untouched, new code only ever knows `liberty_xref2`), not runtime format-detection in the code
-itself (deliberately rejected — that's exactly the two-formats-in-parallel mess this would be
-trying to clean up, not add a third variant of).
+Two real constraints, confirmed by direct test before building anything:
 
-**Satellite-code audit (2026-08-29)** — run as scoping input, not yet acted on: does the code
+**Firebird won't do this in place.** `ALTER TABLE ... ALTER COLUMN ... TYPE BIGINT` on a
+`TIMESTAMP` column fails outright — *"Conversion from base type TIMESTAMP to BIGINT is not
+supported."* Same restriction family as the `BIGINT`→`INTEGER` narrowing block found earlier (see
+the `content_id` lesson above). Firebird also has **no table rename statement at all** — both
+`ALTER TABLE ... TO ...` and `RENAME TABLE ... TO ...` are unrecognised tokens (confirmed live).
+So the migration is a genuine two-hop swap: build `liberty_xref2` as a converted staging copy,
+verify it, then drop the original and rebuild a table literally named `liberty_xref` fresh from
+the staging copy (no permanent second table name, no code anywhere ever needs to know
+`liberty_xref2` exists — it's a pure migration tool, thrown away once the swap's done).
+
+**Not actually "every site simultaneously" once it came to it.** The earlier working theory here
+worried about `liberty_xref` being shared kernel code hit by every site on a server at once,
+unlike `blogs`/`articles`'s per-package staging. Turned out what's shared is the *code*
+(`LibertyXref.php`, one file symlinked into every site) — the *data* is a separate physical
+Firebird database per site. A 2026-08-31 audit (which srv10 sites actually have any
+`liberty_xref` content at all) found only 4 of 11 sites do: `lsces` (41 rows, mapper only),
+`rainbowdigitalmedia` (868, contact-only), `merg` (2,398, stock+contact), and `rdmcloud` (66,269 —
+~95% of all rows server-wide, and the only site touching health). The other six had zero rows —
+migrated with a simpler direct drop-and-rebuild, no staging table needed at all, converging on the
+same tracked version by a different route. So the conversion *was* stageable per-database after
+all, safest-to-riskiest, before the shared code ever went live.
+
+**Satellite-code audit (2026-08-29)** — run as scoping input, acted on over the following two
+sessions (see below): does the code
 using `liberty_xref` across `contact`/`food`/`health`/`mapper`/`stock` go through `LibertyXref`'s
 own methods (`store()`/`verify()`/etc.), or touch its columns directly (raw SQL, `associateInsert`)?
 **Finding: direct-access debt is real and scattered, not confined to `liberty` itself.** `food`
@@ -386,22 +400,39 @@ xref_id keyed by item code, for callers diffing a submitted set against normal (
 group items, which *are* correctly in `mXrefInfo`. Anything reaching for "read this content's own
 xref state without querying the DB" needs to know which of these two situations it's in.
 
-**Outstanding, not touched this session**:
-- **`stock/includes/classes/StockMovement.php`** — the real remaining item. Raw `UPDATE liberty_xref
-  SET start_date = ?` (a write bypassing `store()`, its own third independent reimplementation of
-  the int/string date handling), plus `start_date` used directly in `ORDER BY` subqueries for sort
-  modes — trickier than a mechanism swap, since that's ordering semantics.
-- **6 `associateInsert('liberty_xref', [...])` call sites** — 5 in `stock/import/*.php`, 1 in
-  `contact/import/ImportContactCSV.php` — same shape as `Contact.php`'s original bug, not yet
-  looked at.
-- **`health`'s 14-file import dedup pattern** — all reads, not a real issue by the standard
-  established fixing `contact`/`mapper` (reads are fine; the actual problem class is writes that
-  bypass `store()`). Doesn't need the same treatment.
-- **`Contact.php`'s own remaining raw reads** (`loadXrefTypeList()`, the `#S`/`#L` address-lookup
-  joins in `load()`) and the hardcoded `'MERG Kit Elf'` pre-upgrade-fallback string in
-  `getAvailableTypeItems()` — flagged directly by Lester as needing a bigger rethink, not a
-  mechanical fix: the pre-5.0.3 fallback branches are dead code now (every live/local DB is fully
-  on the generic `liberty_xref_item`/`liberty_xref_group` model, confirmed, "needs tidying away"),
-  and the hardcoded display strings should come from the schema (`cross_ref_title`) instead —
-  anticipated to matter more once `rdmcloud`'s own person-type markers expand beyond the current
-  set (Family/Friend/Contact, etc. named directly as upcoming). Not scoped, not started.
+**Everything flagged as outstanding here got closed out over the following two sessions
+(2026-08-30/31), clearing the way for the actual TIMESTAMP→I8 migration above**:
+- `StockMovement.php`'s raw `UPDATE liberty_xref SET start_date = ?` and its `ORDER BY` sort-mode
+  subqueries, the 6 `associateInsert('liberty_xref', [...])` call sites (5 stock + 1
+  `contact/import/ImportContactCSV.php`), and two more raw patterns found along the way
+  (a `DELETE ... WHERE item IN (...)` in `load_merg_bom.php`, a plain existence-check `SELECT
+  COUNT(*)` duplicated in `stock/view_component.php`/`edit_component.php`) — all converted to the
+  generic `LibertyContent` helper family (`upsertXrefByContentId()`, `deleteXrefByItem()`,
+  `hasXrefItem()`, `lookupContentIdByXrefValue()`, both extended to accept `string|string[]` for
+  the item param). See `project_stock_raw_xref_inserts` memory for the full multi-session trail —
+  zero raw `INSERT`/`UPDATE`/`DELETE` against `liberty_xref` remain anywhere outside liberty's own
+  core, confirmed by a fresh codebase-wide grep the day the I8 migration actually ran.
+- `health`'s 14-file import dedup pattern got swept into the helper family too (now all call
+  `LibertyContent::insertXrefReadingIfNew()`) even though the original note here said reads didn't
+  need it — turned out to matter directly for the I8 migration, since that helper's own
+  `start_date = ?` comparison needed the same `gmdate()`-removal fix everything else did.
+- `Contact.php`'s `#S`/`#L` address-lookup rethink: the "`#S` has no live data" half got fixed
+  2026-08-31 for an unrelated reason (postcode handling, see contact.md) via
+  `findAddressXref()` filtering on `liberty_xref_item.template` instead of a hardcoded item code.
+  `loadXrefTypeList()` and the hardcoded `'MERG Kit Elf'` fallback string remain genuinely
+  untouched — still flagged as needing the bigger rethink, not a mechanical fix, not scoped.
+
+**Code changes the actual I8 migration needed, once the satellite debt above was cleared**: turned
+out small — `LibertyXref::verify()` (stop `gmdate()`-wrapping int input for all four columns,
+`$mDb->NOW()` defaults → `$gBitSystem->getUTCTime()`), `LibertyXrefType::loadContent()` and three
+`LibertyContent` helpers (`lookupXrefByTemplate()`/`lookupXrefByItem()`/`listContentByXrefItem()`,
+replacing `end_date > CURRENT_TIMESTAMP` with a bound `time()`), `LibertyContent
+::insertXrefReadingIfNew()` (same `gmdate()` removal), and one satellite file
+(`contact/export_contacts.php`, its own standalone `CURRENT_TIMESTAMP` check). Roughly ten call
+sites total, all mechanically the same change, concentrated in three liberty files plus one
+satellite one — not the sprawling audit the "shared kernel table" framing above originally
+implied. One real bug the migration surfaced live-testing against `rdmcloud`: `health/
+list_item.php`'s own hand-rolled `new DateTime($row['start_date'], ...)` fatally errors on a raw
+epoch string (`DateMalformedStringException`) — fixed with the `'@'`-prefixed epoch syntax
+`DateTime` already supports. Everything routed through the `bit_date_format` Smarty modifier
+(virtually every template) was already dual-format-safe and needed no changes at all.
