@@ -280,7 +280,7 @@ needing `liberty_content`/`BitDate` to become calendar-system-aware itself. Unde
 timestamps that are inherently recent/ongoing (`event_time` — food/health data, never genuinely
 ancient) — a domain `DateTime` is entirely adequate for.
 
-## `bit_date_format`'s `'Fixed'` mode: real `DateTimeZone`, no more global mutation — DONE, 2026-08-31
+## `BitDate`/adodb — DONE, 2026-08-31 (closes the "Open" TODO this section used to carry)
 
 Prompted by the `liberty_xref` migration just below — same session, same "is the storage really
 UTC-only, and are we just mapping to/from a viewer's local time" question, now answered for the
@@ -321,9 +321,43 @@ is never given the target date - `ADODB_TEST_DATES`, the only branch that would,
 defined) — a genuine latent DST bug in principle. Confirmed it doesn't matter here: this path is
 only reachable for dates outside the 32-bit signed range (pre-1970/post-2038), which per this
 file's own "Genealogical dates belong in webtrees, not here" conclusion, `BitDate` is never asked
-to format for real data in this codebase. Not fixed - correctly out of scope, not a live bug.
+to format for real data in this codebase. Confirmed unreachable, not a live bug for this codebase —
+but see below, this same finding is what justified deleting it outright rather than leaving it be.
 
-Committed: `kernel` (this file + `BitDate.php`), `themes` (`modifier.bit_date_format.php`).
+**Follow-on, same session — the dead code actually deleted, not just bypassed**: Lester's own
+framing ("what code in BitDate can be stripped") prompted going further than adding the
+`DateTimeZone` parameter. Full audit of every method that calls the *external* adodb library
+directly (not just `strftime()`) found exactly four: `date()`, `date2()`, `_getDate()`,
+`_date_gentable()` (a fifth, unrelated public `getDate()` — capital D, distinct from all of these —
+turned out to have its own bug, see below). `calendar` package was the *only* caller of any of them
+anywhere in the codebase — every real call passed a modern, 32-bit-range date, meaning the actual
+reason these methods existed (adodb's extended year range / pre-64-bit-PHP `mktime()` workaround)
+was never exercised by any live call, only their slower, adodb-dependent code paths were reached
+for no real benefit. Modernised `calendar/includes/classes/Calendar.php` to call native
+`gmdate()`/`gmmktime()` directly (matching the GMT-first convention that file already uses
+everywhere else - `calendar` repo `4d71a77`), then deleted all four methods from `BitDate.php`
+outright — 384 lines gone (`kernel` repo `0d73d9a`). `getUTCTimestamp()`/`getUTCDate()` (still
+load-bearing - this is what `BitDb::NOW()` calls) redirected to call native `gmdate()` directly,
+removing the last internal dependency on the deleted methods.
+
+**Two more undefined-method bugs found doing this audit, both fixed**: `getDate()` (the separate,
+unrelated public method) called `$this->getdate()` with no arguments — a method that doesn't
+exist anywhere in the class, no `__call()` fallback either. Zero external callers, deleted along
+with the other four. Separately, `calendar/Calendar.php` itself had *three* call sites doing the
+exact same thing (`$this->mDate->getdate(...)`, no underscore — again, no such method) in
+`buildDay()` (not currently reachable — nothing calls it) and `buildCalendarNavigation()` (a
+**live** bug — this method is called from `mod_calendar.php`, the sidebar widget module, so it
+would fatal whenever that module actually renders). All fixed as part of the same native-`gmdate()`
+rewrite.
+
+Verified directly post-deletion: `getUTCTimestamp()`/`getUTCDate()`, `gmmktime()`/`mktime()`
+(unaffected — confirmed they never called adodb internally, just BitDate's own O(n)
+reimplementation), `strftime()` both with and without the new `DateTimeZone` param,
+`dayOfWeek()`/`daysInMonth()` (unaffected) — all correct.
+
+Committed: `kernel` (`ef2f817` the `DateTimeZone` param, `0d73d9a` the deletion), `themes`
+(`4281f35`), `calendar` (`e90b90d` the `cal_date_format` fix, `4d71a77` the native-call rewrite).
+Not yet deployed past desktop.
 
 ## `liberty_xref` TIMESTAMP→I8 — DONE, 2026-08-31
 
