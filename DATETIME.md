@@ -487,6 +487,37 @@ day, not something this fix set out to solve further). Verified against the real
 dates (23/24/25 hours as expected) and a partial `day_start`/`day_end` window that doesn't span the
 transition (unaffected, as expected). `calendar` `e8aa288`.
 
+**Follow-on, same session — the row LABELS themselves, not just the count**: Lester's next
+observation — "times displayed on the page need a little tz magic so we get two 2:00 or no 2:00...
+perhaps just needs a fiddle triggered by the 23/25 hours range detection" — pointed at what the
+count fix alone didn't cover. The row-building loop still labeled rows via a plain sequential
+`$hour++`, so on spring-forward every label from the transition point onward was off by an hour
+(labels ran `00:00, 01:00, ..., 22:00` — 23 of them, matching the corrected *count*, but "01:00" is
+a wall-clock hour that never happened that day, and every later label was really one hour later
+than shown), and on fall-back the repeated hour never appeared as a repeat — the extra 25th row just
+showed as a spurious trailing "00:00" that reads as belonging to tomorrow, not a second "01:00".
+
+Fix: scan the window (only triggered when `$startOffset !== $endOffset`, i.e. only on the ~2
+days/year it can matter) to find exactly which whole naive hour the transition lands on and which
+direction, then build an explicit `$hourSequence` array — skipping that hour entirely for
+spring-forward, emitting it twice for fall-back — and drive the per-row loop by indexing into that
+array (`intdiv($i, $hour_fraction)`) instead of an incrementing counter. Kept the skip/repeat logic
+in one place (the sequence-building loop) rather than threading state through the per-row loop
+itself. Verified against the real Europe/London 2026 dates: spring-forward now labels
+`00:00, 02:00, 03:00, ..., 23:00` (23 rows, "01:00" genuinely absent); fall-back labels
+`00:00, 01:00, 01:00, 02:00, ..., 23:00` (25 rows, "01:00" genuinely doubled); confirmed correct
+too at half-hour granularity (`calendar_hour_fraction=2`) and for partial `day_start`/`day_end`
+windows both spanning and not spanning the transition. `calendar` `fb4515d`.
+
+**Deliberately out of scope**: which of the two identically-labeled fall-back rows a given event's
+data actually lands in isn't addressed — `getList()`'s per-item bucketing collapses both real
+occurrences of the repeated wall-clock hour onto the same shifted-axis value by design (that's what
+lets a labeled-axis comparison work at all elsewhere in this file), so an event genuinely scheduled
+in the second occurrence bucket into the row nearest it. This is a correct label, not a correct
+per-event split between the two occurrences — genuinely distinguishing them would need the raw
+un-shifted timestamp preserved through `getList()`'s per-item loop (currently overwritten in place),
+a bigger change not warranted for a once-a-year, likely-empty-anyway edge case.
+
 ## `liberty_xref` TIMESTAMP→I8 — DONE, 2026-08-31
 
 Brought `liberty_xref`'s four native `TIMESTAMP` columns (`entry_date`/`last_update_date`/
