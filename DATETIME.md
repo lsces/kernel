@@ -509,14 +509,50 @@ itself. Verified against the real Europe/London 2026 dates: spring-forward now l
 too at half-hour granularity (`calendar_hour_fraction=2`) and for partial `day_start`/`day_end`
 windows both spanning and not spanning the transition. `calendar` `fb4515d`.
 
-**Deliberately out of scope**: which of the two identically-labeled fall-back rows a given event's
-data actually lands in isn't addressed — `getList()`'s per-item bucketing collapses both real
-occurrences of the repeated wall-clock hour onto the same shifted-axis value by design (that's what
-lets a labeled-axis comparison work at all elsewhere in this file), so an event genuinely scheduled
-in the second occurrence bucket into the row nearest it. This is a correct label, not a correct
-per-event split between the two occurrences — genuinely distinguishing them would need the raw
-un-shifted timestamp preserved through `getList()`'s per-item loop (currently overwritten in place),
-a bigger change not warranted for a once-a-year, likely-empty-anyway edge case.
+**Originally left out of scope, then actually done the same session**: the note here first said
+splitting which of the two identically-labeled fall-back rows a given event lands in wasn't worth
+the extra plumbing. Lester pushed back — the events already carry the right UTC time, so they
+should sort themselves into the right row on their own, the same principle that worked cleanly in
+his railway timetable systems (services never sort or dispatch on wall-clock labels, only on real
+elapsed/absolute time — local labels are cosmetic, applied only for passenger-facing display).
+That's exactly right, and doing it properly turned out simpler than the label-only fix above, not
+harder — see the follow-on section immediately below.
+
+## `buildDay()`/`buildCalendar()` — bucketing rebuilt around real UTC time, replacing the label-only fix
+
+The row-label fix above (`fb4515d`) was correct as far as it went but still compared the
+*display-shifted* `'timestamp'` field for bucketing, which by construction cannot tell the two real
+instances of a repeated hour apart — both shift to the identical labeled value, since that's
+literally what "the same wall-clock hour occurring twice" means once a display offset is baked into
+the comparison axis. Two real events an hour apart (one either side of the transition) would
+silently collapse onto the same row.
+
+Rebuilt `buildDay()` around real UTC time throughout rather than naive local labels patched
+afterwards: each row is now a genuinely equally-spaced real-time slot (`$realWindowStart + $i *
+$stepSeconds`), with its own display offset resolved independently per row. This is strictly
+simpler than the scan-for-the-transition-point approach it replaces — the skip/repeat labeling
+behaviour falls out for free, since two consecutive real-time slots either side of a fall-back
+transition naturally resolve to the identical local label, and a spring-forward transition naturally
+jumps straight over the label that never happened. Each row now carries both `'time'` (the display
+label, for `cal_date_format`) and `'time_utc'` (the real UTC boundary).
+
+On the data side, `getList()`'s per-item loop now preserves each item's raw UTC value as
+`'timestamp_utc'` *before* the display shift overwrites the source field in place — previously lost
+entirely once `'created'`/`'last_modified'`/`'event_time'` were shifted in-place. `buildCalendar()`'s
+day-view row-matching loop now compares `'timestamp_utc'`/`'time_utc'` instead of the labeled axis.
+
+One consumer needed a matching manual fix: `FoodDay`'s synthetic day-summary tile (the one virtual,
+non-DB-backed calendar item in this ecosystem — see the `LibertyXref` cross-package section above)
+builds its own item array directly rather than going through `getList()`, so it didn't automatically
+pick up `'timestamp_utc'`. Added, using `$utcDayStart` (already computed for the tile's own SQL
+query) — `food` `c183b9f`. `HealthDay` needed no change; it's a real `liberty_content` row and goes
+through `getList()` normally.
+
+Verified with two synthetic events straddling the real 2026-10-25 Europe/London transition (one at
+real UTC 00:15, one at real UTC 01:15 — an hour apart in reality, both shifting to an identical
+`01:15` display label) correctly bucketing into different rows in true chronological order, plus
+re-confirmed the row-count and label sequences from the previous fix are unchanged (23/24/25 hours,
+correct skip/repeat labels) by this simpler implementation. `calendar` `e284576`.
 
 ## `liberty_xref` TIMESTAMP→I8 — DONE, 2026-08-31
 
