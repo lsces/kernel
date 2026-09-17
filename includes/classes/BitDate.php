@@ -128,11 +128,16 @@ class BitDate {
 			// See getDisplayDateFromUTC()'s matching comment — explicit
 			// DateTimeZone into the constructor, never date_default_timezone_set().
 			$dateTimeUserZone = new \DateTimeZone( $gBitUser->getPreference( 'site_display_timezone', 'UTC' ) );
-			$dateTimeUser = is_numeric( $_timestamp )
-				? new \DateTime( '@'.$_timestamp )
-				: new \DateTime( $_timestamp, $dateTimeUserZone );
-
-			return strtotime( $dateTimeUser->format(DATE_ATOM) ) - timezone_offset_get( $dateTimeUserZone, $dateTimeUser );
+			if ( is_numeric( $_timestamp ) ) {
+				// Mirrors getDisplayDateFromUTC()'s numeric branch in reverse - single offset
+				// application, recovering a true UTC epoch from an already display-shifted one.
+				$dateTimeUser = new \DateTime( '@'.$_timestamp );
+				return strtotime( $dateTimeUser->format(DATE_ATOM) ) - timezone_offset_get( $dateTimeUserZone, $dateTimeUser );
+			}
+			// DateTime already resolves to the correct UTC instant once given the real target
+			// zone - getTimestamp() returns it directly. (Previously ran an extra
+			// - timezone_offset_get() on top of that, double-subtracting the same offset.)
+			return ( new \DateTime( $_timestamp, $dateTimeUserZone ) )->getTimestamp();
 		}
 		// Self-sufficient, matching getDisplayDateFromUTC() - see its comment.
 		$utcTimestamp = $this->getTimestampFromISO($_timestamp);
