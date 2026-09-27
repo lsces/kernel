@@ -25,10 +25,16 @@ namespace Bitweaver;
  * which database ran the query), so identical queries against different sites' separate
  * databases (e.g. two different real_name values for the same user_id) could return each
  * other's cached rows.
+ *
+ * Reuses TEMP_PKG_PATH (defined in config_defaults_inc.php, already required by this point
+ * in setup_inc.php - well before $gBitDb is constructed) rather than independently
+ * recomputing the same sys_get_temp_dir()+HTTP_HOST path here - this is the same real,
+ * already-correctly-scoped per-site temp root every other subsystem's own cache (Smarty
+ * compile cache, biticon cache, etc.) already uses, not a parallel one.
  */
 global $ADODB_CACHE_DIR;
 if( empty( $ADODB_CACHE_DIR )) {
-	$ADODB_CACHE_DIR = sys_get_temp_dir().'/php/adodb/'.$_SERVER['HTTP_HOST'].'/';
+	$ADODB_CACHE_DIR = TEMP_PKG_PATH.'adodb/';
 }
 KernelTools::mkdir_p( $ADODB_CACHE_DIR );
 
