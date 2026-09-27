@@ -16,18 +16,24 @@
 
 namespace Bitweaver;
 
-require_once EXTERNAL_LIBS_PATH.'adodb/adodb.inc.php';
-// require_once EXTERNAL_LIBS_PATH.'adodb/session/adodb-session.php';
-
 /**
- * This code must execute before adodb/adodb.inc.php runs
- * Otherwsie $ADODB_CACHE_DIR ends up being set to '/tmp'
+ * This code must execute before adodb/adodb.inc.php runs - that file defaults
+ * $ADODB_CACHE_DIR to the unscoped '/tmp' the moment it's required, and the empty()
+ * guard below then never fires. Was previously placed AFTER the require_once, silently
+ * defeating the host-scoped path entirely - every site sharing a php-fpm pool's private
+ * /tmp then shared ONE flat adodb query-result cache, keyed only by SQL+params (not by
+ * which database ran the query), so identical queries against different sites' separate
+ * databases (e.g. two different real_name values for the same user_id) could return each
+ * other's cached rows.
  */
 global $ADODB_CACHE_DIR;
 if( empty( $ADODB_CACHE_DIR )) {
 	$ADODB_CACHE_DIR = sys_get_temp_dir().'/php/adodb/'.$_SERVER['HTTP_HOST'].'/';
 }
 KernelTools::mkdir_p( $ADODB_CACHE_DIR );
+
+require_once EXTERNAL_LIBS_PATH.'adodb/adodb.inc.php';
+// require_once EXTERNAL_LIBS_PATH.'adodb/session/adodb-session.php';
 
 /**
  * This class is used for database access and provides a number of functions to help
