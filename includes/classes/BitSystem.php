@@ -1226,15 +1226,22 @@ class BitSystem extends BitSingleton {
 				$loadPkgs[] = $pkgDir;
 			}
 		}
-		// load lib configs
+		// load lib configs - every other package after $gPreScan's, in name order. readdir() order is
+		// filesystem-dependent (hash order on ext4, different per machine/directory), and a package
+		// extending another (contactwiki needing contact registered first, fisheyemedia needing
+		// fisheye) silently skipped its own setup whenever it happened to come first. Name order
+		// puts a base package ahead of its extensions ('contact' < 'contactwiki'); $gPreScan is still
+		// there for any genuine exception.
+		$otherPkgs = [];
 		if( $pkgDir = opendir( BIT_ROOT_PATH )) {
 			while( false !== ( $dirName = readdir( $pkgDir ))) {
 				if( $dirName != '..'  && $dirName != '.' && is_dir( BIT_ROOT_PATH . '/' . $dirName ) && $dirName != 'CVS' && preg_match( '/^\w/', $dirName )) {
-					$loadPkgs[] = $dirName;
+					$otherPkgs[] = $dirName;
 				}
 			}
 		}
-		$loadPkgs = array_unique( $loadPkgs );
+		sort( $otherPkgs, SORT_STRING );
+		$loadPkgs = array_unique( array_merge( $loadPkgs ?? [], $otherPkgs ) );
 
 		// load the list of pkgs in the right order
 		foreach( $loadPkgs as $loadPkg ) {
