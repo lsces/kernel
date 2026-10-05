@@ -914,7 +914,9 @@ class BitSystem extends BitSingleton {
 	 */
 	public function verifyFeature( $pFeatureName ) {
 		if( !$this->isFeatureActive( $pFeatureName ) ) {
-			$this->fatalError( KernelTools::tra("This feature is disabled").": $pFeatureName" );
+			// A disabled feature is a missing page, not a successful one - a 200 here made every
+			// crawler hit on a switched-off feature look like a real page in the access logs.
+			$this->fatalError( KernelTools::tra("This feature is disabled").": $pFeatureName", null, null, 404 );
 		}
 
 		return true;
