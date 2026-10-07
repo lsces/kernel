@@ -513,7 +513,7 @@ class KernelTools
 				}
 
 				$ret = curl_exec( $curl );
-				curl_close( $curl );
+				// No curl_close(): deprecated since PHP 8.5 (no effect since 8.0) - the handle is freed when $curl goes out of scope.
 			} else {
 				// try using fsock now
 				$parsed = parse_url( $pUrl );
