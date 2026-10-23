@@ -82,7 +82,7 @@
 	</ul>
 	<div class="pagination pull-right">
 		{form action="$pageUrl" class="form-inline"}
-		{$listInfo.offset+1} {tr}to{/tr} {math equation="x + y" x=$listInfo.offset y=$listInfo.page_records} {tr}of{/tr} {$listInfo.total_records},&nbsp; 
+		{$listInfo.offset+1} {tr}to{/tr} {math equation="min( x + y, z )" x=$listInfo.offset y=$listInfo.page_records z=$listInfo.total_records} {tr}of{/tr} {$listInfo.total_records},&nbsp; 
 				<input type="hidden" name="find" value="{$find|default:$smarty.request.find}" />
 				<input type="hidden" name="sort_mode" value="{$sort_mode ?? ''}" />
 				{foreach from=$pgnHidden key=name item=value}
