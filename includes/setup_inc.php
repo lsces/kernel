@@ -151,6 +151,12 @@ if( $gBitSystem->isDatabaseValid() ) {
 	// this will register and set up the dropdown menus and the application menus in modules
 	require_once THEMES_PKG_INCLUDE_PATH.'menu_register_inc.php';
 
+	// The packages' setup has registered the site-wide CSS and JS; whatever the page adds from here is its own (see BitThemes::snapshotBaseline()).
+	global $gBitThemes;
+	if( is_object( $gBitThemes ) && method_exists( $gBitThemes, 'snapshotBaseline' ) ) {
+		$gBitThemes->snapshotBaseline();
+	}
+
 	// added for virtual hosting suport
 	if( !isset( $bitdomain )) {
 		$bitdomain = "";
