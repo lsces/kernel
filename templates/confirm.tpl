@@ -22,7 +22,7 @@
 				</div>
 
 				<div class="form-group submit">
-					<input type="button" class="btn btn-default" name="cancel" {$backJavascript} value="{tr}Cancel{/tr}" /> &nbsp;
+					<input type="button" class="btn btn-default" name="cancel" {$backJavascript} value="{tr}Cancel{/tr}" /> 
 					<input type="submit" class="btn btn-default" name="confirm" value="{tr}Yes{/tr}" />
 				</div>
 			{/box}
