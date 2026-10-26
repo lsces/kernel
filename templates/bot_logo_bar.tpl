@@ -6,6 +6,6 @@
 		<a href="http://www.firebirdsql.org/">{biticon ipackage="liberty" iname="firebird" ipath="bitweaver/" iexplain="Powered by Firebird" iforce=icon}</a>&nbsp;&nbsp;
 	</div>
 	<div class="floatright">
-		Web Hosting By <a href="http://rainbowdigitalmedia.co.uk">Rainbow Digital Media <img src="/config/images/rdm-logo32.png" alt="RDM Small Logo" height="32" width="32"></a>
+		Web Hosting By <a href="http://rainbowdigitalmedia.co.uk">Rainbow Digital Media <img src="/util/images/rdm-logo32.png" alt="RDM Small Logo" height="32" width="32"></a>
 	</div>
 
