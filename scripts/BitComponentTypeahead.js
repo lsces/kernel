@@ -20,6 +20,7 @@
 		var seq = 0; // request-generation counter - see reqId below
 
 		function buildLabel(row) {
+			if (config.label) { return config.label(row); }
 			return row.supplier ? row.title + ' [' + row.supplier + ']' : row.title;
 		}
 
