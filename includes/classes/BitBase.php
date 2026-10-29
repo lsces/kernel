@@ -577,14 +577,18 @@ abstract class BitBase {
 	 *
 	 * @param string $pSortMode sort mode to check
 	 * @param array $pValidSortModes array of available sort modes
+	 * @param array|null $pAliases table aliases allowed in front of the column, null for the usual ones (lc, lch, uu, uuc, uue)
 	 * @access public
 	 * @return bool true on success, false on failure
 	 */
-	public static function verifySortMode( $pSortMode, $pValidSortModes ) {
+	public static function verifySortMode( $pSortMode, $pValidSortModes, ?array $pAliases = null ) {
+		// The table alias in front of the column is pasted into the SQL, so only the usual ones are accepted (an alias the query does not have is an
+		// 'unknown table' error from the database); a list whose query uses others passes its own.
+		$aliases = $pAliases ?? [ 'lc', 'lch', 'uu', 'uuc', 'uue' ];
 		if( !empty( $pSortMode ) && is_string( $pSortMode ) && !empty( $pValidSortModes ) && is_array( $pValidSortModes )) {
 			foreach( $pValidSortModes as $mode ) {
-				// we will not check the table - that would just be too complicated...
-				if( preg_match( "/^(\w+\.)?{$mode}_(desc|asc)$/", $pSortMode )) {
+				if( preg_match( "/^(?:(\w+)\.)?{$mode}_(desc|asc)$/", $pSortMode, $m )
+					&& ( ( $m[1] ?? '' ) === '' || in_array( $m[1], $aliases, true ) ) ) {
 					return true;
 				}
 			}
