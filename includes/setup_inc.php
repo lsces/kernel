@@ -142,10 +142,10 @@ if( $gBitSystem->isDatabaseValid() ) {
 		$func();
 	}
 
-	// TODO: XSS security check
-	if( !empty( $_REQUEST['tk'] ) && empty( $_SERVER['bot'] ) ) {
+	// Ticket (CSRF) check: a ticket supplied on any request must match, and a registered user's POST must supply one.
+	// {form} adds the ticket to every form for registered users; a hand-written POST form needs it added by hand.
+	if( empty( $_SERVER['bot'] ) && ( !empty( $_REQUEST['tk'] ) || ( ( $_SERVER['REQUEST_METHOD'] ?? '' ) === 'POST' && $gBitUser->isRegistered() ) ) ) {
 		$gBitUser->verifyTicket();
-	} elseif( !empty( $_SERVER['bot'] ) ) {
 	}
 
 	// this will register and set up the dropdown menus and the application menus in modules
