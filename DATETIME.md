@@ -118,11 +118,10 @@ BIGINT` upgrade script added for: `blogs.blog_posts.publish_date`/`expire_date`,
 `blogs.blogs_posts_map.date_added`, `search.search_index.last_update`,
 `search.search_syllable.last_used`/`last_updated`, `articles.articles.publish_date`/`expire_date`,
 `boards.boards_tracking.track_date`/`notify_date`. Verified via the real installer upgrade flow
-(admin packages page, not manual `isql`) on desktop's `myhomecloud` 2026-08-29 — applied cleanly,
+(admin packages page, not manual `isql`) on a development copy of a live database, 2026-08-29 — applied cleanly,
 all ten target columns confirmed `BIGINT`. Committed and pushed to all four packages' repos.
-**Not yet deployed to srv9/srv10** — desktop-only so far, needs `server-pull-all.sh blogs search
-articles boards` (then the installer's own upgrade-detection, which runs automatically) when
-ready to go live. Considered and rejected: doing this via adodb's own datadict `ChangeTableSQL()`
+Rolled out by updating those four packages; the installer's own upgrade-detection then runs
+automatically. Considered and rejected: doing this via adodb's own datadict `ChangeTableSQL()`
 instead of raw SQL for portability — traced its implementation and found it silently generates no
 SQL at all when given the plain field-definition string every other schema/upgrade file in this
 codebase uses (the diffing logic only runs `if (is_array($flds))`; `createTableSQL()` parses that
@@ -144,9 +143,8 @@ live also surfaced that a `content_id` FK can't be recreated pointing at a still
 `liberty_content.content_id` ("partner index segment has incompatible data type") — so widening
 even one leaf table's `content_id` is not actually independent of every other table that
 references `liberty_content`; it's a coupled, whole-codebase change or nothing, not something to
-slip in package-by-package. Reverted by restoring desktop's `myhomecloud` from that morning's
-local backup (`firebird-restore myhomecloud`) rather than trying to hand-reconstruct the original
-state. Left as `I4` in all four packages' `schema_inc.php`/upgrade scripts for now — a real future
+slip in package-by-package. Reverted by restoring the development database from that morning's
+backup rather than trying to hand-reconstruct the original state. Left as `I4` in all four packages' `schema_inc.php`/upgrade scripts for now — a real future
 item, but its own separate, carefully-scoped piece of work, not a rider on the date-column fix.
 
 ## Display modes: `UTC` / `Local` / `Fixed`
@@ -359,8 +357,8 @@ reimplementation), `strftime()` both with and without the new `DateTimeZone` par
 
 Committed: `kernel` (`ef2f817` the `DateTimeZone` param, `0d73d9a` the deletion), `themes`
 (`4281f35`), `calendar` (`e90b90d` the `cal_date_format` fix, `4d71a77` the native-call rewrite).
-Deployed srv9 (rdmcloud, calendar's only current live user) and srv10 (no visible change expected
-there — only minimal display-time code paths currently exercised on those sites).
+Deployed to the site that uses calendar; the others show no visible change (only minimal
+display-time code paths are exercised there).
 
 ## `get_display_offset()` — 'Fixed'-mode offset was resolved against "now", not the viewed date
 
@@ -558,8 +556,8 @@ correct skip/repeat labels) by this simpler implementation. `calendar` `e284576`
 
 Brought `liberty_xref`'s four native `TIMESTAMP` columns (`entry_date`/`last_update_date`/
 `start_date`/`end_date`) into the `I8` epoch-int convention the rest of the codebase
-(`liberty_content` and ~12 other packages) already uses. Live on every site, srv9 and srv10,
-same day it was scoped — see liberty.md's 2026-08-31 entry for the full narrative; this section
+(`liberty_content` and ~12 other packages) already uses. Rolled out to every site
+the same day it was scoped — see liberty.md's 2026-08-31 entry for the full narrative; this section
 keeps the technical reference (constraints, code changes, what the satellite audit found) since
 that's still the accurate current-behaviour record.
 
@@ -579,10 +577,10 @@ the staging copy (no permanent second table name, no code anywhere ever needs to
 worried about `liberty_xref` being shared kernel code hit by every site on a server at once,
 unlike `blogs`/`articles`'s per-package staging. Turned out what's shared is the *code*
 (`LibertyXref.php`, one file symlinked into every site) — the *data* is a separate physical
-Firebird database per site. A 2026-08-31 audit (which srv10 sites actually have any
-`liberty_xref` content at all) found only 4 of 11 sites do: `lsces` (41 rows, mapper only),
-`rainbowdigitalmedia` (868, contact-only), `merg` (2,398, stock+contact), and `rdmcloud` (66,269 —
-~95% of all rows server-wide, and the only site touching health). The other six had zero rows —
+Firebird database per site. A 2026-08-31 audit (which sites actually have any
+`liberty_xref` content at all) found only 4 of 11 sites do: one with 41 rows (mapper only),
+one with 868 (contact-only), one with 2,398 (stock+contact), and one with 66,269 (~95% of all
+rows across the sites, and the only one touching health). The other six had zero rows —
 migrated with a simpler direct drop-and-rebuild, no staging table needed at all, converging on the
 same tracked version by a different route. So the conversion *was* stageable per-database after
 all, safest-to-riskiest, before the shared code ever went live.
@@ -692,7 +690,7 @@ replacing `end_date > CURRENT_TIMESTAMP` with a bound `time()`), `LibertyContent
 (`contact/export_contacts.php`, its own standalone `CURRENT_TIMESTAMP` check). Roughly ten call
 sites total, all mechanically the same change, concentrated in three liberty files plus one
 satellite one — not the sprawling audit the "shared kernel table" framing above originally
-implied. One real bug the migration surfaced live-testing against `rdmcloud`: `health/
+implied. One real bug the migration surfaced live-testing against the largest site's data: `health/
 list_item.php`'s own hand-rolled `new DateTime($row['start_date'], ...)` fatally errors on a raw
 epoch string (`DateMalformedStringException`) — fixed with the `'@'`-prefixed epoch syntax
 `DateTime` already supports. Everything routed through the `bit_date_format` Smarty modifier

@@ -1,7 +1,6 @@
 {strip}
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 <meta name="generator" content="bitweaver - https://www.bitweaver.org" />
-<meta name="author" content="http://rainbowdigitalmedia.uk" />
 
 {if !empty($metaDescription)}
 <meta name="description" content="{$metaDescription|escape}" />

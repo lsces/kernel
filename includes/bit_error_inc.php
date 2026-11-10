@@ -102,7 +102,16 @@ if( !function_exists( 'eb' ) ) {
 
 function bit_error_email ( $pSubject, $pMessage, $pGlobalVars=[] ) {
 	// You can prevent sending of error emails by adding define('ERROR_EMAIL', ''); in your config/kernel/config_inc.php
-	$errorEmail = \defined( 'ERROR_EMAIL' ) ? ERROR_EMAIL : (!empty( $_SERVER['SERVER_ADMIN'] ) ? $_SERVER['SERVER_ADMIN'] : null);
+	// ERROR_EMAIL if set; else the site administrator's address (BitSystem::getErrorEmail(): the Server settings' sender address, then the web
+	// server's admin address) once the database can answer; else the web server's admin address
+	global $gBitSystem;
+	if( \defined( 'ERROR_EMAIL' ) ) {
+		$errorEmail = ERROR_EMAIL;
+	} elseif( !empty( $gBitSystem ) && \is_object( $gBitSystem ) && $gBitSystem->isDatabaseValid() ) {
+		$errorEmail = $gBitSystem->getErrorEmail();
+	} else {
+		$errorEmail = !empty( $_SERVER['SERVER_ADMIN'] ) ? $_SERVER['SERVER_ADMIN'] : null;
+	}
 
 	$separator = "\n";
 	$indent = "  ";
@@ -122,7 +131,9 @@ function bit_error_email ( $pSubject, $pMessage, $pGlobalVars=[] ) {
 	}
 	$parameters = preg_replace( "/\n/", $separator.$indent, $parameters );
 
-	mail( $errorEmail, $pSubject, $pMessage.$parameters.$separator.$separator.'$_SERVER: '.var_export( $_SERVER, true ) );
+	if( !empty( $errorEmail ) ) {
+		mail( $errorEmail, $pSubject, $pMessage.$parameters.$separator.$separator.'$_SERVER: '.var_export( $_SERVER, true ) );
+	}
 }
 
 function bit_error_handler ( $errno, $errstr, $errfile, $errline, $errcontext=null ) {
@@ -249,9 +260,6 @@ function bit_display_error( $pLogMessage, $pSubject, $pFatal = true ) {
 		print "</body></html>";
 	} else {
 		bit_error_email ( $pSubject, $pLogMessage );
-		if( defined( 'AUTO_BUG_SUBMIT' ) && AUTO_BUG_SUBMIT && !empty( $gBitSystem ) && $gBitSystem->isDatabaseValid() ) {
-			mail( 'support@rainbowdigitalmedia.uk',"$pSubject",$pLogMessage );
-		}
 	}
 
 	if( $pFatal ) {

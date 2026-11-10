@@ -433,6 +433,7 @@ class BitSystem extends BitSingleton {
 		} else {
 			$ret = 'root@localhost';
 		}
+		return $ret;
 	}
 
 	// === sendEmail
