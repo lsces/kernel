@@ -678,7 +678,7 @@ xref state without querying the DB" needs to know which of these two situations 
 - `Contact.php`'s `#S`/`#L` address-lookup rethink: the "`#S` has no live data" half got fixed
   2026-08-31 for an unrelated reason (postcode handling, see contact.md) via
   `findAddressXref()` filtering on `liberty_xref_item.template` instead of a hardcoded item code.
-  `loadXrefTypeList()` and the hardcoded `'MERG Kit Elf'` fallback string remain genuinely
+  `loadXrefTypeList()` and its hardcoded fallback string remain genuinely
   untouched — still flagged as needing the bigger rethink, not a mechanical fix, not scoped.
 
 **Code changes the actual I8 migration needed, once the satellite debt above was cleared**: turned
