@@ -1626,6 +1626,17 @@ class BitSystem extends BitSingleton {
 			if( $len = strpos( $mime, ';' )) {
 				$mime = substr( $mime, 0, $len );
 			}
+			// An epub whose 'mimetype' entry is compressed (the spec says stored) is not recognised from its contents and comes back as a plain zip,
+			// which an upload then unpacks. A file named .epub whose own mimetype entry says epub is one.
+			if( $mime === 'application/zip' && strtolower( substr( $pFile, -5 ) ) === '.epub' && class_exists( '\ZipArchive' ) ) {
+				$zip = new \ZipArchive();
+				if( $zip->open( $pFile ) === true ) {
+					if( trim( (string)$zip->getFromName( 'mimetype' ) ) === 'application/epub+zip' ) {
+						$mime = 'application/epub+zip';
+					}
+					$zip->close();
+				}
+			}
 		}
 		return $mime;
 	}
