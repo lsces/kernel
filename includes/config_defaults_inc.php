@@ -170,7 +170,7 @@ if( substr_count( $_SERVER['HTTP_HOST'], '.' ) >= 2 ) {
 // if this version of bitweaver needs a visit to the installer, update the number in /bit_setup_inc.php
 if( !defined( 'BIT_MAJOR_VERSION' ) ) {
 	define( 'BIT_MAJOR_VERSION',	'5' );
-	define( 'BIT_MINOR_VERSION',	'0' );
+	define( 'BIT_MINOR_VERSION',	'1' );
 	define( 'BIT_SUB_VERSION',	'1' );
 	define( 'BIT_LEVEL',			'lsces' ); // dev < alpha < beta < RC# < '' < pl
 }
@@ -181,7 +181,7 @@ if( !defined( 'MIN_BIT_VERSION' ) ) {
 	define( 'MIN_BIT_VERSION', '5.0.1' );
 }
 if( !defined( 'BITWEAVER_VERSION' ) ) {
-	define( 'BITWEAVER_VERSION', '5.0.1' );
+	define( 'BITWEAVER_VERSION', '5.1.1' );
 }
 
 // These defines have to happen FIRST because core classes depend on them.
