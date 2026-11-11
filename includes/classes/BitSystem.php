@@ -1747,6 +1747,13 @@ class BitSystem extends BitSingleton {
 		}
 
 		$cookie_site = 'bit-user-'.strtolower( preg_replace( "/[^a-zA-Z0-9]/", "", $this->getConfig( 'site_title', 'bitweaver' )));
+		// The installer runs with no site configuration loaded, so the title falls back to 'bitweaver'; writing that name into auth_config.php
+		// switches the session to a different cookie until a normal page puts it back (a ticket built on the other session id is refused).
+		// With no title known, keep the session name the file already has.
+		$authFile = CONFIG_PKG_PATH . 'kernel/auth_config.php';
+		if( !$this->getConfig( 'site_title' ) && is_readable( $authFile ) && preg_match( "/session_name\( '([^']+)' \)/", (string)file_get_contents( $authFile ), $m )) {
+			$cookie_site = $m[1];
+		}
 		global $gBitDbHost, $gBitDbUser, $gBitDbPassword;
 		$authCheck = "<?php\n"
 			. "session_name( '" . $cookie_site . "' );\n"
