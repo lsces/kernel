@@ -550,6 +550,11 @@ abstract class BitBase {
 			}
 		}
 
+		// An offset past the 32 bit range (a scraper walking page numbers) is a syntax error in the database's OFFSET clause, so it counts as no offset
+		if( $pListHash['offset'] > 2147483647 || $pListHash['offset'] < 0 ) {
+			$pListHash['offset'] = 0;
+		}
+
 		// migrate towards a safer hash key
 		if( empty( $pListHash['user_id'] ) && !empty( $pListHash['lookup_user_id'] ) ) {
 			$pListHash['user_id'] = $pListHash['lookup_user_id'];
